@@ -59,6 +59,7 @@ export class UIController {
             <span class="title-panic">OF THE UNIVERSE</span>
           </div>
           <div class="title-tagline">DEFEND THE GALAXY FROM THE ALIEN INVASION</div>
+          <div id="menu-guardian-rank" class="guardian-rank-pill">🛡️ <span>CADET GUARDIAN</span></div>
 
           <div class="menu-stats-row">
             <div class="stat-pill">⭐ <span id="menu-total-stars">0 / 60</span></div>
@@ -527,6 +528,14 @@ export class UIController {
     document.getElementById('btn-endless-menu').addEventListener('click', () => {
       this.showMainMenu();
     });
+
+    // Interactive button hover audio feedback
+    const allButtons = this.container.querySelectorAll('button');
+    allButtons.forEach(btn => {
+      btn.addEventListener('mouseenter', () => {
+        audio.playHover();
+      });
+    });
   }
 
   showMainMenu() {
@@ -539,6 +548,23 @@ export class UIController {
     const maxStars = PLANETS.length * 3;
     document.getElementById('menu-total-stars').textContent = `${totalStars} / ${maxStars}`;
     document.getElementById('menu-endless-high').textContent = storage.getData().endlessHighScore.toLocaleString();
+
+    // Guardian Rank calculation
+    const ranks = [
+      { min: 0, title: 'CADET GUARDIAN', icon: '🛡️', color: '#94a3b8' },
+      { min: 6, title: 'SYSTEM SENTINEL', icon: '⚔️', color: '#00ffa3' },
+      { min: 16, title: 'NEBULA WARDEN', icon: '🌌', color: '#00f0ff' },
+      { min: 31, title: 'COSMIC ADMIRAL', icon: '⭐', color: '#ffe600' },
+      { min: 46, title: 'GALACTIC CHAMPION', icon: '👑', color: '#ff00aa' },
+      { min: 60, title: 'GUARDIAN OF THE UNIVERSE', icon: '✨', color: '#e040fb' }
+    ];
+    const userRank = [...ranks].reverse().find(r => totalStars >= r.min) || ranks[0];
+    const rankEl = document.getElementById('menu-guardian-rank');
+    if (rankEl) {
+      rankEl.innerHTML = `${userRank.icon} <span>${userRank.title}</span>`;
+      rankEl.style.color = userRank.color;
+      rankEl.style.borderColor = userRank.color;
+    }
 
     // Sync sound button icons
     const isMuted = audio.isMuted;

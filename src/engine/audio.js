@@ -176,6 +176,72 @@ class AudioManager {
     osc.stop(t + 0.11);
   }
 
+  playHover() {
+    if (this.isMuted || !this.ctx) return;
+    this.init();
+    const t = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(900, t);
+    osc.frequency.exponentialRampToValueAtTime(1200, t + 0.035);
+
+    gain.gain.setValueAtTime(0.06, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.04);
+
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+
+    osc.start(t);
+    osc.stop(t + 0.045);
+  }
+
+  playLockOn() {
+    if (this.isMuted || !this.ctx) return;
+    this.init();
+    const t = this.ctx.currentTime;
+    // Dual-tone harmonic targeting ping
+    [880, 1760].forEach((freq, idx) => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      const start = t + idx * 0.04;
+
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, start);
+
+      gain.gain.setValueAtTime(0.18, start);
+      gain.gain.exponentialRampToValueAtTime(0.001, start + 0.07);
+
+      osc.connect(gain);
+      gain.connect(this.masterGain);
+
+      osc.start(start);
+      osc.stop(start + 0.08);
+    });
+  }
+
+  playWarp() {
+    if (this.isMuted || !this.ctx) return;
+    this.init();
+    const t = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(220, t);
+    osc.frequency.exponentialRampToValueAtTime(1400, t + 0.32);
+
+    gain.gain.setValueAtTime(0.2, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
+
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+
+    osc.start(t);
+    osc.stop(t + 0.36);
+  }
+
   playBonusTap() {
     if (this.isMuted || !this.ctx) return;
     this.init();

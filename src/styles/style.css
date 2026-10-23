@@ -332,7 +332,23 @@ html, body {
   font-weight: 800;
   letter-spacing: 3px;
   color: var(--color-text-muted);
-  margin-bottom: 24px;
+  margin-bottom: 10px;
+}
+
+.guardian-rank-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 1.5px;
+  padding: 4px 14px;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1.5px solid var(--color-cyan);
+  border-radius: 14px;
+  margin-bottom: 18px;
+  box-shadow: 0 0 14px rgba(0, 0, 0, 0.6);
+  text-transform: uppercase;
 }
 
 .neon-heading {

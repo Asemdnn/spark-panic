@@ -64,4 +64,37 @@ describe('UI Overlay Synchronization', () => {
     uiController.syncOverlays(GAME_STATES.PLAYING);
     expect(lvlSelect.classList.contains('hidden')).toBe(true);
   });
+
+  it('should display Guardian rank and defense status in main menu', () => {
+    uiController.showMainMenu();
+    const rankEl = document.getElementById('menu-guardian-rank');
+    expect(rankEl).toBeDefined();
+    expect(rankEl.textContent).toContain('CADET GUARDIAN');
+
+    const pctEl = document.getElementById('menu-defense-pct');
+    expect(pctEl.textContent).toContain('0 / 20 WORLDS');
+  });
+
+  it('should populate hostile fleet threat badges in planet briefing', () => {
+    const testPlanet = {
+      level: 3,
+      name: 'Solaria',
+      sector: 'SECTOR I',
+      sectorName: 'Inner Sanctuaries',
+      typeDesc: 'Molten Sunforge Planet',
+      target: 14,
+      totalSparks: 28,
+      taps: 1,
+      tip: 'Test tip',
+      gradient: 'radial-gradient(#f5af19, #f12711)',
+      shadowColor: 'rgba(245, 175, 25, 0.75)',
+      types: { NORMAL: 23, MEGA: 5 }
+    };
+
+    uiController.openPlanetBriefing(testPlanet);
+    const badges = document.querySelectorAll('.threat-badge');
+    expect(badges.length).toBe(2);
+    expect(badges[0].textContent).toContain('Alien Scout');
+    expect(badges[1].textContent).toContain('Alien Dreadnought');
+  });
 });

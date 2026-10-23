@@ -210,4 +210,23 @@ describe('StarMap Interactive Celestial Engine', () => {
     expect(mockCtx.clip).toHaveBeenCalled();
     expect(mockCtx.drawImage).toHaveBeenCalled();
   });
+
+  it('should compute astronomical units and velocity for planets', () => {
+    const p1 = starMap.planets[0];
+    const p20 = starMap.planets[19];
+
+    expect(Number(p1.au)).toBeGreaterThanOrEqual(1.0);
+    expect(Number(p20.au)).toBeGreaterThan(Number(p1.au));
+    expect(p1.orbitalVelocityKm).toBeGreaterThan(p20.orbitalVelocityKm);
+  });
+
+  it('should update planetary stardust trails during simulation', () => {
+    const p = starMap.planets[0];
+    expect(p.trail.length).toBe(0);
+
+    starMap.update(0.1);
+    expect(p.trail.length).toBeGreaterThan(0);
+    expect(p.trail[0].x).toBeDefined();
+    expect(p.trail[0].y).toBeDefined();
+  });
 });

@@ -3,6 +3,7 @@
 
 import { PLANETS, SECTORS } from '../config.js';
 import { storage } from '../engine/storage.js';
+import { audio } from '../engine/audio.js';
 
 // Visual color profiles for all 20 celestial worlds
 const PLANET_PALETTES = {
@@ -116,6 +117,10 @@ export class StarMap {
         orbitSpeed,
         planetSize: p.hasRings ? 26 : 22,
         palette,
+        trail: [],
+        trailTimer: 0,
+        au: (orbitRadius / 260).toFixed(1),
+        orbitalVelocityKm: Math.round(35 / Math.sqrt(idx + 1)),
         x: Math.cos(baseAngle) * orbitRadius,
         y: Math.sin(baseAngle) * orbitRadius,
         rotation: Math.random() * Math.PI * 2,
@@ -150,6 +155,8 @@ export class StarMap {
       this.targetCameraY = p.y;
       this.targetZoom = zoomLevel;
       this.selectedPlanet = p;
+      audio.init();
+      audio.playLockOn();
       if (this.onSelectPlanetCallback) {
         this.onSelectPlanetCallback(p);
       }
@@ -209,6 +216,10 @@ export class StarMap {
           found = p;
           break;
         }
+      }
+      if (found && found !== this.hoveredPlanet) {
+        audio.init();
+        audio.playHover();
       }
       this.hoveredPlanet = found;
       if (typeof document !== 'undefined') {
@@ -281,12 +292,21 @@ export class StarMap {
     this.cameraY += (this.targetCameraY - this.cameraY) * Math.min(1, dt * 6);
     this.zoom += (this.targetZoom - this.zoom) * Math.min(1, dt * 8);
 
-    // Orbit planetary bodies around Sol Genesis
+    // Orbit planetary bodies around Sol Genesis & update stardust trails
     for (const p of this.planets) {
       p.orbitAngle += p.orbitSpeed * dt;
       p.x = Math.cos(p.orbitAngle) * p.orbitRadius;
       p.y = Math.sin(p.orbitAngle) * p.orbitRadius;
       p.rotation += dt * 0.4;
+
+      // Stardust trail update
+      p.trailTimer = (p.trailTimer || 0) + dt;
+      if (p.trailTimer >= 0.05) {
+        p.trailTimer = 0;
+        if (!p.trail) p.trail = [];
+        p.trail.unshift({ x: p.x, y: p.y });
+        if (p.trail.length > 10) p.trail.pop();
+      }
     }
 
     // Update alien swarm patrols
@@ -415,6 +435,22 @@ export class StarMap {
   }
 
   renderOrbitalTracks(ctx) {
+    // Concentric Astronomical Unit Radar Grid Markers
+    const radarDistances = [520, 1040, 1560, 2080, 2600];
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = 'rgba(0, 240, 255, 0.05)';
+    ctx.setLineDash([2, 8]);
+    for (const dist of radarDistances) {
+      ctx.beginPath();
+      ctx.arc(0, 0, dist, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.font = '700 8px Montserrat, sans-serif';
+      ctx.fillStyle = 'rgba(0, 240, 255, 0.25)';
+      ctx.textAlign = 'center';
+      ctx.fillText(`${(dist / 260).toFixed(0)} AU`, dist, -8);
+    }
+
     ctx.lineWidth = 1;
     const unlocked = storage.getUnlockedLevel();
 
@@ -477,6 +513,20 @@ export class StarMap {
 
       // Sunward light angle pointing from Sol Genesis (0, 0)
       const sunAngle = Math.atan2(-p.y, -p.x);
+
+      // 0. Fading Orbital Stardust Trail
+      if (p.trail && p.trail.length > 1) {
+        ctx.save();
+        for (let t = 0; t < p.trail.length; t++) {
+          const pt = p.trail[t];
+          const trAlpha = (1 - (t / p.trail.length)) * 0.45;
+          ctx.beginPath();
+          ctx.arc(pt.x - p.x, pt.y - p.y, Math.max(1, (1 - (t / p.trail.length)) * 3), 0, Math.PI * 2);
+          ctx.fillStyle = isUnlocked ? `rgba(0, 240, 255, ${trAlpha})` : `rgba(255, 255, 255, ${trAlpha * 0.35})`;
+          ctx.fill();
+        }
+        ctx.restore();
+      }
 
       // 1. Atmosphere Halo
       const haloGrad = ctx.createRadialGradient(0, 0, r * 0.8, 0, 0, r * 1.6);
@@ -664,6 +714,22 @@ export class StarMap {
     ctx.lineTo(reticleR, reticleR);
     ctx.lineTo(reticleR, reticleR - cornerSize);
     ctx.stroke();
+
+    // Reticle Tactical Data HUD Tag
+    ctx.font = '800 9px Montserrat, sans-serif';
+    ctx.fillStyle = '#00f0ff';
+    ctx.textAlign = 'left';
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.95)';
+    ctx.shadowBlur = 6;
+    ctx.fillText(`TARGET: ${target.name.toUpperCase()}`, reticleR + 10, -6);
+    ctx.font = '700 8px Montserrat, sans-serif';
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+    ctx.fillText(`ORBIT: ${target.au} AU • ${target.orbitalVelocityKm} KM/S`, reticleR + 10, 6);
+    const isTargetUnlocked = target.level <= storage.getUnlockedLevel();
+    const isTargetCleared = storage.getLevelStars(target.level) > 0;
+    ctx.fillStyle = isTargetCleared ? '#00ffa3' : (isTargetUnlocked ? '#ffe600' : '#ff00aa');
+    ctx.fillText(`STATUS: ${isTargetCleared ? 'LIBERATED ★' : (isTargetUnlocked ? 'UNDER SIEGE ⚠️' : 'BLOCKADED 🔒')}`, reticleR + 10, 18);
+    ctx.shadowBlur = 0;
 
     ctx.restore();
   }
