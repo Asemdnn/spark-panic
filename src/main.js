@@ -24,7 +24,38 @@ window.addEventListener('DOMContentLoaded', () => {
   const inputManager = new InputManager(canvasElement, canvasManager);
 
   inputManager.onTap((coords) => {
-    gameState.handleTap(coords);
+    if (gameState.currentState === GAME_STATES.PLAYING) {
+      gameState.handleTap(coords);
+    }
+  });
+
+  inputManager.onPointerDown((clientX, clientY) => {
+    if (gameState.currentState === GAME_STATES.LEVEL_SELECT) {
+      gameState.starMap.handlePointerDown(clientX, clientY);
+    }
+  });
+
+  inputManager.onPointerMove((clientX, clientY) => {
+    if (gameState.currentState === GAME_STATES.LEVEL_SELECT) {
+      gameState.starMap.handlePointerMove(clientX, clientY);
+    }
+  });
+
+  inputManager.onPointerUp((clientX, clientY) => {
+    if (gameState.currentState === GAME_STATES.LEVEL_SELECT) {
+      const selected = gameState.starMap.handlePointerUp(clientX, clientY);
+      if (selected && gameState.starMap.selectedPlanet) {
+        audio.init();
+        audio.playTap();
+        uiController.openPlanetBriefing(gameState.starMap.selectedPlanet);
+      }
+    }
+  });
+
+  inputManager.onWheel((deltaY) => {
+    if (gameState.currentState === GAME_STATES.LEVEL_SELECT) {
+      gameState.starMap.handleWheel(deltaY);
+    }
   });
 
   inputManager.onRestart(() => {
@@ -70,9 +101,13 @@ window.addEventListener('DOMContentLoaded', () => {
     canvasManager.update(dt);
 
     // Render Canvas
-    canvasManager.beginRender();
-    gameState.render(canvasManager.ctx);
-    canvasManager.endRender();
+    if (gameState.currentState === GAME_STATES.LEVEL_SELECT) {
+      gameState.starMap.render(canvasManager.ctx);
+    } else {
+      canvasManager.beginRender();
+      gameState.render(canvasManager.ctx);
+      canvasManager.endRender();
+    }
 
     // Sync HUD & DOM Overlays
     uiController.updateHUD();

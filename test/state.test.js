@@ -102,4 +102,34 @@ describe('Game State & Collision Simulation', () => {
     gameState.handleTap({ x: 320, y: 420, isInside: true });
     expect(gameState.explosions.length).toBe(1);
   });
+
+  it('should delegate update and render to StarMap during LEVEL_SELECT state', () => {
+    gameState.currentState = GAME_STATES.LEVEL_SELECT;
+    const initialPhase = gameState.starMap.solarPhase;
+
+    gameState.update(0.1);
+    expect(gameState.starMap.solarPhase).toBeGreaterThan(initialPhase);
+
+    const mockCtx = {
+      save: () => {},
+      restore: () => {},
+      scale: () => {},
+      translate: () => {},
+      rotate: () => {},
+      beginPath: () => {},
+      arc: () => {},
+      ellipse: () => {},
+      moveTo: () => {},
+      lineTo: () => {},
+      stroke: () => {},
+      fill: () => {},
+      fillRect: () => {},
+      strokeRect: () => {},
+      fillText: () => {},
+      setLineDash: () => {},
+      createRadialGradient: () => ({ addColorStop: () => {} })
+    };
+
+    expect(() => gameState.render(mockCtx)).not.toThrow();
+  });
 });

@@ -497,32 +497,65 @@ html, body {
   filter: drop-shadow(0 0 10px rgba(0, 240, 255, 0.6));
 }
 
-/* GALAXY STAR MAP (UNIVERSE MAP VIEWPORT) */
+/* GALAXY STAR MAP (CELESTIAL UNIVERSE VIEWPORT) */
+#overlay-level-select.galaxy-overlay {
+  background: transparent !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  pointer-events: none !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: space-between !important;
+  align-items: stretch !important;
+  padding: 16px 20px !important;
+}
+
 .galaxy-map-fullscreen {
-  width: min(96vw, 1100px);
-  height: min(90vh, 780px);
-  background: rgba(7, 9, 19, 0.96);
-  border: 1.5px solid var(--color-border);
-  box-shadow: 0 0 50px rgba(0, 0, 0, 0.8), 0 0 30px rgba(0, 240, 255, 0.25);
-  border-radius: 24px;
+  width: 100%;
+  height: 100%;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
-  position: relative;
-  animation: cardPop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  justify-content: space-between;
+  pointer-events: none;
 }
 
 .galaxy-nav-header {
   width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 20px;
-  background: rgba(15, 23, 42, 0.9);
-  backdrop-filter: blur(12px);
-  border-bottom: 1px solid var(--color-border);
-  z-index: 10;
+  padding: 12px 18px;
+  background: rgba(15, 23, 42, 0.88);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1.5px solid var(--color-border);
+  border-radius: 20px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.65), 0 0 20px rgba(0, 240, 255, 0.2);
+  pointer-events: auto;
+  z-index: 20;
   gap: 12px;
+}
+
+.galaxy-hint-pill {
+  align-self: center;
+  padding: 6px 18px;
+  background: rgba(7, 9, 19, 0.75);
+  border: 1px solid rgba(0, 240, 255, 0.3);
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.85);
+  letter-spacing: 0.5px;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  pointer-events: none;
+  margin: 6px auto;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
 }
 
 .galaxy-header-titles {
@@ -808,23 +841,39 @@ html, body {
 
 /* TACTICAL MISSION BRIEFING HOLO-CARD */
 .galaxy-mission-briefing {
-  position: absolute;
-  bottom: 16px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: min(92%, 520px);
-  background: rgba(15, 23, 42, 0.95);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  position: relative;
+  bottom: 0;
+  left: auto;
+  transform: none;
+  width: min(94%, 560px);
+  margin: 0 auto;
+  background: rgba(15, 23, 42, 0.94);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
   border: 1.5px solid var(--color-cyan);
   border-radius: 20px;
   padding: 16px 20px;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.85), 0 0 30px rgba(0, 240, 255, 0.35);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.85), 0 0 24px rgba(0, 240, 255, 0.35);
+  pointer-events: auto;
   z-index: 20;
   display: flex;
   flex-direction: column;
   gap: 10px;
-  animation: cardPop 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  animation: holoSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes holoSlideUp {
+  from { transform: translateY(30px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.btn-disabled {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  color: #64748b !important;
+  cursor: not-allowed !important;
+  box-shadow: none !important;
+  transform: none !important;
 }
 
 .briefing-header {
@@ -974,4 +1023,76 @@ html, body {
 
 .menu-actions, .modal-actions {
   width: 100%;
+}
+
+/* MOBILE RESPONSIVE TUNING */
+@media (max-width: 640px) {
+  #overlay-level-select.galaxy-overlay {
+    padding: 10px 10px !important;
+  }
+
+  .galaxy-nav-header {
+    padding: 10px 14px;
+    border-radius: 14px;
+    gap: 8px;
+  }
+
+  .galaxy-main-title {
+    font-size: 17px;
+  }
+
+  .galaxy-sector-tabs {
+    gap: 4px;
+  }
+
+  .sector-tab {
+    font-size: 10px;
+    padding: 3px 7px;
+  }
+
+  .galaxy-hint-pill {
+    font-size: 9.5px;
+    padding: 4px 12px;
+    margin: 4px auto;
+  }
+
+  .galaxy-mission-briefing {
+    width: 100%;
+    padding: 12px 14px;
+    border-radius: 16px;
+    gap: 8px;
+  }
+
+  .briefing-planet-icon {
+    width: 42px;
+    height: 42px;
+  }
+
+  .briefing-title {
+    font-size: 15px;
+  }
+
+  .briefing-desc {
+    font-size: 11px;
+  }
+
+  .briefing-stats-row {
+    gap: 6px;
+  }
+
+  .briefing-stat {
+    padding: 6px 8px;
+  }
+
+  .briefing-stat .b-label {
+    font-size: 8px;
+  }
+
+  .briefing-stat strong {
+    font-size: 11px;
+  }
+
+  .briefing-tip {
+    font-size: 10px;
+  }
 }

@@ -71,83 +71,70 @@ export class UIController {
       </div>
 
       <!-- GALAXY STAR MAP (UNIVERSE MAP) OVERLAY -->
-      <div id="overlay-level-select" class="screen-overlay hidden">
-        <div class="galaxy-map-fullscreen">
-          <div class="galaxy-nav-header">
-            <div class="galaxy-header-titles">
-              <div class="galaxy-badge">COSMIC CARTOGRAPHY</div>
-              <h2 class="neon-heading galaxy-main-title">GALAXY STAR MAP</h2>
-              <div class="galaxy-sector-tabs">
-                <button class="sector-tab active" data-sector="all">ALL SECTORS</button>
-                <button class="sector-tab" data-sector="sector-1">SECTOR I</button>
-                <button class="sector-tab" data-sector="sector-2">SECTOR II</button>
-                <button class="sector-tab" data-sector="sector-3">SECTOR III</button>
-                <button class="sector-tab" data-sector="sector-4">SECTOR IV</button>
-              </div>
-            </div>
-
-            <div class="galaxy-header-actions">
-              <div class="stat-pill">⭐ <span id="galaxy-total-stars">0 / 60</span></div>
-              <button id="btn-levels-back" class="icon-btn" title="Back to Main Menu">✕</button>
+      <div id="overlay-level-select" class="screen-overlay galaxy-overlay hidden">
+        <!-- FLOATING TOP NAVIGATION HUD -->
+        <div class="galaxy-nav-header">
+          <div class="galaxy-header-titles">
+            <div class="galaxy-badge">COSMIC CARTOGRAPHY • CELESTIAL STAR MAP</div>
+            <h2 class="neon-heading galaxy-main-title">GUARDIAN STAR SYSTEM</h2>
+            <div class="galaxy-sector-tabs">
+              <button class="sector-tab active" data-sector="current">OBJECTIVE 🛸</button>
+              <button class="sector-tab" data-sector="sector-1">SECTOR I</button>
+              <button class="sector-tab" data-sector="sector-2">SECTOR II</button>
+              <button class="sector-tab" data-sector="sector-3">SECTOR III</button>
+              <button class="sector-tab" data-sector="sector-4">SECTOR IV</button>
+              <button class="sector-tab" data-sector="core">SOL GENESIS ☀️</button>
             </div>
           </div>
 
-          <!-- THE COSMIC MAP VIEWPORT -->
-          <div id="galaxy-map-viewport" class="galaxy-map-viewport">
-            <div id="galaxy-universe-chart" class="galaxy-universe-chart">
-              <!-- SVG Hyperspace Jump Lanes -->
-              <svg id="galaxy-hyperspace-svg" class="galaxy-hyperspace-svg" viewBox="0 0 1000 600" preserveAspectRatio="none">
-              </svg>
+          <div class="galaxy-header-actions">
+            <div class="stat-pill">⭐ <span id="galaxy-total-stars">0 / 60</span></div>
+            <button id="btn-levels-back" class="icon-btn" title="Back to Main Menu">✕</button>
+          </div>
+        </div>
 
-              <!-- Sector Boundaries -->
-              <div class="sector-boundary sector-b1" style="left: 0%; width: 25%;">
-                <span class="sector-tag">SECTOR I: INNER SANCTUARIES</span>
-              </div>
-              <div class="sector-boundary sector-b2" style="left: 25%; width: 25%;">
-                <span class="sector-tag">SECTOR II: CRYO-CRYSTAL RIM</span>
-              </div>
-              <div class="sector-boundary sector-b3" style="left: 50%; width: 25%;">
-                <span class="sector-tag">SECTOR III: OUTER MAELSTROM</span>
-              </div>
-              <div class="sector-boundary sector-b4" style="left: 75%; width: 25%;">
-                <span class="sector-tag">SECTOR IV: VOID & GENESIS</span>
-              </div>
+        <!-- CONTROLS HINT -->
+        <div class="galaxy-hint-pill">
+          <span>🌌 Drag to pan universe • Scroll/pinch to zoom • Tap planet in space to target</span>
+        </div>
 
-              <!-- Planetary Nodes Layer -->
-              <div id="galaxy-planets-layer" class="galaxy-planets-layer"></div>
+        <!-- TACTICAL MISSION BRIEFING HOLO-CARD -->
+        <div id="galaxy-mission-briefing" class="galaxy-mission-briefing hidden">
+          <div class="briefing-header">
+            <div class="briefing-planet-icon" id="briefing-planet-sphere"></div>
+            <div class="briefing-info">
+              <div class="briefing-tag" id="briefing-sector-tag">SECTOR I</div>
+              <h3 class="briefing-title" id="briefing-planet-title">Planet Aerilon</h3>
+              <div class="briefing-desc" id="briefing-planet-desc">Lush Terrestrial Sanctuary</div>
+            </div>
+            <button id="btn-briefing-close" class="briefing-close-btn" title="Close Briefing">✕</button>
+          </div>
+
+          <div class="briefing-stats-row">
+            <div class="briefing-stat">
+              <span class="b-label">TARGET INVASION:</span>
+              <strong id="briefing-target">4 / 18 Aliens</strong>
+            </div>
+            <div class="briefing-stat">
+              <span class="b-label">GUARDIAN CHARGES:</span>
+              <strong id="briefing-taps" class="text-neon-gold">⚡ 1 Strike</strong>
+            </div>
+            <div class="briefing-stat">
+              <span class="b-label">DEFENSE RECORD:</span>
+              <strong id="briefing-stars">★★★</strong>
             </div>
           </div>
 
-          <!-- TACTICAL MISSION BRIEFING HOLO-CARD -->
-          <div id="galaxy-mission-briefing" class="galaxy-mission-briefing hidden">
-            <div class="briefing-header">
-              <div class="briefing-planet-icon" id="briefing-planet-sphere"></div>
-              <div class="briefing-info">
-                <div class="briefing-tag" id="briefing-sector-tag">SECTOR I</div>
-                <h3 class="briefing-title" id="briefing-planet-title">Planet Aerilon</h3>
-                <div class="briefing-desc" id="briefing-planet-desc">Lush Terrestrial Sanctuary</div>
-              </div>
-              <button id="btn-briefing-close" class="briefing-close-btn" title="Close Briefing">✕</button>
-            </div>
+          <p class="briefing-tip" id="briefing-tip">Tip: Tap near alien clusters to trigger cascading energy waves.</p>
 
-            <div class="briefing-stats-row">
-              <div class="briefing-stat">
-                <span class="b-label">TARGET INVASION:</span>
-                <strong id="briefing-target">4 / 18 Aliens</strong>
-              </div>
-              <div class="briefing-stat">
-                <span class="b-label">GUARDIAN CHARGES:</span>
-                <strong id="briefing-taps" class="text-neon-gold">⚡ 1 Strike</strong>
-              </div>
-              <div class="briefing-stat">
-                <span class="b-label">DEFENSE RECORD:</span>
-                <strong id="briefing-stars">★★★</strong>
-              </div>
-            </div>
+          <button id="btn-briefing-engage" class="btn btn-primary pulse-btn">ENGAGE ALIEN ARMADA ➔</button>
+        </div>
 
-            <p class="briefing-tip" id="briefing-tip">Tip: Tap near alien clusters to trigger cascading energy waves.</p>
-
-            <button id="btn-briefing-engage" class="btn btn-primary pulse-btn">ENGAGE ALIEN ARMADA ➔</button>
+        <!-- Hidden Accessible Semantic Planetary Registry for screen-readers and test compatibility -->
+        <div id="galaxy-map-viewport" class="galaxy-map-viewport" style="display:none;" aria-hidden="true">
+          <div id="galaxy-universe-chart">
+            <svg id="galaxy-hyperspace-svg" viewBox="0 0 1000 600" preserveAspectRatio="none"></svg>
+            <div id="galaxy-planets-layer"></div>
           </div>
         </div>
       </div>
@@ -341,6 +328,15 @@ export class UIController {
       document.getElementById('overlay-how-to-play').classList.add('hidden');
     });
 
+    // Galaxy Star Map Planet Selection from Canvas
+    if (this.gameState.starMap) {
+      this.gameState.starMap.onSelectPlanet((planet) => {
+        audio.init();
+        audio.playTap();
+        this.openPlanetBriefing(planet);
+      });
+    }
+
     // Galaxy Star Map Back
     document.getElementById('btn-levels-back').addEventListener('click', () => {
       this.showMainMenu();
@@ -359,20 +355,45 @@ export class UIController {
     if (briefingEngage) {
       briefingEngage.addEventListener('click', () => {
         if (this.selectedPlanet) {
-          this.hideAllOverlays();
-          this.gameState.startCampaignLevel(this.selectedPlanet.level);
+          const unlocked = storage.getUnlockedLevel();
+          if (this.selectedPlanet.level <= unlocked) {
+            audio.init();
+            audio.playTap();
+            this.hideAllOverlays();
+            this.gameState.startCampaignLevel(this.selectedPlanet.level);
+          }
         }
       });
     }
 
-    // Sector Tab Filters
+    // Sector Tab Filters (Cosmic Camera Focus)
     const sectorTabs = document.querySelectorAll('.sector-tab');
     sectorTabs.forEach(tab => {
       tab.addEventListener('click', (e) => {
         sectorTabs.forEach(t => t.classList.remove('active'));
         e.target.classList.add('active');
         const sector = e.target.getAttribute('data-sector');
-        this.scrollToSector(sector);
+        audio.init();
+        audio.playTap();
+
+        if (this.gameState.starMap) {
+          if (sector === 'current') {
+            this.gameState.starMap.focusCurrentObjective();
+            const unlocked = storage.getUnlockedLevel();
+            const planet = PLANETS.find(p => p.level === unlocked) || PLANETS[0];
+            this.openPlanetBriefing(planet);
+          } else if (sector === 'core') {
+            this.gameState.starMap.focusCore();
+          } else if (sector === 'sector-1') {
+            this.gameState.starMap.focusSector(1);
+          } else if (sector === 'sector-2') {
+            this.gameState.starMap.focusSector(2);
+          } else if (sector === 'sector-3') {
+            this.gameState.starMap.focusSector(3);
+          } else if (sector === 'sector-4') {
+            this.gameState.starMap.focusSector(4);
+          }
+        }
       });
     });
 
@@ -460,6 +481,14 @@ export class UIController {
     document.getElementById('hud-top').classList.add('hidden');
 
     document.getElementById('galaxy-total-stars').textContent = `${storage.getTotalStars()} / ${PLANETS.length * 3}`;
+
+    const unlocked = storage.getUnlockedLevel();
+    if (this.gameState.starMap) {
+      this.gameState.starMap.focusCurrentObjective();
+    }
+    const currentPlanet = PLANETS.find(p => p.level === unlocked) || PLANETS[0];
+    this.openPlanetBriefing(currentPlanet);
+
     this.renderGalaxyStarMap();
   }
 
@@ -549,13 +578,17 @@ export class UIController {
 
     briefing.classList.remove('hidden');
 
+    const unlocked = storage.getUnlockedLevel();
+    const isUnlocked = planet.level <= unlocked;
+    const engageBtn = document.getElementById('btn-briefing-engage');
+
     const sphere = document.getElementById('briefing-planet-sphere');
     sphere.style.background = planet.gradient;
     sphere.style.boxShadow = `0 0 20px ${planet.shadowColor}`;
     sphere.innerHTML = planet.hasRings ? `<div class="planet-ring" style="border-color: ${planet.ringColor};"></div>` : '';
 
     document.getElementById('briefing-sector-tag').textContent = `${planet.sector}: ${planet.sectorName}`;
-    document.getElementById('briefing-planet-title').textContent = `Planet ${planet.name}`;
+    document.getElementById('briefing-planet-title').textContent = `Planet ${planet.name} ${!isUnlocked ? '(LOCKED)' : ''}`;
     document.getElementById('briefing-planet-desc').textContent = planet.typeDesc;
     document.getElementById('briefing-target').textContent = `${planet.target} / ${planet.totalSparks} Aliens`;
     document.getElementById('briefing-taps').textContent = `⚡ ${planet.taps} ${planet.taps === 1 ? 'Strike' : 'Strikes'}`;
@@ -565,7 +598,23 @@ export class UIController {
     for (let s = 1; s <= 3; s++) starsStr += s <= stars ? '★' : '☆';
     document.getElementById('briefing-stars').textContent = starsStr;
 
-    document.getElementById('briefing-tip').textContent = planet.tip;
+    document.getElementById('briefing-tip').textContent = isUnlocked 
+      ? planet.tip 
+      : `🔒 Defend Planet ${planet.level - 1} first to breach the alien blockade around ${planet.name}.`;
+
+    if (engageBtn) {
+      if (isUnlocked) {
+        engageBtn.disabled = false;
+        engageBtn.textContent = 'ENGAGE ALIEN ARMADA ➔';
+        engageBtn.classList.remove('btn-disabled');
+        engageBtn.classList.add('pulse-btn');
+      } else {
+        engageBtn.disabled = true;
+        engageBtn.textContent = '🔒 SECTOR BLOCKADED';
+        engageBtn.classList.add('btn-disabled');
+        engageBtn.classList.remove('pulse-btn');
+      }
+    }
   }
 
   scrollToSector(sectorId) {

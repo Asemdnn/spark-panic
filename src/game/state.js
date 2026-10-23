@@ -5,6 +5,7 @@ import { Explosion } from './explosion.js';
 import { ParticleManager } from './particle.js';
 import { FloaterManager } from './floater.js';
 import { LevelManager } from './level-manager.js';
+import { StarMap } from './star-map.js';
 import { audio } from '../engine/audio.js';
 import { storage } from '../engine/storage.js';
 
@@ -25,6 +26,7 @@ export class GameState {
     this.previousState = GAME_STATES.MENU;
 
     this.levelManager = new LevelManager(canvasManager.virtualWidth, canvasManager.virtualHeight);
+    this.starMap = new StarMap(canvasManager);
     this.particles = new ParticleManager();
     this.floaters = new FloaterManager();
 
@@ -110,6 +112,11 @@ export class GameState {
 
   update(dt) {
     if (this.currentState === GAME_STATES.PAUSED) return;
+
+    if (this.currentState === GAME_STATES.LEVEL_SELECT) {
+      this.starMap.update(dt);
+      return;
+    }
 
     // Cap delta time to prevent physics anomalies when browser tabs switch
     const cappedDt = Math.min(dt, 0.05);
@@ -269,6 +276,11 @@ export class GameState {
   }
 
   render(ctx) {
+    if (this.currentState === GAME_STATES.LEVEL_SELECT) {
+      this.starMap.render(ctx);
+      return;
+    }
+
     // 1. Render all orbs
     for (const orb of this.orbs) {
       orb.render(ctx);
