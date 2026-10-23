@@ -52,6 +52,13 @@ describe('UI Overlay Synchronization', () => {
     const lvlSelect = document.getElementById('overlay-level-select');
     expect(lvlSelect.classList.contains('hidden')).toBe(false);
 
+    // Verify planetary nodes and hyperspace jump lanes are rendered
+    const planets = document.querySelectorAll('.galaxy-planet-node');
+    expect(planets.length).toBe(20);
+
+    const lanes = document.querySelectorAll('.hyperspace-lane');
+    expect(lanes.length).toBe(19);
+
     // Start playing
     mockGameState.currentState = GAME_STATES.PLAYING;
     uiController.syncOverlays(GAME_STATES.PLAYING);

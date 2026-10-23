@@ -1,6 +1,6 @@
-// Guardian of the Universe - Responsive HTML/CSS UI & Planetary HUD Controller
+// Guardian of the Universe - Responsive HTML/CSS UI & Planetary Galaxy Star Map Controller
 
-import { PLANETS, LEVELS, SPARK_CONFIG, SPARK_TYPES } from '../config.js';
+import { PLANETS, SECTORS, LEVELS, SPARK_CONFIG, SPARK_TYPES } from '../config.js';
 import { GAME_STATES } from '../game/state.js';
 import { storage } from '../engine/storage.js';
 import { audio } from '../engine/audio.js';
@@ -9,7 +9,7 @@ export class UIController {
   constructor(uiContainer, gameState) {
     this.container = uiContainer;
     this.gameState = gameState;
-    this.currentView = null;
+    this.selectedPlanet = null;
 
     this.renderInitialDOM();
     this.bindEvents();
@@ -70,17 +70,85 @@ export class UIController {
         </div>
       </div>
 
-      <!-- GALAXY STAR MAP (PLANETS) OVERLAY -->
+      <!-- GALAXY STAR MAP (UNIVERSE MAP) OVERLAY -->
       <div id="overlay-level-select" class="screen-overlay hidden">
-        <div class="screen-card wide-card galaxy-map-card">
-          <div class="modal-header">
-            <div>
-              <h2 class="neon-heading">GALAXY STAR MAP</h2>
-              <p class="galaxy-subtitle">Choose a planet to liberate from the alien armada</p>
+        <div class="galaxy-map-fullscreen">
+          <div class="galaxy-nav-header">
+            <div class="galaxy-header-titles">
+              <div class="galaxy-badge">COSMIC CARTOGRAPHY</div>
+              <h2 class="neon-heading galaxy-main-title">GALAXY STAR MAP</h2>
+              <div class="galaxy-sector-tabs">
+                <button class="sector-tab active" data-sector="all">ALL SECTORS</button>
+                <button class="sector-tab" data-sector="sector-1">SECTOR I</button>
+                <button class="sector-tab" data-sector="sector-2">SECTOR II</button>
+                <button class="sector-tab" data-sector="sector-3">SECTOR III</button>
+                <button class="sector-tab" data-sector="sector-4">SECTOR IV</button>
+              </div>
             </div>
-            <button id="btn-levels-back" class="icon-btn" title="Back to Main Menu">✕</button>
+
+            <div class="galaxy-header-actions">
+              <div class="stat-pill">⭐ <span id="galaxy-total-stars">0 / 60</span></div>
+              <button id="btn-levels-back" class="icon-btn" title="Back to Main Menu">✕</button>
+            </div>
           </div>
-          <div id="levels-grid" class="planets-galaxy-grid"></div>
+
+          <!-- THE COSMIC MAP VIEWPORT -->
+          <div id="galaxy-map-viewport" class="galaxy-map-viewport">
+            <div id="galaxy-universe-chart" class="galaxy-universe-chart">
+              <!-- SVG Hyperspace Jump Lanes -->
+              <svg id="galaxy-hyperspace-svg" class="galaxy-hyperspace-svg" viewBox="0 0 1000 600" preserveAspectRatio="none">
+              </svg>
+
+              <!-- Sector Boundaries -->
+              <div class="sector-boundary sector-b1" style="left: 0%; width: 25%;">
+                <span class="sector-tag">SECTOR I: INNER SANCTUARIES</span>
+              </div>
+              <div class="sector-boundary sector-b2" style="left: 25%; width: 25%;">
+                <span class="sector-tag">SECTOR II: CRYO-CRYSTAL RIM</span>
+              </div>
+              <div class="sector-boundary sector-b3" style="left: 50%; width: 25%;">
+                <span class="sector-tag">SECTOR III: OUTER MAELSTROM</span>
+              </div>
+              <div class="sector-boundary sector-b4" style="left: 75%; width: 25%;">
+                <span class="sector-tag">SECTOR IV: VOID & GENESIS</span>
+              </div>
+
+              <!-- Planetary Nodes Layer -->
+              <div id="galaxy-planets-layer" class="galaxy-planets-layer"></div>
+            </div>
+          </div>
+
+          <!-- TACTICAL MISSION BRIEFING HOLO-CARD -->
+          <div id="galaxy-mission-briefing" class="galaxy-mission-briefing hidden">
+            <div class="briefing-header">
+              <div class="briefing-planet-icon" id="briefing-planet-sphere"></div>
+              <div class="briefing-info">
+                <div class="briefing-tag" id="briefing-sector-tag">SECTOR I</div>
+                <h3 class="briefing-title" id="briefing-planet-title">Planet Aerilon</h3>
+                <div class="briefing-desc" id="briefing-planet-desc">Lush Terrestrial Sanctuary</div>
+              </div>
+              <button id="btn-briefing-close" class="briefing-close-btn" title="Close Briefing">✕</button>
+            </div>
+
+            <div class="briefing-stats-row">
+              <div class="briefing-stat">
+                <span class="b-label">TARGET INVASION:</span>
+                <strong id="briefing-target">4 / 18 Aliens</strong>
+              </div>
+              <div class="briefing-stat">
+                <span class="b-label">GUARDIAN CHARGES:</span>
+                <strong id="briefing-taps" class="text-neon-gold">⚡ 1 Strike</strong>
+              </div>
+              <div class="briefing-stat">
+                <span class="b-label">DEFENSE RECORD:</span>
+                <strong id="briefing-stars">★★★</strong>
+              </div>
+            </div>
+
+            <p class="briefing-tip" id="briefing-tip">Tip: Tap near alien clusters to trigger cascading energy waves.</p>
+
+            <button id="btn-briefing-engage" class="btn btn-primary pulse-btn">ENGAGE ALIEN ARMADA ➔</button>
+          </div>
         </div>
       </div>
 
@@ -213,7 +281,7 @@ export class UIController {
               <div class="guide-bullet bullet-yellow"></div>
               <div>
                 <strong>Alien Dreadnought (Gold)</strong>
-                <p>Heavily armored flagship. When destroyed, triggers a massive screen-clearing nova blast!</p>
+                <p>Heavily armored flagship. When destroyed, triggers a massive solar nova!</p>
               </div>
             </div>
 
@@ -221,7 +289,7 @@ export class UIController {
               <div class="guide-bullet bullet-magenta"></div>
               <div>
                 <strong>Alien Interceptor (Magenta)</strong>
-                <p>Swarm warship. When destroyed, fires 4 high-speed plasma darts across the galaxy.</p>
+                <p>Swarm warship. Fires 4 high-speed plasma bolts across space upon destruction.</p>
               </div>
             </div>
 
@@ -273,9 +341,39 @@ export class UIController {
       document.getElementById('overlay-how-to-play').classList.add('hidden');
     });
 
-    // Level Select Back
+    // Galaxy Star Map Back
     document.getElementById('btn-levels-back').addEventListener('click', () => {
       this.showMainMenu();
+    });
+
+    // Briefing Close Button
+    const briefingClose = document.getElementById('btn-briefing-close');
+    if (briefingClose) {
+      briefingClose.addEventListener('click', () => {
+        document.getElementById('galaxy-mission-briefing').classList.add('hidden');
+      });
+    }
+
+    // Briefing Engage Button
+    const briefingEngage = document.getElementById('btn-briefing-engage');
+    if (briefingEngage) {
+      briefingEngage.addEventListener('click', () => {
+        if (this.selectedPlanet) {
+          this.hideAllOverlays();
+          this.gameState.startCampaignLevel(this.selectedPlanet.level);
+        }
+      });
+    }
+
+    // Sector Tab Filters
+    const sectorTabs = document.querySelectorAll('.sector-tab');
+    sectorTabs.forEach(tab => {
+      tab.addEventListener('click', (e) => {
+        sectorTabs.forEach(t => t.classList.remove('active'));
+        e.target.classList.add('active');
+        const sector = e.target.getAttribute('data-sector');
+        this.scrollToSector(sector);
+      });
     });
 
     // Sound toggle
@@ -361,51 +459,133 @@ export class UIController {
     document.getElementById('overlay-level-select').classList.remove('hidden');
     document.getElementById('hud-top').classList.add('hidden');
 
-    this.renderLevelGrid();
+    document.getElementById('galaxy-total-stars').textContent = `${storage.getTotalStars()} / ${PLANETS.length * 3}`;
+    this.renderGalaxyStarMap();
   }
 
-  renderLevelGrid() {
-    const grid = document.getElementById('levels-grid');
-    grid.innerHTML = '';
+  renderGalaxyStarMap() {
+    const planetsLayer = document.getElementById('galaxy-planets-layer');
+    const svgLanes = document.getElementById('galaxy-hyperspace-svg');
+    if (!planetsLayer || !svgLanes) return;
+
+    planetsLayer.innerHTML = '';
+    svgLanes.innerHTML = '';
 
     const unlocked = storage.getUnlockedLevel();
 
+    // 1. Draw Hyperspace Jump Lanes (SVG)
+    let pathsHtml = '';
+    for (let i = 0; i < PLANETS.length - 1; i++) {
+      const p1 = PLANETS[i];
+      const p2 = PLANETS[i + 1];
+
+      // Convert percentage coordinates to 1000x600 SVG viewBox
+      const x1 = (p1.mapX / 100) * 1000;
+      const y1 = (p1.mapY / 100) * 600;
+      const x2 = (p2.mapX / 100) * 1000;
+      const y2 = (p2.mapY / 100) * 600;
+
+      const isLaneUnlocked = p2.level <= unlocked;
+
+      pathsHtml += `
+        <line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" 
+          class="hyperspace-lane ${isLaneUnlocked ? 'lane-active' : 'lane-locked'}" />
+      `;
+    }
+    svgLanes.innerHTML = pathsHtml;
+
+    // 2. Render Planetary System Nodes
     PLANETS.forEach((planet) => {
       const isUnlocked = planet.level <= unlocked;
+      const isCurrentObjective = planet.level === unlocked;
       const stars = storage.getLevelStars(planet.level);
-
-      const card = document.createElement('div');
-      card.className = `planet-card ${isUnlocked ? 'unlocked' : 'locked'}`;
 
       let starsHtml = '';
       for (let s = 1; s <= 3; s++) {
-        starsHtml += `<span class="planet-star ${s <= stars ? 'earned' : 'empty'}">★</span>`;
+        starsHtml += `<span class="p-star ${s <= stars ? 'earned' : 'empty'}">★</span>`;
       }
 
-      card.innerHTML = `
-        <div class="planet-visual-container">
-          <div class="planet-sphere" style="background: ${planet.gradient}; box-shadow: 0 0 20px ${planet.shadowColor};">
+      const node = document.createElement('div');
+      node.className = `galaxy-planet-node ${isUnlocked ? 'unlocked' : 'locked'} ${isCurrentObjective ? 'current-target' : ''}`;
+      node.style.left = `${planet.mapX}%`;
+      node.style.top = `${planet.mapY}%`;
+
+      node.innerHTML = `
+        <div class="node-visual">
+          ${isCurrentObjective ? '<div class="guardian-flagship-beacon">🛸</div><div class="radar-ping"></div>' : ''}
+          <div class="planet-sphere" style="background: ${planet.gradient}; box-shadow: 0 0 16px ${planet.shadowColor};">
             ${planet.hasRings ? `<div class="planet-ring" style="border-color: ${planet.ringColor};"></div>` : ''}
           </div>
           ${!isUnlocked ? '<div class="planet-shield-lock">🔒</div>' : ''}
         </div>
-        <div class="planet-meta">
-          <div class="planet-num">PLANET ${planet.level}</div>
-          <div class="planet-title">${planet.name}</div>
-          <div class="planet-type">${planet.typeDesc}</div>
-          <div class="planet-stars-row">${starsHtml}</div>
+        <div class="node-label">
+          <div class="node-num">LVL ${planet.level}</div>
+          <div class="node-name">${planet.name}</div>
+          <div class="node-stars">${starsHtml}</div>
         </div>
       `;
 
       if (isUnlocked) {
-        card.addEventListener('click', () => {
-          this.hideAllOverlays();
-          this.gameState.startCampaignLevel(planet.level);
+        node.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.openPlanetBriefing(planet);
         });
       }
 
-      grid.appendChild(card);
+      planetsLayer.appendChild(node);
     });
+
+    // Auto-scroll toward current unlocked planet on initial render
+    setTimeout(() => {
+      const currentPlanet = PLANETS.find(p => p.level === unlocked) || PLANETS[0];
+      this.scrollToPlanet(currentPlanet);
+    }, 50);
+  }
+
+  openPlanetBriefing(planet) {
+    this.selectedPlanet = planet;
+    const briefing = document.getElementById('galaxy-mission-briefing');
+    if (!briefing) return;
+
+    briefing.classList.remove('hidden');
+
+    const sphere = document.getElementById('briefing-planet-sphere');
+    sphere.style.background = planet.gradient;
+    sphere.style.boxShadow = `0 0 20px ${planet.shadowColor}`;
+    sphere.innerHTML = planet.hasRings ? `<div class="planet-ring" style="border-color: ${planet.ringColor};"></div>` : '';
+
+    document.getElementById('briefing-sector-tag').textContent = `${planet.sector}: ${planet.sectorName}`;
+    document.getElementById('briefing-planet-title').textContent = `Planet ${planet.name}`;
+    document.getElementById('briefing-planet-desc').textContent = planet.typeDesc;
+    document.getElementById('briefing-target').textContent = `${planet.target} / ${planet.totalSparks} Aliens`;
+    document.getElementById('briefing-taps').textContent = `⚡ ${planet.taps} ${planet.taps === 1 ? 'Strike' : 'Strikes'}`;
+
+    const stars = storage.getLevelStars(planet.level);
+    let starsStr = '';
+    for (let s = 1; s <= 3; s++) starsStr += s <= stars ? '★' : '☆';
+    document.getElementById('briefing-stars').textContent = starsStr;
+
+    document.getElementById('briefing-tip').textContent = planet.tip;
+  }
+
+  scrollToSector(sectorId) {
+    const viewport = document.getElementById('galaxy-map-viewport');
+    if (!viewport) return;
+
+    const chartWidth = 2000;
+    if (sectorId === 'sector-1') viewport.scrollTo({ left: 0, behavior: 'smooth' });
+    else if (sectorId === 'sector-2') viewport.scrollTo({ left: chartWidth * 0.25, behavior: 'smooth' });
+    else if (sectorId === 'sector-3') viewport.scrollTo({ left: chartWidth * 0.50, behavior: 'smooth' });
+    else if (sectorId === 'sector-4') viewport.scrollTo({ left: chartWidth * 0.75, behavior: 'smooth' });
+    else viewport.scrollTo({ left: 0, behavior: 'smooth' });
+  }
+
+  scrollToPlanet(planet) {
+    const viewport = document.getElementById('galaxy-map-viewport');
+    if (!viewport || !planet) return;
+    const chartWidth = 2000;
+    const targetX = (planet.mapX / 100) * chartWidth - (viewport.clientWidth / 2);
+    viewport.scrollTo({ left: Math.max(0, targetX), behavior: 'smooth' });
   }
 
   hideAllOverlays() {
@@ -422,6 +602,9 @@ export class UIController {
       const el = document.getElementById(id);
       if (el) el.classList.add('hidden');
     });
+
+    const briefing = document.getElementById('galaxy-mission-briefing');
+    if (briefing) briefing.classList.add('hidden');
   }
 
   updateHUD() {
