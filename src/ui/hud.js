@@ -47,7 +47,10 @@ export class UIController {
       <!-- MAIN MENU OVERLAY -->
       <div id="overlay-menu" class="screen-overlay">
         <div class="screen-card">
-          <div class="cosmic-emblem">🌌 ⚔️ 🪐</div>
+          <div class="menu-hero-banner-container">
+            <img src="./assets/game-cover.jpg" alt="Guardian of the Universe Key Art" class="menu-hero-banner" />
+            <div class="hero-overlay-gradient"></div>
+          </div>
           <div class="title-logo">
             <span class="title-spark">GUARDIAN</span>
             <span class="title-panic">OF THE UNIVERSE</span>

@@ -92,9 +92,8 @@ export class CanvasManager {
     // Scale for device pixel ratio
     ctx.scale(this.dpr, this.dpr);
 
-    // Clear full screen
-    ctx.fillStyle = '#070913';
-    ctx.fillRect(0, 0, window.innerWidth, window.innerHeight);
+    // Clear full canvas buffer
+    ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
 
     // Position and clip to active game arena
     ctx.translate(this.offsetX, this.offsetY);
@@ -115,13 +114,13 @@ export class CanvasManager {
   }
 
   drawArenaBounds(ctx) {
-    // Arena backdrop
+    // Semi-translucent arena backdrop exposing deep space nebula
     const grad = ctx.createRadialGradient(
       this.virtualWidth / 2, this.virtualHeight / 2, 80,
       this.virtualWidth / 2, this.virtualHeight / 2, this.virtualHeight * 0.7
     );
-    grad.addColorStop(0, '#0f172a');
-    grad.addColorStop(1, '#05070e');
+    grad.addColorStop(0, 'rgba(15, 23, 42, 0.75)');
+    grad.addColorStop(1, 'rgba(7, 9, 19, 0.92)');
 
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, this.virtualWidth, this.virtualHeight);

@@ -26,7 +26,7 @@ html, body {
   width: 100%;
   height: 100%;
   overflow: hidden;
-  background-color: var(--color-bg);
+  background: #070913 url('../assets/space-background.jpg') center/cover no-repeat fixed;
   font-family: 'Montserrat', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   color: var(--color-text-main);
   touch-action: none;
@@ -40,6 +40,7 @@ html, body {
   align-items: center;
   justify-content: center;
   overflow: hidden;
+  background: radial-gradient(circle at 50% 50%, rgba(15, 23, 42, 0.3) 0%, rgba(7, 9, 19, 0.85) 100%);
 }
 
 #game-canvas {
@@ -248,6 +249,34 @@ html, body {
 }
 
 /* LOGO & HEADINGS */
+.menu-hero-banner-container {
+  position: relative;
+  width: 100%;
+  height: 140px;
+  border-radius: 16px;
+  overflow: hidden;
+  margin-bottom: 16px;
+  border: 1.5px solid var(--color-border);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), 0 0 16px rgba(0, 240, 255, 0.25);
+}
+
+.menu-hero-banner {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.hero-overlay-gradient {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(180deg, rgba(7, 9, 19, 0.05) 0%, rgba(15, 23, 42, 0.75) 100%);
+  pointer-events: none;
+}
+
 .title-logo {
   display: flex;
   flex-direction: column;
