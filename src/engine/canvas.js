@@ -58,10 +58,14 @@ export class CanvasManager {
     const x = rawX / this.scale;
     const y = rawY / this.scale;
 
+    // Clamp coordinates so any click in the window triggers inside the arena
+    const clampedX = Math.max(25, Math.min(this.virtualWidth - 25, x));
+    const clampedY = Math.max(120, Math.min(this.virtualHeight - 40, y));
+
     return {
-      x,
-      y,
-      isInside: x >= 0 && x <= this.virtualWidth && y >= 0 && y <= this.virtualHeight
+      x: clampedX,
+      y: clampedY,
+      isInside: true
     };
   }
 

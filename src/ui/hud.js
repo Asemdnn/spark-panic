@@ -239,6 +239,7 @@ export class UIController {
 
     document.getElementById('btn-play-endless').addEventListener('click', () => {
       audio.init();
+      this.hideAllOverlays();
       this.gameState.startEndlessMode();
     });
 
@@ -277,6 +278,7 @@ export class UIController {
     });
 
     document.getElementById('btn-pause-restart').addEventListener('click', () => {
+      this.hideAllOverlays();
       this.gameState.restartCurrent();
     });
 
@@ -287,6 +289,7 @@ export class UIController {
     // Victory Modal Buttons
     document.getElementById('btn-next-level').addEventListener('click', () => {
       const nextLvl = this.gameState.levelManager.currentLevel + 1;
+      this.hideAllOverlays();
       if (nextLvl <= LEVELS.length) {
         this.gameState.startCampaignLevel(nextLvl);
       } else {
@@ -295,6 +298,7 @@ export class UIController {
     });
 
     document.getElementById('btn-replay-level').addEventListener('click', () => {
+      this.hideAllOverlays();
       this.gameState.restartCurrent();
     });
 
@@ -304,6 +308,7 @@ export class UIController {
 
     // Defeat Modal Buttons
     document.getElementById('btn-defeat-retry').addEventListener('click', () => {
+      this.hideAllOverlays();
       this.gameState.restartCurrent();
     });
 
@@ -313,6 +318,7 @@ export class UIController {
 
     // Endless Over Buttons
     document.getElementById('btn-endless-retry').addEventListener('click', () => {
+      this.hideAllOverlays();
       this.gameState.startEndlessMode();
     });
 
@@ -363,6 +369,7 @@ export class UIController {
           <div class="level-stars">${starsStr}</div>
         `;
         item.addEventListener('click', () => {
+          this.hideAllOverlays();
           this.gameState.startCampaignLevel(lvl.level);
         });
       } else {
@@ -443,6 +450,23 @@ export class UIController {
   }
 
   syncOverlays(state) {
+    if (state === GAME_STATES.PLAYING) {
+      const victory = document.getElementById('overlay-victory');
+      const defeat = document.getElementById('overlay-defeat');
+      const endlessOver = document.getElementById('overlay-endless-over');
+      const pause = document.getElementById('overlay-pause');
+      const menu = document.getElementById('overlay-menu');
+      const lvlSelect = document.getElementById('overlay-level-select');
+
+      if (victory && !victory.classList.contains('hidden')) victory.classList.add('hidden');
+      if (defeat && !defeat.classList.contains('hidden')) defeat.classList.add('hidden');
+      if (endlessOver && !endlessOver.classList.contains('hidden')) endlessOver.classList.add('hidden');
+      if (pause && !pause.classList.contains('hidden')) pause.classList.add('hidden');
+      if (menu && !menu.classList.contains('hidden')) menu.classList.add('hidden');
+      if (lvlSelect && !lvlSelect.classList.contains('hidden')) lvlSelect.classList.add('hidden');
+      return;
+    }
+
     const victory = document.getElementById('overlay-victory');
     const defeat = document.getElementById('overlay-defeat');
     const endlessOver = document.getElementById('overlay-endless-over');

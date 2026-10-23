@@ -16,211 +16,212 @@ export const SPARK_CONFIG = {
     name: 'Spark',
     radius: 14,
     color: '#00f0ff',
-    glowColor: 'rgba(0, 240, 255, 0.6)',
-    blastRadius: 52,
-    blastDuration: 1.6, // seconds
+    glowColor: 'rgba(0, 240, 255, 0.65)',
+    blastRadius: 96,
+    blastDuration: 2.8, // seconds
     score: 100,
-    speed: 100
+    speed: 130
   },
   [SPARK_TYPES.MEGA]: {
     name: 'Mega Spark',
     radius: 20,
     color: '#ffe600',
-    glowColor: 'rgba(255, 230, 0, 0.7)',
-    blastRadius: 95,
-    blastDuration: 2.1,
+    glowColor: 'rgba(255, 230, 0, 0.75)',
+    blastRadius: 180,
+    blastDuration: 3.4,
     score: 250,
-    speed: 70
+    speed: 85
   },
   [SPARK_TYPES.SPLITTER]: {
     name: 'Splitter Spark',
     radius: 15,
     color: '#ff00aa',
-    glowColor: 'rgba(255, 0, 170, 0.7)',
-    blastRadius: 46,
-    blastDuration: 1.4,
+    glowColor: 'rgba(255, 0, 170, 0.75)',
+    blastRadius: 88,
+    blastDuration: 2.4,
     score: 200,
-    speed: 110,
+    speed: 140,
     dartCount: 4,
-    dartSpeed: 380,
-    dartRadius: 26
+    dartSpeed: 450,
+    dartRadius: 28,
+    dartMaxDist: 480
   },
   [SPARK_TYPES.FREEZE]: {
     name: 'Frost Spark',
     radius: 16,
     color: '#00ffa3',
-    glowColor: 'rgba(0, 255, 163, 0.7)',
-    blastRadius: 65,
-    blastDuration: 2.4,
+    glowColor: 'rgba(0, 255, 163, 0.75)',
+    blastRadius: 110,
+    blastDuration: 3.2,
     score: 180,
-    speed: 85,
-    slowFactor: 0.3,
-    slowDuration: 3.5
+    speed: 95,
+    slowFactor: 0.25,
+    slowDuration: 4.0
   },
   [SPARK_TYPES.REPULSOR]: {
     name: 'Phase Spark',
     radius: 15,
     color: '#b55fe6',
-    glowColor: 'rgba(181, 95, 230, 0.7)',
-    blastRadius: 58,
-    blastDuration: 1.8,
+    glowColor: 'rgba(181, 95, 230, 0.75)',
+    blastRadius: 105,
+    blastDuration: 3.0,
     score: 220,
-    speed: 120,
-    secondaryBlastDelay: 0.6
+    speed: 130,
+    secondaryBlastDelay: 0.8
   }
 };
 
-// 20 progressive handcrafted levels
+// 20 progressive handcrafted levels (tuned for realistic cascading fun)
 export const LEVELS = [
   {
     level: 1,
     title: 'First Spark',
-    totalSparks: 15,
-    target: 8,
+    totalSparks: 18,
+    target: 4,
     taps: 1,
-    types: { [SPARK_TYPES.NORMAL]: 15 },
-    tip: 'Tap anywhere to trigger a chain reaction!'
+    types: { [SPARK_TYPES.NORMAL]: 18 },
+    tip: 'Tap near sparks to kickstart your first chain reaction!'
   },
   {
     level: 2,
     title: 'Chain Beginner',
-    totalSparks: 22,
-    target: 14,
+    totalSparks: 24,
+    target: 8,
     taps: 1,
-    types: { [SPARK_TYPES.NORMAL]: 22 },
+    types: { [SPARK_TYPES.NORMAL]: 24 },
     tip: 'Wait until sparks cluster closely together.'
   },
   {
     level: 3,
     title: 'Golden Dawn',
-    totalSparks: 26,
-    target: 18,
+    totalSparks: 28,
+    target: 14,
     taps: 1,
-    types: { [SPARK_TYPES.NORMAL]: 22, [SPARK_TYPES.MEGA]: 4 },
+    types: { [SPARK_TYPES.NORMAL]: 23, [SPARK_TYPES.MEGA]: 5 },
     tip: 'Mega Sparks create a massive detonation wave!'
   },
   {
     level: 4,
     title: 'Double Tap',
-    totalSparks: 35,
-    target: 25,
+    totalSparks: 36,
+    target: 20,
     taps: 2,
-    types: { [SPARK_TYPES.NORMAL]: 30, [SPARK_TYPES.MEGA]: 5 },
+    types: { [SPARK_TYPES.NORMAL]: 30, [SPARK_TYPES.MEGA]: 6 },
     tip: 'You have 2 taps. Use the second to catch stragglers.'
   },
   {
     level: 5,
     title: 'Shatter Star',
-    totalSparks: 32,
-    target: 24,
+    totalSparks: 34,
+    target: 18,
     taps: 1,
-    types: { [SPARK_TYPES.NORMAL]: 24, [SPARK_TYPES.SPLITTER]: 8 },
+    types: { [SPARK_TYPES.NORMAL]: 26, [SPARK_TYPES.SPLITTER]: 8 },
     tip: 'Splitter Sparks shoot high-speed homing darts!'
   },
   {
     level: 6,
     title: 'Chain Reaction',
-    totalSparks: 40,
-    target: 30,
+    totalSparks: 42,
+    target: 26,
     taps: 2,
-    types: { [SPARK_TYPES.NORMAL]: 28, [SPARK_TYPES.MEGA]: 6, [SPARK_TYPES.SPLITTER]: 6 },
-    tip: 'Target the Mega sparks to kickstart massive combos.'
+    types: { [SPARK_TYPES.NORMAL]: 30, [SPARK_TYPES.MEGA]: 6, [SPARK_TYPES.SPLITTER]: 6 },
+    tip: 'Target Mega sparks to kickstart massive combos.'
   },
   {
     level: 7,
     title: 'Deep Freeze',
-    totalSparks: 38,
-    target: 28,
+    totalSparks: 40,
+    target: 22,
     taps: 1,
-    types: { [SPARK_TYPES.NORMAL]: 28, [SPARK_TYPES.FREEZE]: 10 },
+    types: { [SPARK_TYPES.NORMAL]: 30, [SPARK_TYPES.FREEZE]: 10 },
     tip: 'Frost Sparks slow surrounding orbs to trap them.'
   },
   {
     level: 8,
     title: 'Cold Snap',
-    totalSparks: 45,
-    target: 36,
+    totalSparks: 46,
+    target: 30,
     taps: 2,
-    types: { [SPARK_TYPES.NORMAL]: 28, [SPARK_TYPES.FREEZE]: 9, [SPARK_TYPES.MEGA]: 8 },
+    types: { [SPARK_TYPES.NORMAL]: 28, [SPARK_TYPES.FREEZE]: 10, [SPARK_TYPES.MEGA]: 8 },
     tip: 'Freeze orbs first, then detonate the pack with Mega.'
   },
   {
     level: 9,
     title: 'Phase Shift',
-    totalSparks: 42,
-    target: 32,
+    totalSparks: 44,
+    target: 26,
     taps: 1,
-    types: { [SPARK_TYPES.NORMAL]: 24, [SPARK_TYPES.REPULSOR]: 10, [SPARK_TYPES.SPLITTER]: 8 },
+    types: { [SPARK_TYPES.NORMAL]: 26, [SPARK_TYPES.REPULSOR]: 10, [SPARK_TYPES.SPLITTER]: 8 },
     tip: 'Phase Sparks trigger a secondary shockwave ring.'
   },
   {
     level: 10,
     title: 'Cascade Protocol',
     totalSparks: 50,
-    target: 40,
+    target: 34,
     taps: 2,
-    types: { [SPARK_TYPES.NORMAL]: 24, [SPARK_TYPES.MEGA]: 8, [SPARK_TYPES.SPLITTER]: 10, [SPARK_TYPES.FREEZE]: 8 },
+    types: { [SPARK_TYPES.NORMAL]: 26, [SPARK_TYPES.MEGA]: 8, [SPARK_TYPES.SPLITTER]: 8, [SPARK_TYPES.FREEZE]: 8 },
     tip: 'All special sparks unite! Look for high-density clusters.'
   },
   {
     level: 11,
     title: 'Critical Mass',
-    totalSparks: 52,
-    target: 44,
+    totalSparks: 54,
+    target: 38,
     taps: 2,
-    types: { [SPARK_TYPES.NORMAL]: 26, [SPARK_TYPES.MEGA]: 10, [SPARK_TYPES.SPLITTER]: 10, [SPARK_TYPES.REPULSOR]: 6 },
+    types: { [SPARK_TYPES.NORMAL]: 28, [SPARK_TYPES.MEGA]: 10, [SPARK_TYPES.SPLITTER]: 10, [SPARK_TYPES.REPULSOR]: 6 },
     tip: 'Aim for high-traffic intersections.'
   },
   {
     level: 12,
     title: 'Needle Thread',
-    totalSparks: 45,
-    target: 38,
+    totalSparks: 48,
+    target: 32,
     taps: 1,
-    types: { [SPARK_TYPES.NORMAL]: 20, [SPARK_TYPES.SPLITTER]: 15, [SPARK_TYPES.MEGA]: 10 },
+    types: { [SPARK_TYPES.NORMAL]: 22, [SPARK_TYPES.SPLITTER]: 16, [SPARK_TYPES.MEGA]: 10 },
     tip: '1 tap only! Splitters will do the heavy lifting.'
   },
   {
     level: 13,
     title: 'Absolute Zero',
-    totalSparks: 55,
-    target: 45,
+    totalSparks: 56,
+    target: 40,
     taps: 2,
-    types: { [SPARK_TYPES.NORMAL]: 25, [SPARK_TYPES.FREEZE]: 15, [SPARK_TYPES.MEGA]: 15 },
+    types: { [SPARK_TYPES.NORMAL]: 26, [SPARK_TYPES.FREEZE]: 15, [SPARK_TYPES.MEGA]: 15 },
     tip: 'Use freeze waves to bunch sparks together.'
   },
   {
     level: 14,
     title: 'Supernova Surge',
-    totalSparks: 60,
-    target: 50,
+    totalSparks: 62,
+    target: 45,
     taps: 2,
-    types: { [SPARK_TYPES.NORMAL]: 20, [SPARK_TYPES.MEGA]: 20, [SPARK_TYPES.SPLITTER]: 12, [SPARK_TYPES.REPULSOR]: 8 },
+    types: { [SPARK_TYPES.NORMAL]: 22, [SPARK_TYPES.MEGA]: 20, [SPARK_TYPES.SPLITTER]: 12, [SPARK_TYPES.REPULSOR]: 8 },
     tip: 'Mega explosions create chain dominos across the screen.'
   },
   {
     level: 15,
     title: 'Quantum Field',
-    totalSparks: 65,
-    target: 55,
+    totalSparks: 66,
+    target: 48,
     taps: 2,
-    types: { [SPARK_TYPES.NORMAL]: 25, [SPARK_TYPES.MEGA]: 15, [SPARK_TYPES.SPLITTER]: 15, [SPARK_TYPES.FREEZE]: 10 },
+    types: { [SPARK_TYPES.NORMAL]: 26, [SPARK_TYPES.MEGA]: 15, [SPARK_TYPES.SPLITTER]: 15, [SPARK_TYPES.FREEZE]: 10 },
     tip: 'Patience is key: let sparks group naturally.'
   },
   {
     level: 16,
     title: 'One Shot Wonder',
-    totalSparks: 50,
-    target: 45,
+    totalSparks: 52,
+    target: 38,
     taps: 1,
-    types: { [SPARK_TYPES.NORMAL]: 15, [SPARK_TYPES.MEGA]: 15, [SPARK_TYPES.SPLITTER]: 12, [SPARK_TYPES.REPULSOR]: 8 },
-    tip: 'Almost full screen wipe needed with only 1 tap!'
+    types: { [SPARK_TYPES.NORMAL]: 16, [SPARK_TYPES.MEGA]: 16, [SPARK_TYPES.SPLITTER]: 12, [SPARK_TYPES.REPULSOR]: 8 },
+    tip: 'Trigger a Mega spark at the center for a massive cascade!'
   },
   {
     level: 17,
     title: 'Storm Chaser',
     totalSparks: 70,
-    target: 60,
+    target: 52,
     taps: 2,
     types: { [SPARK_TYPES.NORMAL]: 25, [SPARK_TYPES.MEGA]: 15, [SPARK_TYPES.SPLITTER]: 15, [SPARK_TYPES.FREEZE]: 15 },
     tip: 'Watch for the freeze slow-motion window.'
@@ -229,7 +230,7 @@ export const LEVELS = [
     level: 18,
     title: 'Hyper Pulse',
     totalSparks: 75,
-    target: 65,
+    target: 58,
     taps: 2,
     types: { [SPARK_TYPES.NORMAL]: 25, [SPARK_TYPES.MEGA]: 20, [SPARK_TYPES.SPLITTER]: 18, [SPARK_TYPES.REPULSOR]: 12 },
     tip: 'Combos above 30 yield huge bonus points.'
@@ -238,7 +239,7 @@ export const LEVELS = [
     level: 19,
     title: 'Singularity',
     totalSparks: 80,
-    target: 72,
+    target: 64,
     taps: 2,
     types: { [SPARK_TYPES.NORMAL]: 20, [SPARK_TYPES.MEGA]: 25, [SPARK_TYPES.SPLITTER]: 20, [SPARK_TYPES.FREEZE]: 15 },
     tip: 'Trigger the mega clusters near the center.'
@@ -247,7 +248,7 @@ export const LEVELS = [
     level: 20,
     title: 'Master of Sparks',
     totalSparks: 90,
-    target: 82,
+    target: 72,
     taps: 2,
     types: { [SPARK_TYPES.NORMAL]: 20, [SPARK_TYPES.MEGA]: 25, [SPARK_TYPES.SPLITTER]: 25, [SPARK_TYPES.FREEZE]: 10, [SPARK_TYPES.REPULSOR]: 10 },
     tip: 'The ultimate chain reaction challenge. Good luck!'
@@ -255,12 +256,12 @@ export const LEVELS = [
 ];
 
 export const COMBO_TITLES = [
-  { min: 5, text: 'GOOD!', color: '#00f0ff' },
-  { min: 10, text: 'GREAT!', color: '#00ffa3' },
-  { min: 18, text: 'AWESOME!', color: '#ffe600' },
-  { min: 28, text: 'MEGA BLAST!', color: '#ff8800' },
-  { min: 40, text: 'SUPERNOVA!', color: '#ff00aa' },
-  { min: 55, text: 'GODLIKE CHAIN!', color: '#e040fb' }
+  { min: 4, text: 'GOOD!', color: '#00f0ff' },
+  { min: 8, text: 'GREAT!', color: '#00ffa3' },
+  { min: 15, text: 'AWESOME!', color: '#ffe600' },
+  { min: 25, text: 'MEGA BLAST!', color: '#ff8800' },
+  { min: 38, text: 'SUPERNOVA!', color: '#ff00aa' },
+  { min: 50, text: 'GODLIKE CHAIN!', color: '#e040fb' }
 ];
 
 // Pentatonic scale frequencies for musical combo escalation

@@ -87,7 +87,6 @@ export class GameState {
 
   handleTap(virtualCoords) {
     if (this.currentState !== GAME_STATES.PLAYING) return;
-    if (!virtualCoords.isInside) return;
 
     // Check if player can use a tap
     if (!this.levelManager.useTap()) {
@@ -97,13 +96,16 @@ export class GameState {
     audio.init();
     audio.playTap();
 
-    // Trigger initial tap explosion
+    // Trigger initial tap explosion with generous reach
     const exp = new Explosion(virtualCoords.x, virtualCoords.y, SPARK_TYPES.NORMAL, 1);
+    exp.maxRadius = 115;
+    exp.duration = 3.0;
+    exp.expandTime = 0.9;
     this.explosions.push(exp);
 
     // Initial tap particles & screen shake
-    this.particles.spawnBurst(virtualCoords.x, virtualCoords.y, '#00f0ff', 12, 180);
-    this.canvasManager.addShake(4, 0.2);
+    this.particles.spawnBurst(virtualCoords.x, virtualCoords.y, '#00f0ff', 16, 220);
+    this.canvasManager.addShake(6, 0.22);
   }
 
   update(dt) {

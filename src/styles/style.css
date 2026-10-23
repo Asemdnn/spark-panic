@@ -48,6 +48,7 @@ html, body {
   left: 0;
   display: block;
   z-index: 1;
+  cursor: crosshair;
 }
 
 #ui-layer {
@@ -215,9 +216,10 @@ html, body {
 }
 
 .screen-overlay.hidden {
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  display: none !important;
 }
 
 .screen-card {
