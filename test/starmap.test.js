@@ -229,4 +229,64 @@ describe('StarMap Interactive Celestial Engine', () => {
     expect(p.trail[0].x).toBeDefined();
     expect(p.trail[0].y).toBeDefined();
   });
+
+  it('should emit and expand solar flare shockwaves from Sol Genesis over time', () => {
+    expect(starMap.solarFlareWaves.length).toBe(0);
+
+    // Advance past solar flare interval (3.6s)
+    starMap.update(3.7);
+    expect(starMap.solarFlareWaves.length).toBe(1);
+    const wave = starMap.solarFlareWaves[0];
+    expect(wave.radius).toBeGreaterThan(110);
+    expect(wave.alpha).toBeGreaterThan(0);
+
+    // Advance further to observe wave expansion
+    const prevRadius = wave.radius;
+    starMap.update(0.5);
+    expect(wave.radius).toBeGreaterThan(prevRadius);
+  });
+
+  it('should execute hyperspace warp transition and trigger onComplete callback', () => {
+    const onComplete = vi.fn();
+    const planet = starMap.planets[3];
+
+    starMap.triggerWarp(planet, onComplete);
+    expect(starMap.warpTransition).toBeDefined();
+    expect(starMap.warpTransition.planet).toBe(planet);
+    expect(starMap.warpTransition.duration).toBe(0.35);
+
+    // Progress halfway
+    starMap.update(0.2);
+    expect(onComplete).not.toHaveBeenCalled();
+    expect(starMap.warpTransition).not.toBeNull();
+
+    // Complete warp
+    starMap.update(0.2);
+    expect(onComplete).toHaveBeenCalledTimes(1);
+    expect(starMap.warpTransition).toBeNull();
+  });
+
+  it('should render ambient background for main menu without throwing', () => {
+    const mockCtx = {
+      save: vi.fn(),
+      restore: vi.fn(),
+      scale: vi.fn(),
+      translate: vi.fn(),
+      rotate: vi.fn(),
+      beginPath: vi.fn(),
+      arc: vi.fn(),
+      fill: vi.fn(),
+      fillRect: vi.fn(),
+      clearRect: vi.fn(),
+      drawImage: vi.fn(),
+      createRadialGradient: vi.fn(() => ({
+        addColorStop: vi.fn()
+      }))
+    };
+
+    expect(() => starMap.renderAmbientBackground(mockCtx)).not.toThrow();
+    expect(mockCtx.save).toHaveBeenCalled();
+    expect(mockCtx.restore).toHaveBeenCalled();
+    expect(mockCtx.fillRect).toHaveBeenCalled();
+  });
 });

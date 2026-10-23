@@ -103,6 +103,8 @@ window.addEventListener('DOMContentLoaded', () => {
     // Render Canvas
     if (gameState.currentState === GAME_STATES.LEVEL_SELECT) {
       gameState.starMap.render(canvasManager.ctx);
+    } else if (gameState.currentState === GAME_STATES.MENU) {
+      gameState.starMap.renderAmbientBackground(canvasManager.ctx);
     } else {
       canvasManager.beginRender();
       gameState.render(canvasManager.ctx);

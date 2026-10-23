@@ -61,6 +61,10 @@ export class StarMap {
 
     // Central Cosmic Star animation
     this.solarPhase = 0;
+    this.solarFlareWaves = [];
+    this.solarFlareTimer = 0;
+    this.ambientRotation = 0;
+    this.warpTransition = null;
 
     // Alien armada orbiters
     this.alienDrones = [];
@@ -186,6 +190,18 @@ export class StarMap {
   focusCurrentObjective() {
     const unlocked = storage.getUnlockedLevel();
     this.focusPlanet(unlocked, 1.15);
+  }
+
+  triggerWarp(planet, onComplete) {
+    this.focusPlanet(planet.level, 1.35);
+    audio.init();
+    audio.playWarp();
+    this.warpTransition = {
+      planet,
+      timer: 0,
+      duration: 0.35,
+      onComplete
+    };
   }
 
   handlePointerDown(clientX, clientY) {
@@ -318,6 +334,43 @@ export class StarMap {
     for (const star of this.stars) {
       star.phase += star.twinkleSpeed * dt;
     }
+
+    // Ambient background rotation
+    this.ambientRotation += dt * 0.025;
+
+    // Solar flare shockwave emissions from Sol Genesis
+    this.solarFlareTimer += dt;
+    if (this.solarFlareTimer >= 3.6) {
+      this.solarFlareTimer = 0;
+      this.solarFlareWaves.push({
+        radius: 110,
+        speed: 400,
+        maxRadius: 2800,
+        alpha: 0.65
+      });
+    }
+
+    // Advance active solar flare waves
+    for (let i = this.solarFlareWaves.length - 1; i >= 0; i--) {
+      const wave = this.solarFlareWaves[i];
+      wave.radius += wave.speed * dt;
+      wave.alpha = Math.max(0, (1 - (wave.radius / wave.maxRadius)) * 0.65);
+      if (wave.radius >= wave.maxRadius || wave.alpha <= 0.01) {
+        this.solarFlareWaves.splice(i, 1);
+      }
+    }
+
+    // Warp jump transition sequence
+    if (this.warpTransition) {
+      this.warpTransition.timer += dt;
+      const progress = Math.min(1, this.warpTransition.timer / this.warpTransition.duration);
+      this.targetZoom = 1.25 + progress * 0.75;
+      if (progress >= 1) {
+        const callback = this.warpTransition.onComplete;
+        this.warpTransition = null;
+        if (callback) callback();
+      }
+    }
   }
 
   render(ctx) {
@@ -327,6 +380,7 @@ export class StarMap {
 
     ctx.save();
     ctx.scale(dpr, dpr);
+    if (ctx.clearRect) ctx.clearRect(0, 0, width, height);
 
     // Deep cosmic space void
     const spaceGrad = ctx.createRadialGradient(
@@ -362,6 +416,9 @@ export class StarMap {
     // 2. Render Central Cosmic Star: Sol Genesis (Galactic Core)
     this.renderCentralStar(ctx);
 
+    // 2.5. Render Expanding Solar Flare Waves
+    this.renderSolarFlareWaves(ctx);
+
     // 3. Render Orbital Tracks
     this.renderOrbitalTracks(ctx);
 
@@ -376,6 +433,89 @@ export class StarMap {
 
     // 7. Render Holographic Targeting Reticle
     this.renderTargetingReticle(ctx);
+
+    ctx.restore();
+
+    // 8. Warp Jump Hyperspace Speed Lines
+    if (this.warpTransition) {
+      const progress = this.warpTransition.timer / this.warpTransition.duration;
+      ctx.save();
+      ctx.scale(dpr, dpr);
+      ctx.translate(width / 2, height / 2);
+      ctx.strokeStyle = `rgba(0, 240, 255, ${progress * 0.75})`;
+      ctx.lineWidth = 2.5;
+      for (let w = 0; w < 36; w++) {
+        const ang = (w / 36) * Math.PI * 2 + (progress * 0.5);
+        const r1 = 80 + (w % 4) * 40;
+        const r2 = r1 + 320 * progress;
+        ctx.beginPath();
+        ctx.moveTo(Math.cos(ang) * r1, Math.sin(ang) * r1);
+        ctx.lineTo(Math.cos(ang) * r2, Math.sin(ang) * r2);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+  }
+
+  renderSolarFlareWaves(ctx) {
+    for (const wave of this.solarFlareWaves) {
+      ctx.beginPath();
+      ctx.arc(0, 0, wave.radius, 0, Math.PI * 2);
+      ctx.strokeStyle = `rgba(255, 200, 60, ${wave.alpha})`;
+      ctx.lineWidth = 2.5;
+      ctx.shadowColor = '#ffaa00';
+      ctx.shadowBlur = 10;
+      ctx.stroke();
+    }
+    ctx.shadowBlur = 0;
+  }
+
+  renderAmbientBackground(ctx) {
+    const width = typeof window !== 'undefined' ? window.innerWidth : 720;
+    const height = typeof window !== 'undefined' ? window.innerHeight : 1280;
+    const dpr = this.canvasManager.dpr || 1;
+
+    ctx.save();
+    ctx.scale(dpr, dpr);
+    if (ctx.clearRect) ctx.clearRect(0, 0, width, height);
+
+    // Deep cosmic space gradient
+    const spaceGrad = ctx.createRadialGradient(
+      width / 2, height / 2, 100,
+      width / 2, height / 2, Math.max(width, height) * 0.8
+    );
+    spaceGrad.addColorStop(0, '#090d24');
+    spaceGrad.addColorStop(0.5, '#050714');
+    spaceGrad.addColorStop(1, '#020308');
+    ctx.fillStyle = spaceGrad;
+    ctx.fillRect(0, 0, width, height);
+
+    // Slowly rotating parallax nebula backdrop
+    if (this.backdropImage && this.backdropImage.complete && this.backdropImage.naturalWidth > 0) {
+      ctx.save();
+      ctx.translate(width / 2, height / 2);
+      ctx.rotate(this.ambientRotation * 0.2);
+      ctx.globalAlpha = 0.45;
+      const bgW = 4800;
+      const bgH = 4800;
+      ctx.drawImage(this.backdropImage, -bgW / 2, -bgH / 2, bgW, bgH);
+      ctx.restore();
+    }
+
+    // Drifting twinkling cosmic stars
+    ctx.save();
+    ctx.translate(width / 2, height / 2);
+    ctx.rotate(this.ambientRotation * 0.4);
+    for (let i = 0; i < Math.min(220, this.stars.length); i++) {
+      const star = this.stars[i];
+      const alpha = star.alpha * (0.6 + Math.sin(star.phase) * 0.4);
+      ctx.fillStyle = star.color;
+      ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
+      ctx.beginPath();
+      ctx.arc(star.x * 0.35, star.y * 0.35, star.size, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
 
     ctx.restore();
   }

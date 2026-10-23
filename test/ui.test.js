@@ -97,4 +97,41 @@ describe('UI Overlay Synchronization', () => {
     expect(badges[0].textContent).toContain('Alien Scout');
     expect(badges[1].textContent).toContain('Alien Dreadnought');
   });
+
+  it('should support Quick Jump sector shortcut pills from main menu', () => {
+    uiController.showMainMenu();
+    const pills = document.querySelectorAll('.shortcut-pill');
+    expect(pills.length).toBe(4);
+
+    // Click Sector III pill
+    const sec3Pill = Array.from(pills).find(p => p.getAttribute('data-sector') === '3');
+    expect(sec3Pill).toBeDefined();
+
+    sec3Pill.click();
+    expect(mockGameState.currentState).toBe(GAME_STATES.LEVEL_SELECT);
+    expect(document.getElementById('overlay-level-select').classList.contains('hidden')).toBe(false);
+
+    // Verify Sector 3 tab became active in navigation header
+    const activeTab = document.querySelector('.sector-tab.active');
+    expect(activeTab).toBeDefined();
+    expect(activeTab.getAttribute('data-sector')).toBe('sector-3');
+  });
+
+  it('should trigger warp sequence when engaging unlocked planet', () => {
+    uiController.showLevelSelect();
+    const briefingEngage = document.getElementById('btn-briefing-engage');
+    expect(briefingEngage).toBeDefined();
+
+    const planet = { level: 1, name: 'Aerilon', sector: 'SECTOR I' };
+    uiController.openPlanetBriefing(planet);
+
+    briefingEngage.click();
+    // Warp sequence initiated
+    expect(mockGameState.starMap.warpTransition).toBeDefined();
+    expect(mockGameState.starMap.warpTransition.planet).toBe(planet);
+
+    // Complete warp
+    mockGameState.starMap.update(0.4);
+    expect(mockGameState.currentState).toBe(GAME_STATES.PLAYING);
+  });
 });

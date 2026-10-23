@@ -78,6 +78,13 @@ export class UIController {
 
           <div class="menu-actions">
             <button id="btn-play-campaign" class="btn btn-primary pulse-btn">DEFEND PLANETS (CAMPAIGN)</button>
+            <div class="menu-sector-shortcuts">
+              <span class="shortcuts-label">QUICK JUMP:</span>
+              <button class="shortcut-pill" data-sector="1" title="Sector I: Inner Sanctuaries">SEC I</button>
+              <button class="shortcut-pill" data-sector="2" title="Sector II: Cryo-Crystal Rim">SEC II</button>
+              <button class="shortcut-pill" data-sector="3" title="Sector III: Outer Maelstrom">SEC III</button>
+              <button class="shortcut-pill" data-sector="4" title="Sector IV: Void & Genesis Core">SEC IV</button>
+            </div>
             <button id="btn-play-endless" class="btn btn-secondary">ENDLESS ALIEN SWARM</button>
             <button id="btn-how-to-play" class="btn btn-outline">GUARDIAN ARCHIVES</button>
           </div>
@@ -333,7 +340,19 @@ export class UIController {
     // Menu Actions
     document.getElementById('btn-play-campaign').addEventListener('click', () => {
       audio.init();
+      audio.playTap();
       this.showLevelSelect();
+    });
+
+    // Quick Jump Sector Shortcuts from Main Menu
+    const shortcutPills = this.container.querySelectorAll('.shortcut-pill');
+    shortcutPills.forEach(pill => {
+      pill.addEventListener('click', (e) => {
+        const sector = parseInt(e.currentTarget.getAttribute('data-sector'), 10);
+        audio.init();
+        audio.playTap();
+        this.showLevelSelect(sector);
+      });
     });
 
     document.getElementById('btn-play-endless').addEventListener('click', () => {
@@ -383,10 +402,20 @@ export class UIController {
         if (this.selectedPlanet) {
           const unlocked = storage.getUnlockedLevel();
           if (this.selectedPlanet.level <= unlocked) {
-            audio.init();
-            audio.playTap();
-            this.hideAllOverlays();
-            this.gameState.startCampaignLevel(this.selectedPlanet.level);
+            briefingEngage.disabled = true;
+            if (this.gameState.starMap && typeof this.gameState.starMap.triggerWarp === 'function') {
+              this.gameState.starMap.triggerWarp(this.selectedPlanet, () => {
+                briefingEngage.disabled = false;
+                this.hideAllOverlays();
+                this.gameState.startCampaignLevel(this.selectedPlanet.level);
+              });
+            } else {
+              briefingEngage.disabled = false;
+              audio.init();
+              audio.playTap();
+              this.hideAllOverlays();
+              this.gameState.startCampaignLevel(this.selectedPlanet.level);
+            }
           }
         }
       });
@@ -594,7 +623,7 @@ export class UIController {
     }
   }
 
-  showLevelSelect() {
+  showLevelSelect(sector = null) {
     this.gameState.currentState = GAME_STATES.LEVEL_SELECT;
     this.hideAllOverlays();
     document.getElementById('overlay-level-select').classList.remove('hidden');
@@ -604,10 +633,31 @@ export class UIController {
 
     const unlocked = storage.getUnlockedLevel();
     if (this.gameState.starMap) {
-      this.gameState.starMap.focusCurrentObjective();
+      if (sector) {
+        this.gameState.starMap.focusSector(sector);
+        // Sync active sector tab in galaxy star map navigation header
+        const sectorTabs = document.querySelectorAll('.sector-tab');
+        sectorTabs.forEach(tab => {
+          if (tab.getAttribute('data-sector') === `sector-${sector}`) {
+            tab.classList.add('active');
+          } else {
+            tab.classList.remove('active');
+          }
+        });
+        const sectorDef = SECTORS[sector - 1] || SECTORS[0];
+        const targetPlanet = PLANETS.find(p => p.level >= sectorDef.range[0] && p.level <= sectorDef.range[1] && p.level === unlocked) ||
+                             PLANETS.find(p => p.level >= sectorDef.range[0] && p.level <= sectorDef.range[1]) ||
+                             PLANETS[0];
+        this.openPlanetBriefing(targetPlanet);
+      } else {
+        this.gameState.starMap.focusCurrentObjective();
+        const currentPlanet = PLANETS.find(p => p.level === unlocked) || PLANETS[0];
+        this.openPlanetBriefing(currentPlanet);
+      }
+    } else {
+      const currentPlanet = PLANETS.find(p => p.level === unlocked) || PLANETS[0];
+      this.openPlanetBriefing(currentPlanet);
     }
-    const currentPlanet = PLANETS.find(p => p.level === unlocked) || PLANETS[0];
-    this.openPlanetBriefing(currentPlanet);
 
     this.renderGalaxyStarMap();
   }

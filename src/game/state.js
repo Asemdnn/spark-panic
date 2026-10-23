@@ -118,6 +118,10 @@ export class GameState {
       return;
     }
 
+    if (this.currentState === GAME_STATES.MENU) {
+      this.starMap.update(dt);
+    }
+
     // Cap delta time to prevent physics anomalies when browser tabs switch
     const cappedDt = Math.min(dt, 0.05);
 
