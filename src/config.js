@@ -459,7 +459,10 @@ export const PLANETS = [
     types: { [SPARK_TYPES.NORMAL]: 20, [SPARK_TYPES.MEGA]: 25, [SPARK_TYPES.SPLITTER]: 25, [SPARK_TYPES.FREEZE]: 10, [SPARK_TYPES.REPULSOR]: 10 },
     tip: 'The ultimate battle! Save the Heart of the Universe from total alien extinction!'
   }
-];
+].map(p => ({
+  ...p,
+  image: `./assets/planets/${p.name.toLowerCase()}.jpg`
+}));
 
 export const LEVELS = PLANETS;
 

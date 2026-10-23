@@ -583,9 +583,13 @@ export class UIController {
     const engageBtn = document.getElementById('btn-briefing-engage');
 
     const sphere = document.getElementById('briefing-planet-sphere');
-    sphere.style.background = planet.gradient;
-    sphere.style.boxShadow = `0 0 20px ${planet.shadowColor}`;
-    sphere.innerHTML = planet.hasRings ? `<div class="planet-ring" style="border-color: ${planet.ringColor};"></div>` : '';
+    const planetImgSrc = planet.image || `./assets/planets/${planet.name.toLowerCase()}.jpg`;
+    sphere.style.boxShadow = `0 0 24px ${planet.shadowColor}`;
+    sphere.style.background = 'transparent';
+    sphere.innerHTML = `
+      <img src="${planetImgSrc}" alt="${planet.name}" class="briefing-planet-img" onerror="this.style.display='none'; this.parentElement.style.background='${planet.gradient}';" />
+      ${planet.hasRings ? `<div class="planet-ring" style="border-color: ${planet.ringColor};"></div>` : ''}
+    `;
 
     document.getElementById('briefing-sector-tag').textContent = `${planet.sector}: ${planet.sectorName}`;
     document.getElementById('briefing-planet-title').textContent = `Planet ${planet.name} ${!isUnlocked ? '(LOCKED)' : ''}`;

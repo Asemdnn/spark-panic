@@ -161,6 +161,8 @@ describe('StarMap Interactive Celestial Engine', () => {
       strokeRect: vi.fn(),
       fillText: vi.fn(),
       setLineDash: vi.fn(),
+      clip: vi.fn(),
+      drawImage: vi.fn(),
       createRadialGradient: vi.fn(() => ({
         addColorStop: vi.fn()
       }))
@@ -170,5 +172,42 @@ describe('StarMap Interactive Celestial Engine', () => {
     expect(mockCtx.save).toHaveBeenCalled();
     expect(mockCtx.restore).toHaveBeenCalled();
     expect(mockCtx.fillText).toHaveBeenCalled();
+  });
+
+  it('should draw textured planet when planet image is loaded', () => {
+    const mockCtx = {
+      save: vi.fn(),
+      restore: vi.fn(),
+      scale: vi.fn(),
+      translate: vi.fn(),
+      rotate: vi.fn(),
+      beginPath: vi.fn(),
+      arc: vi.fn(),
+      ellipse: vi.fn(),
+      moveTo: vi.fn(),
+      lineTo: vi.fn(),
+      stroke: vi.fn(),
+      fill: vi.fn(),
+      fillRect: vi.fn(),
+      strokeRect: vi.fn(),
+      fillText: vi.fn(),
+      setLineDash: vi.fn(),
+      clip: vi.fn(),
+      drawImage: vi.fn(),
+      createRadialGradient: vi.fn(() => ({
+        addColorStop: vi.fn()
+      }))
+    };
+
+    // Simulate loaded image
+    starMap.planetImages[1] = {
+      complete: true,
+      naturalWidth: 512,
+      naturalHeight: 512
+    };
+
+    expect(() => starMap.render(mockCtx)).not.toThrow();
+    expect(mockCtx.clip).toHaveBeenCalled();
+    expect(mockCtx.drawImage).toHaveBeenCalled();
   });
 });

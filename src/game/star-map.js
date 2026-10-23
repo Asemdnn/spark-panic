@@ -71,6 +71,16 @@ export class StarMap {
       this.backdropImage = new Image();
       this.backdropImage.src = './assets/galaxy-map-backdrop.jpg';
     }
+
+    // Preload planetary artwork textures
+    this.planetImages = {};
+    if (typeof Image !== 'undefined') {
+      for (const p of this.planets) {
+        const img = new Image();
+        img.src = p.image || `./assets/planets/${p.name.toLowerCase()}.jpg`;
+        this.planetImages[p.level] = img;
+      }
+    }
   }
 
   initCosmicStars() {
@@ -309,14 +319,14 @@ export class StarMap {
     ctx.fillStyle = spaceGrad;
     ctx.fillRect(0, 0, width, height);
 
-    // Parallax backdrop nebula
+    // Parallax Master Universe Star Map Backdrop (Nano Banana Artwork)
     if (this.backdropImage && this.backdropImage.complete && this.backdropImage.naturalWidth > 0) {
       ctx.save();
-      ctx.globalAlpha = 0.28;
-      const bgW = 4200;
-      const bgH = 4200;
-      const px = (width / 2) - (this.cameraX * 0.12) - (bgW / 2);
-      const py = (height / 2) - (this.cameraY * 0.12) - (bgH / 2);
+      ctx.globalAlpha = 0.55;
+      const bgW = 5200;
+      const bgH = 5200;
+      const px = (width / 2) - (this.cameraX * 0.15) - (bgW / 2);
+      const py = (height / 2) - (this.cameraY * 0.15) - (bgH / 2);
       ctx.drawImage(this.backdropImage, px, py, bgW, bgH);
       ctx.restore();
     }
@@ -477,23 +487,47 @@ export class StarMap {
       ctx.fillStyle = haloGrad;
       ctx.fill();
 
-      // 2. Planet Sphere with 3D Spherical Light Gradient
+      // 2. Planet Sphere (Nano Banana Artwork Texture with 3D Sunward Lighting)
       const lightOffsetX = Math.cos(sunAngle) * (r * 0.45);
       const lightOffsetY = Math.sin(sunAngle) * (r * 0.45);
 
-      const sphereGrad = ctx.createRadialGradient(
-        lightOffsetX, lightOffsetY, r * 0.1,
-        0, 0, r
-      );
-      sphereGrad.addColorStop(0, isUnlocked ? pal.light : '#94a3b8');
-      sphereGrad.addColorStop(0.35, isUnlocked ? pal.mid : '#475569');
-      sphereGrad.addColorStop(0.75, isUnlocked ? pal.dark : '#1e293b');
-      sphereGrad.addColorStop(1, '#020611');
+      const img = this.planetImages && this.planetImages[p.level];
+      if (img && img.complete && img.naturalWidth > 0) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(0, 0, r, 0, Math.PI * 2);
+        ctx.clip();
+        ctx.drawImage(img, -r, -r, r * 2, r * 2);
 
-      ctx.beginPath();
-      ctx.arc(0, 0, r, 0, Math.PI * 2);
-      ctx.fillStyle = sphereGrad;
-      ctx.fill();
+        // Dynamic 3D sunward lighting overlay relative to Sol Genesis
+        const shadowGrad = ctx.createRadialGradient(
+          lightOffsetX, lightOffsetY, r * 0.15,
+          0, 0, r
+        );
+        shadowGrad.addColorStop(0, 'rgba(255, 255, 255, 0.22)');
+        shadowGrad.addColorStop(0.5, 'transparent');
+        shadowGrad.addColorStop(0.82, 'rgba(3, 8, 20, 0.6)');
+        shadowGrad.addColorStop(1, 'rgba(2, 5, 14, 0.92)');
+
+        ctx.fillStyle = shadowGrad;
+        ctx.fill();
+        ctx.restore();
+      } else {
+        // Procedural 3D Sphere Fallback
+        const sphereGrad = ctx.createRadialGradient(
+          lightOffsetX, lightOffsetY, r * 0.1,
+          0, 0, r
+        );
+        sphereGrad.addColorStop(0, isUnlocked ? pal.light : '#94a3b8');
+        sphereGrad.addColorStop(0.35, isUnlocked ? pal.mid : '#475569');
+        sphereGrad.addColorStop(0.75, isUnlocked ? pal.dark : '#1e293b');
+        sphereGrad.addColorStop(1, '#020611');
+
+        ctx.beginPath();
+        ctx.arc(0, 0, r, 0, Math.PI * 2);
+        ctx.fillStyle = sphereGrad;
+        ctx.fill();
+      }
 
       // 3. Planetary Rings (for ringed worlds)
       if (p.hasRings) {
