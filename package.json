@@ -1,0 +1,25 @@
+{
+  "name": "spark-panic",
+  "version": "1.0.0",
+  "description": "Spark Panic - Hyper-casual Chain Reaction Game for YouTube Playables",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest run"
+  },
+  "keywords": [
+    "game",
+    "chain-reaction",
+    "youtube-playables",
+    "html5-canvas"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "esbuild": "^0.28.2",
+    "vite": "^8.3.5",
+    "vitest": "^5.0.5"
+  }
+}
