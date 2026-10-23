@@ -1,6 +1,6 @@
-// Spark Panic - Responsive HTML/CSS UI & HUD Controller
+// Guardian of the Universe - Responsive HTML/CSS UI & Planetary HUD Controller
 
-import { LEVELS } from '../config.js';
+import { PLANETS, LEVELS, SPARK_CONFIG, SPARK_TYPES } from '../config.js';
 import { GAME_STATES } from '../game/state.js';
 import { storage } from '../engine/storage.js';
 import { audio } from '../engine/audio.js';
@@ -20,15 +20,15 @@ export class UIController {
       <!-- TOP IN-GAME HUD -->
       <div id="hud-top" class="hud-top hidden">
         <div class="hud-left">
-          <div class="hud-badge" id="hud-level-badge">LVL 1</div>
+          <div class="hud-badge" id="hud-level-badge">🪐 PLANET AERILON</div>
           <div class="hud-taps-container" id="hud-taps-box">
-            <span class="hud-label">TAPS</span>
+            <span class="hud-label">CHARGES</span>
             <div id="hud-taps-icons" class="hud-taps-icons"></div>
           </div>
         </div>
 
         <div class="hud-center">
-          <div class="hud-target-text" id="hud-target-label">0 / 0</div>
+          <div class="hud-target-text" id="hud-target-label">ALIENS PURGED: 0 / 0</div>
           <div class="hud-progress-bar-bg">
             <div class="hud-progress-bar-fill" id="hud-progress-fill"></div>
           </div>
@@ -36,7 +36,7 @@ export class UIController {
 
         <div class="hud-right">
           <div class="hud-score-box">
-            <span class="hud-label">SCORE</span>
+            <span class="hud-label">COSMIC SCORE</span>
             <span class="hud-score-val" id="hud-score-val">0</span>
           </div>
           <button id="btn-sound-toggle" class="icon-btn" aria-label="Toggle Sound" title="Sound (M)">🔊</button>
@@ -47,11 +47,12 @@ export class UIController {
       <!-- MAIN MENU OVERLAY -->
       <div id="overlay-menu" class="screen-overlay">
         <div class="screen-card">
+          <div class="cosmic-emblem">🌌 ⚔️ 🪐</div>
           <div class="title-logo">
-            <span class="title-spark">SPARK</span>
-            <span class="title-panic">PANIC</span>
+            <span class="title-spark">GUARDIAN</span>
+            <span class="title-panic">OF THE UNIVERSE</span>
           </div>
-          <div class="title-tagline">NEON CHAIN REACTION</div>
+          <div class="title-tagline">DEFEND THE GALAXY FROM THE ALIEN INVASION</div>
 
           <div class="menu-stats-row">
             <div class="stat-pill">⭐ <span id="menu-total-stars">0 / 60</span></div>
@@ -59,77 +60,83 @@ export class UIController {
           </div>
 
           <div class="menu-actions">
-            <button id="btn-play-campaign" class="btn btn-primary pulse-btn">CAMPAIGN MODE</button>
-            <button id="btn-play-endless" class="btn btn-secondary">ENDLESS ARCADE</button>
-            <button id="btn-how-to-play" class="btn btn-outline">HOW TO PLAY</button>
+            <button id="btn-play-campaign" class="btn btn-primary pulse-btn">DEFEND PLANETS (CAMPAIGN)</button>
+            <button id="btn-play-endless" class="btn btn-secondary">ENDLESS ALIEN SWARM</button>
+            <button id="btn-how-to-play" class="btn btn-outline">GUARDIAN ARCHIVES</button>
           </div>
         </div>
       </div>
 
-      <!-- LEVEL SELECT OVERLAY -->
+      <!-- GALAXY STAR MAP (PLANETS) OVERLAY -->
       <div id="overlay-level-select" class="screen-overlay hidden">
-        <div class="screen-card wide-card">
+        <div class="screen-card wide-card galaxy-map-card">
           <div class="modal-header">
-            <h2 class="neon-heading">SELECT LEVEL</h2>
-            <button id="btn-levels-back" class="icon-btn">✕</button>
+            <div>
+              <h2 class="neon-heading">GALAXY STAR MAP</h2>
+              <p class="galaxy-subtitle">Choose a planet to liberate from the alien armada</p>
+            </div>
+            <button id="btn-levels-back" class="icon-btn" title="Back to Main Menu">✕</button>
           </div>
-          <div id="levels-grid" class="levels-grid"></div>
+          <div id="levels-grid" class="planets-galaxy-grid"></div>
         </div>
       </div>
 
-      <!-- LEVEL CLEARED OVERLAY -->
+      <!-- LEVEL CLEARED (PLANET DEFENDED) OVERLAY -->
       <div id="overlay-victory" class="screen-overlay hidden">
         <div class="screen-card">
-          <div class="celebration-title">LEVEL CLEARED!</div>
+          <div class="planet-badge-icon" id="victory-planet-icon">🪐</div>
+          <div class="celebration-title">PLANET DEFENDED!</div>
+          <p class="celebration-subtitle" id="victory-planet-subtitle">Planet successfully liberated!</p>
           <div id="victory-stars" class="stars-display"></div>
 
           <div class="summary-stats">
             <div class="stat-row">
-              <span>Sparks Popped:</span>
-              <strong id="victory-popped-val">0 / 0</strong>
+              <span>Aliens Purged:</span>
+              <strong id="victory-popped-val" class="text-neon-cyan">0 / 0</strong>
             </div>
             <div class="stat-row">
-              <span>Max Combo:</span>
-              <strong id="victory-combo-val" class="text-neon-cyan">x0</strong>
+              <span>Max Guardian Combo:</span>
+              <strong id="victory-combo-val" class="text-neon-gold">x0</strong>
             </div>
             <div class="stat-row">
-              <span>Level Score:</span>
-              <strong id="victory-score-val" class="text-neon-gold">0</strong>
+              <span>Mission Score:</span>
+              <strong id="victory-score-val" class="text-neon-green">0</strong>
             </div>
           </div>
 
           <div class="modal-actions">
-            <button id="btn-next-level" class="btn btn-primary">NEXT LEVEL ➔</button>
-            <button id="btn-replay-level" class="btn btn-secondary">REPLAY ⟲</button>
-            <button id="btn-victory-levels" class="btn btn-outline">LEVELS ☰</button>
+            <button id="btn-next-level" class="btn btn-primary">NEXT PLANET ➔</button>
+            <button id="btn-replay-level" class="btn btn-secondary">RETRY DEFENSE ⟲</button>
+            <button id="btn-victory-levels" class="btn btn-outline">GALAXY MAP ☰</button>
           </div>
         </div>
       </div>
 
-      <!-- LEVEL FAILED OVERLAY -->
+      <!-- LEVEL FAILED (PLANET OVERRUN) OVERLAY -->
       <div id="overlay-defeat" class="screen-overlay hidden">
         <div class="screen-card">
-          <div class="defeat-title">CHAIN BROKE!</div>
-          <p class="defeat-subtitle">Target sparks not reached</p>
+          <div class="defeat-badge-icon">⚠️ 🛸 💥</div>
+          <div class="defeat-title">PLANET OVERRUN!</div>
+          <p class="defeat-subtitle" id="defeat-planet-subtitle">Alien armada breached planetary defenses</p>
 
           <div class="summary-stats">
             <div class="stat-row">
-              <span>Popped:</span>
+              <span>Aliens Purged:</span>
               <strong id="defeat-popped-val" class="text-neon-magenta">0 / 0</strong>
             </div>
             <div class="stat-row">
-              <span>Target Needed:</span>
+              <span>Required to Save:</span>
               <strong id="defeat-target-val">0</strong>
             </div>
             <div class="stat-row">
-              <span>Score:</span>
+              <span>Cosmic Score:</span>
               <strong id="defeat-score-val">0</strong>
             </div>
           </div>
 
           <div class="modal-actions">
-            <button id="btn-defeat-retry" class="btn btn-primary">TRY AGAIN ⟲</button>
-            <button id="btn-defeat-levels" class="btn btn-outline">LEVELS ☰</button>
+            <button id="btn-defeat-retry" class="btn btn-primary">RETRY DEFENSE ⟲</button>
+            <button id="btn-defeat-levels" class="btn btn-outline">GALAXY MAP ☰</button>
           </div>
         </div>
       </div>
@@ -137,26 +144,26 @@ export class UIController {
       <!-- ENDLESS GAME OVER OVERLAY -->
       <div id="overlay-endless-over" class="screen-overlay hidden">
         <div class="screen-card">
-          <div class="defeat-title">OUT OF TAPS!</div>
-          <div id="endless-new-high" class="badge-new-record hidden">★ NEW HIGH SCORE! ★</div>
+          <div class="defeat-title">OUT OF CHARGES!</div>
+          <div id="endless-new-high" class="badge-new-record hidden">★ NEW GALAXY RECORD! ★</div>
 
           <div class="summary-stats">
             <div class="stat-row">
-              <span>Final Score:</span>
+              <span>Total Aliens Destroyed:</span>
               <strong id="endless-final-score" class="text-neon-gold">0</strong>
             </div>
             <div class="stat-row">
-              <span>Wave Reached:</span>
+              <span>Swarm Wave Reached:</span>
               <strong id="endless-final-wave" class="text-neon-cyan">Wave 1</strong>
             </div>
             <div class="stat-row">
-              <span>Best Combo:</span>
+              <span>Peak Guardian Combo:</span>
               <strong id="endless-final-combo" class="text-neon-green">x0</strong>
             </div>
           </div>
 
           <div class="modal-actions">
-            <button id="btn-endless-retry" class="btn btn-primary">PLAY AGAIN ⟲</button>
+            <button id="btn-endless-retry" class="btn btn-primary">DEFEND AGAIN ⟲</button>
             <button id="btn-endless-menu" class="btn btn-outline">MAIN MENU</button>
           </div>
         </div>
@@ -165,20 +172,20 @@ export class UIController {
       <!-- PAUSE OVERLAY -->
       <div id="overlay-pause" class="screen-overlay hidden">
         <div class="screen-card">
-          <h2 class="neon-heading">PAUSED</h2>
+          <h2 class="neon-heading">TACTICAL PAUSE</h2>
           <div class="modal-actions">
-            <button id="btn-resume" class="btn btn-primary">RESUME ▶</button>
-            <button id="btn-pause-restart" class="btn btn-secondary">RESTART ⟲</button>
-            <button id="btn-pause-menu" class="btn btn-outline">MAIN MENU</button>
+            <button id="btn-resume" class="btn btn-primary">RESUME DEFENSE ▶</button>
+            <button id="btn-pause-restart" class="btn btn-secondary">RESTART PLANET ⟲</button>
+            <button id="btn-pause-menu" class="btn btn-outline">GALAXY MAP</button>
           </div>
         </div>
       </div>
 
-      <!-- HOW TO PLAY GUIDE MODAL -->
+      <!-- GUARDIAN ARCHIVES GUIDE MODAL -->
       <div id="overlay-how-to-play" class="screen-overlay hidden">
         <div class="screen-card wide-card guide-card">
           <div class="modal-header">
-            <h2 class="neon-heading">HOW TO PLAY</h2>
+            <h2 class="neon-heading">GUARDIAN ARCHIVES</h2>
             <button id="btn-guide-back" class="icon-btn">✕</button>
           </div>
 
@@ -186,52 +193,60 @@ export class UIController {
             <div class="guide-item">
               <div class="guide-bullet bullet-cyan"></div>
               <div>
-                <strong>Tap to Trigger</strong>
-                <p>Tap anywhere inside the arena to create an expanding shockwave.</p>
+                <strong>Guardian Energy Nova</strong>
+                <p>Tap anywhere in orbital space to detonate an expanding energy shockwave.</p>
+              </div>
+            </div>
+
+            <div class="guide-item">
+              <div class="guide-bullet bullet-cyan"></div>
+              <div>
+                <strong>Alien Scout (Cyan)</strong>
+                <p>Fast recon drones that form the vanguard of the alien armada.</p>
               </div>
             </div>
 
             <div class="guide-item">
               <div class="guide-bullet bullet-yellow"></div>
               <div>
-                <strong>Mega Spark</strong>
-                <p>Golden orbs cause huge screen-clearing explosions with double radius.</p>
+                <strong>Alien Dreadnought (Gold)</strong>
+                <p>Heavily armored flagship. When destroyed, triggers a massive screen-clearing nova blast!</p>
               </div>
             </div>
 
             <div class="guide-item">
               <div class="guide-bullet bullet-magenta"></div>
               <div>
-                <strong>Splitter Spark</strong>
-                <p>Launches 4 high-speed darts that ignite distant clusters of sparks.</p>
+                <strong>Alien Interceptor (Magenta)</strong>
+                <p>Swarm warship. When destroyed, fires 4 high-speed plasma darts across the galaxy.</p>
               </div>
             </div>
 
             <div class="guide-item">
               <div class="guide-bullet bullet-mint"></div>
               <div>
-                <strong>Frost Spark</strong>
-                <p>Emits an icy blast that slows surrounding sparks down by 70%.</p>
+                <strong>Alien Cryo-Ship (Mint)</strong>
+                <p>Emits a cold stasis blast slowing surrounding alien invaders down by 75%.</p>
               </div>
             </div>
 
             <div class="guide-item">
               <div class="guide-bullet bullet-violet"></div>
               <div>
-                <strong>Phase Spark</strong>
-                <p>Detonates, then pulses a second delayed shockwave ring.</p>
+                <strong>Alien Phase-Shifter (Violet)</strong>
+                <p>Warp vessel that triggers a secondary delayed shockwave across time and space.</p>
               </div>
             </div>
           </div>
 
-          <button id="btn-guide-close" class="btn btn-primary" style="margin-top: 18px;">GOT IT!</button>
+          <button id="btn-guide-close" class="btn btn-primary" style="margin-top: 18px;">ENTER BATTLE!</button>
         </div>
       </div>
     `;
   }
 
   bindEvents() {
-    // Menu
+    // Menu Actions
     document.getElementById('btn-play-campaign').addEventListener('click', () => {
       audio.init();
       this.showLevelSelect();
@@ -283,14 +298,14 @@ export class UIController {
     });
 
     document.getElementById('btn-pause-menu').addEventListener('click', () => {
-      this.showMainMenu();
+      this.showLevelSelect();
     });
 
     // Victory Modal Buttons
     document.getElementById('btn-next-level').addEventListener('click', () => {
       const nextLvl = this.gameState.levelManager.currentLevel + 1;
       this.hideAllOverlays();
-      if (nextLvl <= LEVELS.length) {
+      if (nextLvl <= PLANETS.length) {
         this.gameState.startCampaignLevel(nextLvl);
       } else {
         this.showLevelSelect();
@@ -333,7 +348,7 @@ export class UIController {
     document.getElementById('overlay-menu').classList.remove('hidden');
     document.getElementById('hud-top').classList.add('hidden');
 
-    document.getElementById('menu-total-stars').textContent = `${storage.getTotalStars()} / ${LEVELS.length * 3}`;
+    document.getElementById('menu-total-stars').textContent = `${storage.getTotalStars()} / ${PLANETS.length * 3}`;
     document.getElementById('menu-endless-high').textContent = storage.getData().endlessHighScore.toLocaleString();
   }
 
@@ -352,34 +367,41 @@ export class UIController {
 
     const unlocked = storage.getUnlockedLevel();
 
-    LEVELS.forEach((lvl) => {
-      const isUnlocked = lvl.level <= unlocked;
-      const stars = storage.getLevelStars(lvl.level);
+    PLANETS.forEach((planet) => {
+      const isUnlocked = planet.level <= unlocked;
+      const stars = storage.getLevelStars(planet.level);
 
-      const item = document.createElement('button');
-      item.className = `level-node ${isUnlocked ? 'unlocked' : 'locked'}`;
+      const card = document.createElement('div');
+      card.className = `planet-card ${isUnlocked ? 'unlocked' : 'locked'}`;
 
-      if (isUnlocked) {
-        let starsStr = '';
-        for (let s = 1; s <= 3; s++) {
-          starsStr += s <= stars ? '★' : '☆';
-        }
-        item.innerHTML = `
-          <div class="level-num">${lvl.level}</div>
-          <div class="level-stars">${starsStr}</div>
-        `;
-        item.addEventListener('click', () => {
-          this.hideAllOverlays();
-          this.gameState.startCampaignLevel(lvl.level);
-        });
-      } else {
-        item.innerHTML = `
-          <div class="level-lock">🔒</div>
-          <div class="level-num dim">${lvl.level}</div>
-        `;
+      let starsHtml = '';
+      for (let s = 1; s <= 3; s++) {
+        starsHtml += `<span class="planet-star ${s <= stars ? 'earned' : 'empty'}">★</span>`;
       }
 
-      grid.appendChild(item);
+      card.innerHTML = `
+        <div class="planet-visual-container">
+          <div class="planet-sphere" style="background: ${planet.gradient}; box-shadow: 0 0 20px ${planet.shadowColor};">
+            ${planet.hasRings ? `<div class="planet-ring" style="border-color: ${planet.ringColor};"></div>` : ''}
+          </div>
+          ${!isUnlocked ? '<div class="planet-shield-lock">🔒</div>' : ''}
+        </div>
+        <div class="planet-meta">
+          <div class="planet-num">PLANET ${planet.level}</div>
+          <div class="planet-title">${planet.name}</div>
+          <div class="planet-type">${planet.typeDesc}</div>
+          <div class="planet-stars-row">${starsHtml}</div>
+        </div>
+      `;
+
+      if (isUnlocked) {
+        card.addEventListener('click', () => {
+          this.hideAllOverlays();
+          this.gameState.startCampaignLevel(planet.level);
+        });
+      }
+
+      grid.appendChild(card);
     });
   }
 
@@ -408,16 +430,23 @@ export class UIController {
 
       const isCampaign = this.gameState.levelManager.mode === 'CAMPAIGN';
 
-      // Badge
+      // Badge: Planet Name or Wave
       const badge = document.getElementById('hud-level-badge');
-      badge.textContent = isCampaign ? `LVL ${this.gameState.levelManager.currentLevel}` : `WAVE ${this.gameState.levelManager.endlessWave}`;
+      if (isCampaign) {
+        const planetIndex = this.gameState.levelManager.currentLevel - 1;
+        const currentPlanet = PLANETS[planetIndex] || PLANETS[0];
+        badge.innerHTML = `🪐 <strong>${currentPlanet.name.toUpperCase()}</strong>`;
+      } else {
+        badge.innerHTML = `🛸 <strong>WAVE ${this.gameState.levelManager.endlessWave}</strong>`;
+      }
 
-      // Taps
+      // Guardian Nova Charges
       const tapsContainer = document.getElementById('hud-taps-icons');
       tapsContainer.innerHTML = '';
       for (let i = 0; i < this.gameState.levelManager.tapsRemaining; i++) {
         const dot = document.createElement('span');
         dot.className = 'tap-dot';
+        dot.title = 'Guardian Strike Ready';
         tapsContainer.appendChild(dot);
       }
 
@@ -428,13 +457,13 @@ export class UIController {
       if (isCampaign) {
         const popped = this.gameState.levelManager.poppedSparks;
         const target = this.gameState.levelManager.target;
-        targetLabel.textContent = `${popped} / ${target}`;
+        targetLabel.textContent = `ALIENS PURGED: ${popped} / ${target}`;
         const pct = Math.min(100, (popped / target) * 100);
         progressFill.style.width = `${pct}%`;
         progressFill.style.background = popped >= target ? 'linear-gradient(90deg, #00ffa3, #ffe600)' : 'linear-gradient(90deg, #00f0ff, #00ffa3)';
       } else {
         const popped = this.gameState.levelManager.poppedSparks;
-        targetLabel.textContent = `POPPED: ${popped}`;
+        targetLabel.textContent = `ALIENS PURGED: ${popped}`;
         progressFill.style.width = '100%';
         progressFill.style.background = 'linear-gradient(90deg, #ff00aa, #ffe600)';
       }
@@ -476,6 +505,10 @@ export class UIController {
       this.hideAllOverlays();
       victory.classList.remove('hidden');
 
+      const planetIndex = this.gameState.levelManager.currentLevel - 1;
+      const planet = PLANETS[planetIndex] || PLANETS[0];
+
+      document.getElementById('victory-planet-subtitle').textContent = `You saved Planet ${planet.name} from the alien armada!`;
       const popped = this.gameState.levelManager.poppedSparks;
       const total = this.gameState.levelManager.totalSparks;
       document.getElementById('victory-popped-val').textContent = `${popped} / ${total} (${Math.round((popped / total) * 100)}%)`;
@@ -493,6 +526,10 @@ export class UIController {
     } else if (state === GAME_STATES.LEVEL_FAILED && defeat.classList.contains('hidden')) {
       this.hideAllOverlays();
       defeat.classList.remove('hidden');
+
+      const planetIndex = this.gameState.levelManager.currentLevel - 1;
+      const planet = PLANETS[planetIndex] || PLANETS[0];
+      document.getElementById('defeat-planet-subtitle').textContent = `Alien armada breached planetary defenses on ${planet.name}`;
 
       const popped = this.gameState.levelManager.poppedSparks;
       const total = this.gameState.levelManager.totalSparks;

@@ -1,7 +1,7 @@
 {
-  "name": "spark-panic",
+  "name": "guardian-of-the-universe",
   "version": "1.0.0",
-  "description": "Spark Panic - Hyper-casual Chain Reaction Game for YouTube Playables",
+  "description": "Guardian of the Universe - Cosmic Chain Reaction Planetary Defense Game for YouTube Playables",
   "type": "module",
   "scripts": {
     "dev": "vite",
