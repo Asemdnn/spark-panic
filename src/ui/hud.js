@@ -47,6 +47,9 @@ export class UIController {
       <!-- MAIN MENU OVERLAY -->
       <div id="overlay-menu" class="screen-overlay">
         <div class="screen-card">
+          <div class="menu-top-bar">
+            <button id="btn-menu-sound-toggle" class="icon-btn" aria-label="Toggle Sound" title="Sound (M)">🔊</button>
+          </div>
           <div class="menu-hero-banner-container">
             <img src="./assets/game-cover.jpg" alt="Guardian of the Universe Key Art" class="menu-hero-banner" />
             <div class="hero-overlay-gradient"></div>
@@ -60,6 +63,16 @@ export class UIController {
           <div class="menu-stats-row">
             <div class="stat-pill">⭐ <span id="menu-total-stars">0 / 60</span></div>
             <div class="stat-pill">🏆 <span id="menu-endless-high">0</span></div>
+          </div>
+
+          <div class="menu-campaign-progress-box">
+            <div class="menu-progress-header">
+              <span class="hud-label">GALAXY DEFENSE STATUS</span>
+              <strong id="menu-defense-pct" class="text-neon-cyan">0 / 20 WORLDS (0%)</strong>
+            </div>
+            <div class="hud-progress-bar-bg">
+              <div class="hud-progress-bar-fill" id="menu-defense-bar"></div>
+            </div>
           </div>
 
           <div class="menu-actions">
@@ -125,9 +138,21 @@ export class UIController {
             </div>
           </div>
 
+          <div class="briefing-threat-section">
+            <span class="threat-label">SCANNING HOSTILE FLEET:</span>
+            <div id="briefing-threat-badges" class="threat-badges-row"></div>
+          </div>
+
           <p class="briefing-tip" id="briefing-tip">Tip: Tap near alien clusters to trigger cascading energy waves.</p>
 
           <button id="btn-briefing-engage" class="btn btn-primary pulse-btn">ENGAGE ALIEN ARMADA ➔</button>
+        </div>
+
+        <!-- FLOATING QUICK NAVIGATION & ZOOM DOCK -->
+        <div class="galaxy-floating-dock">
+          <button id="btn-galaxy-zoom-in" class="galaxy-dock-btn" title="Zoom In (+)">＋</button>
+          <button id="btn-galaxy-zoom-out" class="galaxy-dock-btn" title="Zoom Out (−)">−</button>
+          <button id="btn-galaxy-recenter" class="galaxy-dock-btn" title="Re-center Sol Genesis">☀️</button>
         </div>
 
         <!-- Hidden Accessible Semantic Planetary Registry for screen-readers and test compatibility -->
@@ -397,12 +422,52 @@ export class UIController {
       });
     });
 
-    // Sound toggle
+    // Sound toggle (HUD in-game)
     const soundBtn = document.getElementById('btn-sound-toggle');
     soundBtn.addEventListener('click', () => {
       const isMuted = audio.toggleMute();
       soundBtn.textContent = isMuted ? '🔇' : '🔊';
+      const menuSoundBtn = document.getElementById('btn-menu-sound-toggle');
+      if (menuSoundBtn) menuSoundBtn.textContent = isMuted ? '🔇' : '🔊';
     });
+
+    // Sound toggle (Main Menu)
+    const menuSoundBtn = document.getElementById('btn-menu-sound-toggle');
+    if (menuSoundBtn) {
+      menuSoundBtn.addEventListener('click', () => {
+        const isMuted = audio.toggleMute();
+        menuSoundBtn.textContent = isMuted ? '🔇' : '🔊';
+        soundBtn.textContent = isMuted ? '🔇' : '🔊';
+      });
+    }
+
+    // Galaxy Quick Navigation & Zoom Dock Controls
+    const zoomInBtn = document.getElementById('btn-galaxy-zoom-in');
+    if (zoomInBtn) {
+      zoomInBtn.addEventListener('click', () => {
+        audio.init();
+        audio.playTap();
+        if (this.gameState.starMap) this.gameState.starMap.handleWheel(-140);
+      });
+    }
+
+    const zoomOutBtn = document.getElementById('btn-galaxy-zoom-out');
+    if (zoomOutBtn) {
+      zoomOutBtn.addEventListener('click', () => {
+        audio.init();
+        audio.playTap();
+        if (this.gameState.starMap) this.gameState.starMap.handleWheel(140);
+      });
+    }
+
+    const recenterBtn = document.getElementById('btn-galaxy-recenter');
+    if (recenterBtn) {
+      recenterBtn.addEventListener('click', () => {
+        audio.init();
+        audio.playTap();
+        if (this.gameState.starMap) this.gameState.starMap.focusCore();
+      });
+    }
 
     // Pause toggle
     document.getElementById('btn-pause').addEventListener('click', () => {
@@ -470,8 +535,37 @@ export class UIController {
     document.getElementById('overlay-menu').classList.remove('hidden');
     document.getElementById('hud-top').classList.add('hidden');
 
-    document.getElementById('menu-total-stars').textContent = `${storage.getTotalStars()} / ${PLANETS.length * 3}`;
+    const totalStars = storage.getTotalStars();
+    const maxStars = PLANETS.length * 3;
+    document.getElementById('menu-total-stars').textContent = `${totalStars} / ${maxStars}`;
     document.getElementById('menu-endless-high').textContent = storage.getData().endlessHighScore.toLocaleString();
+
+    // Sync sound button icons
+    const isMuted = audio.isMuted;
+    const soundIcons = ['btn-sound-toggle', 'btn-menu-sound-toggle'];
+    soundIcons.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = isMuted ? '🔇' : '🔊';
+    });
+
+    const unlocked = storage.getUnlockedLevel();
+    const cleared = Math.max(0, unlocked - 1);
+    const pct = Math.round((cleared / PLANETS.length) * 100);
+    const pctEl = document.getElementById('menu-defense-pct');
+    const barEl = document.getElementById('menu-defense-bar');
+    if (pctEl) pctEl.textContent = `${cleared} / ${PLANETS.length} WORLDS (${pct}%)`;
+    if (barEl) barEl.style.width = `${pct}%`;
+
+    const campaignBtn = document.getElementById('btn-play-campaign');
+    if (campaignBtn) {
+      if (cleared > 0 && cleared < PLANETS.length) {
+        campaignBtn.textContent = `CONTINUE CAMPAIGN (PLANET ${unlocked}) ➔`;
+      } else if (cleared >= PLANETS.length) {
+        campaignBtn.textContent = `GALAXY LIBERATED (REPLAY) ★`;
+      } else {
+        campaignBtn.textContent = `DEFEND PLANETS (CAMPAIGN)`;
+      }
+    }
   }
 
   showLevelSelect() {
@@ -605,6 +699,23 @@ export class UIController {
     document.getElementById('briefing-tip').textContent = isUnlocked 
       ? planet.tip 
       : `🔒 Defend Planet ${planet.level - 1} first to breach the alien blockade around ${planet.name}.`;
+
+    // Hostile armada threat composition breakdown
+    const threatContainer = document.getElementById('briefing-threat-badges');
+    if (threatContainer) {
+      threatContainer.innerHTML = '';
+      if (planet.types) {
+        Object.entries(planet.types).forEach(([type, count]) => {
+          const cfg = SPARK_CONFIG[type];
+          if (cfg && count > 0) {
+            const badge = document.createElement('span');
+            badge.className = `threat-badge threat-${type.toLowerCase()}`;
+            badge.textContent = `${cfg.name}: ${count}`;
+            threatContainer.appendChild(badge);
+          }
+        });
+      }
+    }
 
     if (engageBtn) {
       if (isUnlocked) {

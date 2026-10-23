@@ -249,6 +249,32 @@ html, body {
 }
 
 /* LOGO & HEADINGS */
+.menu-top-bar {
+  width: 100%;
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 6px;
+}
+
+.menu-campaign-progress-box {
+  width: 100%;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(0, 240, 255, 0.2);
+  border-radius: 14px;
+  padding: 10px 14px;
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.menu-progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+}
+
 .menu-hero-banner-container {
   position: relative;
   width: 100%;
@@ -986,6 +1012,87 @@ html, body {
   font-size: 13px;
   color: var(--color-text-muted);
   margin-bottom: 16px;
+}
+
+.briefing-threat-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: left;
+}
+
+.threat-label {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: var(--color-text-muted);
+}
+
+.threat-badges-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.threat-badge {
+  font-size: 10px;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.threat-normal { border-color: var(--color-cyan); color: var(--color-cyan); }
+.threat-mega { border-color: var(--color-gold); color: var(--color-gold); }
+.threat-splitter { border-color: var(--color-magenta); color: var(--color-magenta); }
+.threat-freeze { border-color: var(--color-green); color: var(--color-green); }
+.threat-repulsor { border-color: var(--color-violet); color: var(--color-violet); }
+
+/* FLOATING DOCK IN STAR MAP */
+.galaxy-floating-dock {
+  position: absolute;
+  right: 20px;
+  bottom: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 25;
+  pointer-events: auto;
+}
+
+.galaxy-dock-btn {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.88);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1.5px solid var(--color-border);
+  color: var(--color-cyan);
+  font-size: 17px;
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6), 0 0 10px rgba(0, 240, 255, 0.25);
+  transition: all 0.2s ease;
+}
+
+.galaxy-dock-btn:hover {
+  background: rgba(0, 240, 255, 0.2);
+  border-color: var(--color-cyan);
+  transform: scale(1.08);
+  box-shadow: 0 6px 20px rgba(0, 240, 255, 0.5);
+}
+
+.galaxy-dock-btn:active {
+  transform: scale(0.95);
 }
 
 /* GUIDE CARD */
