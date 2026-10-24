@@ -18,6 +18,24 @@ export class CanvasManager {
     this.shakeDuration = 0;
     this.shakeTimer = 0;
 
+    // Deep space background & arena stars
+    this.spaceStars = [];
+    for (let i = 0; i < 75; i++) {
+      this.spaceStars.push({
+        x: Math.random() * virtualWidth,
+        y: Math.random() * virtualHeight,
+        size: Math.random() * 2 + 0.6,
+        alpha: Math.random() * 0.7 + 0.3,
+        twinkleSpeed: Math.random() * 3 + 1,
+        phase: Math.random() * Math.PI * 2
+      });
+    }
+
+    if (typeof Image !== 'undefined') {
+      this.bgImage = new Image();
+      this.bgImage.src = './assets/space-background.jpg';
+    }
+
     this.resize = this.resize.bind(this);
     window.addEventListener('resize', this.resize);
     this.resize();
@@ -114,21 +132,44 @@ export class CanvasManager {
   }
 
   drawArenaBounds(ctx) {
-    // Semi-translucent arena backdrop exposing deep space nebula
+    // 1. Deep space void gradient
     const grad = ctx.createRadialGradient(
       this.virtualWidth / 2, this.virtualHeight / 2, 80,
-      this.virtualWidth / 2, this.virtualHeight / 2, this.virtualHeight * 0.7
+      this.virtualWidth / 2, this.virtualHeight / 2, this.virtualHeight * 0.75
     );
-    grad.addColorStop(0, 'rgba(15, 23, 42, 0.75)');
-    grad.addColorStop(1, 'rgba(7, 9, 19, 0.92)');
+    grad.addColorStop(0, '#090d24');
+    grad.addColorStop(0.6, '#050714');
+    grad.addColorStop(1, '#020308');
 
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, this.virtualWidth, this.virtualHeight);
 
-    // Subtle cyber grid lines
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.03)';
+    // 2. High-res Deep space nebula artwork
+    if (this.bgImage && this.bgImage.complete && this.bgImage.naturalWidth > 0) {
+      ctx.save();
+      ctx.globalAlpha = 0.45;
+      ctx.drawImage(this.bgImage, 0, 0, this.virtualWidth, this.virtualHeight);
+      ctx.restore();
+    }
+
+    // 3. Twinkling cosmic arena stars
+    if (this.spaceStars) {
+      ctx.save();
+      for (const s of this.spaceStars) {
+        s.phase = (s.phase || 0) + 0.03;
+        const alpha = Math.max(0.15, Math.min(1, s.alpha * (0.6 + Math.sin(s.phase) * 0.4)));
+        ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    // 4. Subtle cyber planetary defense radar grid
+    ctx.strokeStyle = 'rgba(0, 240, 255, 0.04)';
     ctx.lineWidth = 1;
-    const gridSize = 60;
+    const gridSize = 80;
     ctx.beginPath();
     for (let x = gridSize; x < this.virtualWidth; x += gridSize) {
       ctx.moveTo(x, 0);
@@ -140,10 +181,25 @@ export class CanvasManager {
     }
     ctx.stroke();
 
-    // Arena glowing border
-    ctx.strokeStyle = 'rgba(0, 240, 255, 0.35)';
-    ctx.lineWidth = 3;
+    // 5. Arena glowing cyber border & corner brackets
+    ctx.strokeStyle = 'rgba(0, 240, 255, 0.4)';
+    ctx.lineWidth = 2.5;
     ctx.strokeRect(1.5, 1.5, this.virtualWidth - 3, this.virtualHeight - 3);
+
+    // Tactical corner brackets
+    ctx.strokeStyle = '#00f0ff';
+    ctx.lineWidth = 3.5;
+    const cSize = 24;
+    // Top-Left
+    ctx.beginPath();
+    ctx.moveTo(3, cSize); ctx.lineTo(3, 3); ctx.lineTo(cSize, 3);
+    // Top-Right
+    ctx.moveTo(this.virtualWidth - cSize, 3); ctx.lineTo(this.virtualWidth - 3, 3); ctx.lineTo(this.virtualWidth - 3, cSize);
+    // Bottom-Left
+    ctx.moveTo(3, this.virtualHeight - cSize); ctx.lineTo(3, this.virtualHeight - 3); ctx.lineTo(cSize, this.virtualHeight - 3);
+    // Bottom-Right
+    ctx.moveTo(this.virtualWidth - cSize, this.virtualHeight - 3); ctx.lineTo(this.virtualWidth - 3, this.virtualHeight - 3); ctx.lineTo(this.virtualWidth - 3, this.virtualHeight - cSize);
+    ctx.stroke();
   }
 
   endRender() {

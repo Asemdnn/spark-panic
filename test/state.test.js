@@ -132,4 +132,43 @@ describe('Game State & Collision Simulation', () => {
 
     expect(() => gameState.render(mockCtx)).not.toThrow();
   });
+
+  it('should trigger LEVEL_FAILED when planetary shield integrity is breached', () => {
+    gameState.startCampaignLevel(1);
+    expect(gameState.currentState).toBe(GAME_STATES.PLAYING);
+    expect(gameState.planetDefense.shieldHp).toBe(100);
+
+    // Alien breach completely depletes shield
+    gameState.planetDefense.shieldHp = 0;
+    gameState.update(0.016);
+
+    expect(gameState.currentState).toBe(GAME_STATES.LEVEL_FAILED);
+  });
+
+  it('should charge EMP and drop repair cores when detonating elite invaders', () => {
+    gameState.startCampaignLevel(1);
+    expect(gameState.planetDefense.empEnergy).toBe(0);
+    expect(gameState.planetDefense.repairCores.length).toBe(0);
+
+    const megaOrb = new Orb(300, 300, SPARK_TYPES.MEGA, 720, 1280);
+    gameState.detonateOrb(megaOrb);
+
+    expect(gameState.planetDefense.empEnergy).toBe(12);
+    expect(gameState.planetDefense.repairCores.length).toBe(1);
+  });
+
+  it('should discharge planetary EMP when player taps near planet defense shield', () => {
+    gameState.startCampaignLevel(1);
+    gameState.planetDefense.empEnergy = 100;
+    expect(gameState.planetDefense.isEmpReady()).toBe(true);
+
+    const initialTaps = gameState.levelManager.tapsRemaining;
+
+    // Tap on planet shield area (y > 800)
+    gameState.handleTap({ x: 360, y: 950, isInside: true });
+
+    // EMP should discharge without consuming a standard tap strike
+    expect(gameState.planetDefense.empEnergy).toBe(0);
+    expect(gameState.levelManager.tapsRemaining).toBe(initialTaps);
+  });
 });

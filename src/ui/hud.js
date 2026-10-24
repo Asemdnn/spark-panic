@@ -32,6 +32,16 @@ export class UIController {
           <div class="hud-progress-bar-bg">
             <div class="hud-progress-bar-fill" id="hud-progress-fill"></div>
           </div>
+          <!-- PLANETARY DEFENSE SHIELD GAUGE -->
+          <div class="hud-shield-container" id="hud-shield-box">
+            <div class="hud-shield-header">
+              <span class="hud-shield-label">PLANETARY SHIELD:</span>
+              <strong id="hud-shield-val" class="hud-shield-val text-neon-cyan">100%</strong>
+            </div>
+            <div class="hud-shield-bar-bg">
+              <div class="hud-shield-bar-fill" id="hud-shield-fill"></div>
+            </div>
+          </div>
         </div>
 
         <div class="hud-right">
@@ -42,6 +52,13 @@ export class UIController {
           <button id="btn-sound-toggle" class="icon-btn" aria-label="Toggle Sound" title="Sound (M)">🔊</button>
           <button id="btn-pause" class="icon-btn" aria-label="Pause" title="Pause (P)">⏸</button>
         </div>
+      </div>
+
+      <!-- PLANETARY EMP DEFENSE SUPERWEAPON DOCK -->
+      <div id="hud-emp-dock" class="hud-emp-dock hidden">
+        <button id="btn-trigger-emp" class="btn-trigger-emp pulse-gold" title="Trigger Planetary EMP Wave (Tap to Discharge)">
+          ⚡ PLANETARY EMP READY (TAP TO DISCHARGE)
+        </button>
       </div>
 
       <!-- MAIN MENU OVERLAY -->
@@ -186,6 +203,10 @@ export class UIController {
               <strong id="victory-popped-val" class="text-neon-cyan">0 / 0</strong>
             </div>
             <div class="stat-row">
+              <span>Planetary Shield:</span>
+              <strong id="victory-shield-val" class="text-neon-green">100%</strong>
+            </div>
+            <div class="stat-row">
               <span>Max Guardian Combo:</span>
               <strong id="victory-combo-val" class="text-neon-gold">x0</strong>
             </div>
@@ -211,6 +232,10 @@ export class UIController {
           <p class="defeat-subtitle" id="defeat-planet-subtitle">Alien armada breached planetary defenses</p>
 
           <div class="summary-stats">
+            <div class="stat-row">
+              <span>Failure Cause:</span>
+              <strong id="defeat-reason-val" class="text-neon-magenta">SHIELD BREACHED</strong>
+            </div>
             <div class="stat-row">
               <span>Aliens Purged:</span>
               <strong id="defeat-popped-val" class="text-neon-magenta">0 / 0</strong>
@@ -558,6 +583,20 @@ export class UIController {
       this.showMainMenu();
     });
 
+    // Planetary EMP Trigger Button
+    const empBtn = document.getElementById('btn-trigger-emp');
+    if (empBtn) {
+      empBtn.addEventListener('click', () => {
+        if (this.gameState.planetDefense && this.gameState.currentState === GAME_STATES.PLAYING) {
+          this.gameState.planetDefense.triggerEmp(
+            this.gameState.orbs,
+            this.gameState.particles,
+            this.gameState.floaters
+          );
+        }
+      });
+    }
+
     // Interactive button hover audio feedback
     const allButtons = this.container.querySelectorAll('button');
     allButtons.forEach(btn => {
@@ -896,8 +935,37 @@ export class UIController {
 
       // Score
       document.getElementById('hud-score-val').textContent = this.gameState.score.toLocaleString();
+
+      // Planetary Defense Shield HUD update
+      if (this.gameState.planetDefense) {
+        const shieldHp = Math.round(this.gameState.planetDefense.shieldHp);
+        const shieldValEl = document.getElementById('hud-shield-val');
+        const shieldFillEl = document.getElementById('hud-shield-fill');
+        if (shieldValEl) {
+          shieldValEl.textContent = `${shieldHp}%`;
+          shieldValEl.className = `hud-shield-val ${shieldHp > 50 ? 'text-neon-cyan' : (shieldHp > 25 ? 'text-neon-gold' : 'text-neon-magenta pulse')}`;
+        }
+        if (shieldFillEl) {
+          shieldFillEl.style.width = `${shieldHp}%`;
+          shieldFillEl.style.background = shieldHp > 50
+            ? 'linear-gradient(90deg, #00c6ff, #0072ff)'
+            : (shieldHp > 25 ? 'linear-gradient(90deg, #f5af19, #f12711)' : 'linear-gradient(90deg, #ff0055, #ff00aa)');
+        }
+
+        // Toggle EMP Superweapon Dock
+        const empDock = document.getElementById('hud-emp-dock');
+        if (empDock) {
+          if (this.gameState.planetDefense.isEmpReady()) {
+            empDock.classList.remove('hidden');
+          } else {
+            empDock.classList.add('hidden');
+          }
+        }
+      }
     } else {
       hudTop.classList.add('hidden');
+      const empDock = document.getElementById('hud-emp-dock');
+      if (empDock) empDock.classList.add('hidden');
     }
 
     // Modal Overlays synchronization
@@ -938,6 +1006,9 @@ export class UIController {
       const popped = this.gameState.levelManager.poppedSparks;
       const total = this.gameState.levelManager.totalSparks;
       document.getElementById('victory-popped-val').textContent = `${popped} / ${total} (${Math.round((popped / total) * 100)}%)`;
+      const shieldHp = Math.round(this.gameState.planetDefense?.shieldHp || 100);
+      const shieldValEl = document.getElementById('victory-shield-val');
+      if (shieldValEl) shieldValEl.textContent = `${shieldHp}% INTACT`;
       document.getElementById('victory-combo-val').textContent = `x${this.gameState.maxRoundCombo}`;
       document.getElementById('victory-score-val').textContent = this.gameState.score.toLocaleString();
 
@@ -955,7 +1026,15 @@ export class UIController {
 
       const planetIndex = this.gameState.levelManager.currentLevel - 1;
       const planet = PLANETS[planetIndex] || PLANETS[0];
-      document.getElementById('defeat-planet-subtitle').textContent = `Alien armada breached planetary defenses on ${planet.name}`;
+      const shieldBreached = (this.gameState.planetDefense?.shieldHp || 0) <= 0;
+      document.getElementById('defeat-planet-subtitle').textContent = shieldBreached
+        ? `Alien invaders broke through the planetary shield of ${planet.name}!`
+        : `Guardian energy charges depleted while defending ${planet.name}!`;
+
+      const defeatReasonEl = document.getElementById('defeat-reason-val');
+      if (defeatReasonEl) {
+        defeatReasonEl.textContent = shieldBreached ? 'PLANETARY SHIELD BREACHED' : 'GUARDIAN CHARGES DEPLETED';
+      }
 
       const popped = this.gameState.levelManager.poppedSparks;
       const total = this.gameState.levelManager.totalSparks;

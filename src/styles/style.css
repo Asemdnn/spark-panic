@@ -159,6 +159,94 @@ html, body {
   box-shadow: 0 0 8px var(--color-green);
 }
 
+.hud-shield-container {
+  width: 100%;
+  margin-top: 3px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.hud-shield-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+}
+
+.hud-shield-label {
+  color: var(--color-cyan);
+}
+
+.hud-shield-val {
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.hud-shield-bar-bg {
+  width: 100%;
+  height: 5px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.hud-shield-bar-fill {
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(90deg, #00c6ff, #0072ff);
+  transition: width 0.2s ease-out, background 0.3s ease;
+  box-shadow: 0 0 8px rgba(0, 198, 255, 0.6);
+}
+
+/* PLANETARY EMP DOCK */
+.hud-emp-dock {
+  position: absolute;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 50;
+  pointer-events: auto;
+}
+
+.btn-trigger-emp {
+  background: linear-gradient(135deg, rgba(255, 230, 0, 0.35), rgba(0, 240, 255, 0.45));
+  border: 1.5px solid #ffe600;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 1.5px;
+  padding: 10px 24px;
+  border-radius: 24px;
+  cursor: pointer;
+  text-shadow: 0 0 10px #ffe600;
+  box-shadow: 0 0 20px rgba(255, 230, 0, 0.5), inset 0 0 12px rgba(0, 240, 255, 0.4);
+  animation: empPulse 1.2s infinite alternate;
+  white-space: nowrap;
+}
+
+.btn-trigger-emp:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 28px rgba(255, 230, 0, 0.8);
+}
+
+.btn-trigger-emp:active {
+  transform: scale(0.96);
+}
+
+@keyframes empPulse {
+  0% { box-shadow: 0 0 12px rgba(255, 230, 0, 0.4); }
+  100% { box-shadow: 0 0 28px rgba(255, 230, 0, 0.9), 0 0 14px rgba(0, 240, 255, 0.8); }
+}
+
+.text-neon-red {
+  color: #ff0055;
+  text-shadow: 0 0 8px #ff0055;
+}
+
 .hud-score-box {
   display: flex;
   flex-direction: column;

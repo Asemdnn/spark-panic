@@ -134,4 +134,34 @@ describe('UI Overlay Synchronization', () => {
     mockGameState.starMap.update(0.4);
     expect(mockGameState.currentState).toBe(GAME_STATES.PLAYING);
   });
+
+  it('should synchronize planetary shield bar and EMP superweapon dock in HUD', () => {
+    mockGameState.startCampaignLevel(1);
+    uiController.updateHUD();
+
+    const shieldVal = document.getElementById('hud-shield-val');
+    const shieldFill = document.getElementById('hud-shield-fill');
+    expect(shieldVal).toBeDefined();
+    expect(shieldVal.textContent).toBe('100%');
+    expect(shieldFill.style.width).toBe('100%');
+
+    // Damage shield
+    mockGameState.planetDefense.shieldHp = 45;
+    uiController.updateHUD();
+    expect(shieldVal.textContent).toBe('45%');
+    expect(shieldFill.style.width).toBe('45%');
+
+    // EMP dock visibility
+    const empDock = document.getElementById('hud-emp-dock');
+    expect(empDock.classList.contains('hidden')).toBe(true);
+
+    mockGameState.planetDefense.empEnergy = 100;
+    uiController.updateHUD();
+    expect(empDock.classList.contains('hidden')).toBe(false);
+
+    // Clicking EMP triggers discharge
+    const empBtn = document.getElementById('btn-trigger-emp');
+    empBtn.click();
+    expect(mockGameState.planetDefense.empEnergy).toBe(0);
+  });
 });

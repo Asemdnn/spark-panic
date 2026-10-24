@@ -47,6 +47,17 @@ export class Orb {
     this.x += this.vx * speedMultiplier * dt;
     this.y += this.vy * speedMultiplier * dt;
 
+    // Subtle alien armada tactical pull toward planet atmosphere
+    if (this.y < 780 && this.frozenTimer <= 0) {
+      this.vy += dt * 14;
+      const currentSpeed = Math.hypot(this.vx, this.vy);
+      const maxSpeed = this.baseSpeed * 1.25;
+      if (currentSpeed > maxSpeed) {
+        this.vx = (this.vx / currentSpeed) * maxSpeed;
+        this.vy = (this.vy / currentSpeed) * maxSpeed;
+      }
+    }
+
     // Bounce off horizontal boundaries
     if (this.x - this.radius < 6) {
       this.x = this.radius + 6;

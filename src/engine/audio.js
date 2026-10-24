@@ -312,6 +312,150 @@ class AudioManager {
       osc.stop(start + 0.26);
     });
   }
+
+  playShieldHit() {
+    if (this.isMuted || !this.ctx) return;
+    this.init();
+    const t = this.ctx.currentTime;
+
+    // Sub-bass heavy impact thud
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(110, t);
+    osc.frequency.exponentialRampToValueAtTime(36, t + 0.28);
+
+    gain.gain.setValueAtTime(0.4, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+
+    osc.start(t);
+    osc.stop(t + 0.31);
+
+    // Energy shield fizzle noise
+    const noiseOsc = this.ctx.createOscillator();
+    const noiseGain = this.ctx.createGain();
+    noiseOsc.type = 'sawtooth';
+    noiseOsc.frequency.setValueAtTime(320, t);
+    noiseOsc.frequency.exponentialRampToValueAtTime(70, t + 0.16);
+
+    noiseGain.gain.setValueAtTime(0.18, t);
+    noiseGain.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
+
+    noiseOsc.connect(noiseGain);
+    noiseGain.connect(this.masterGain);
+
+    noiseOsc.start(t);
+    noiseOsc.stop(t + 0.19);
+  }
+
+  playShieldAlarm() {
+    if (this.isMuted || !this.ctx) return;
+    this.init();
+    const t = this.ctx.currentTime;
+    [784, 880].forEach((freq, idx) => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      const start = t + idx * 0.08;
+
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(freq, start);
+
+      gain.gain.setValueAtTime(0.15, start);
+      gain.gain.exponentialRampToValueAtTime(0.001, start + 0.07);
+
+      osc.connect(gain);
+      gain.connect(this.masterGain);
+
+      osc.start(start);
+      osc.stop(start + 0.08);
+    });
+  }
+
+  playEmpBlast() {
+    if (this.isMuted || !this.ctx) return;
+    this.init();
+    const t = this.ctx.currentTime;
+
+    // Deep subterranean rumble
+    const sub = this.ctx.createOscillator();
+    const subGain = this.ctx.createGain();
+    sub.type = 'sine';
+    sub.frequency.setValueAtTime(65, t);
+    sub.frequency.linearRampToValueAtTime(140, t + 0.15);
+    sub.frequency.exponentialRampToValueAtTime(25, t + 0.65);
+
+    subGain.gain.setValueAtTime(0.45, t);
+    subGain.gain.exponentialRampToValueAtTime(0.001, t + 0.7);
+
+    sub.connect(subGain);
+    subGain.connect(this.masterGain);
+
+    sub.start(t);
+    sub.stop(t + 0.72);
+
+    // High shimmer frequency sweep
+    const sweep = this.ctx.createOscillator();
+    const sweepGain = this.ctx.createGain();
+    sweep.type = 'sawtooth';
+    sweep.frequency.setValueAtTime(1800, t);
+    sweep.frequency.exponentialRampToValueAtTime(220, t + 0.48);
+
+    sweepGain.gain.setValueAtTime(0.25, t);
+    sweepGain.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
+
+    sweep.connect(sweepGain);
+    sweepGain.connect(this.masterGain);
+
+    sweep.start(t);
+    sweep.stop(t + 0.52);
+  }
+
+  playTurretFire() {
+    if (this.isMuted || !this.ctx) return;
+    this.init();
+    const t = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(1500, t);
+    osc.frequency.exponentialRampToValueAtTime(350, t + 0.06);
+
+    gain.gain.setValueAtTime(0.08, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.065);
+
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+
+    osc.start(t);
+    osc.stop(t + 0.07);
+  }
+
+  playCoreAbsorbed() {
+    if (this.isMuted || !this.ctx) return;
+    this.init();
+    const t = this.ctx.currentTime;
+    [659.25, 880, 1174.66, 1567.98].forEach((freq, idx) => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      const start = t + idx * 0.05;
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, start);
+
+      gain.gain.setValueAtTime(0.18, start);
+      gain.gain.exponentialRampToValueAtTime(0.001, start + 0.12);
+
+      osc.connect(gain);
+      gain.connect(this.masterGain);
+
+      osc.start(start);
+      osc.stop(start + 0.13);
+    });
+  }
 }
 
 export const audio = new AudioManager();

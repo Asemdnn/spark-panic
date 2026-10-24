@@ -1,25 +1,36 @@
-# Guardian of the Universe (Cosmic Chain Defense)
+# Guardian of the Universe (Cosmic Planetary Defense)
 ### A Hyper-Casual Planetary Defense Game Built for YouTube Playables
 
-**Guardian of the Universe** is an arcade cosmic defense game. You are the **Guardian of the Universe**, tasked with defending 20 planetary worlds across the galaxy from an unrelenting alien invasion. With limited Guardian Energy Strikes, trigger massive cascading chain explosions that wipe out alien fighter armadas before the planets are overrun.
+**Guardian of the Universe** is an arcade planetary defense game. You are the **Guardian of the Universe**, tasked with defending 20 celestial worlds across the galaxy from an unrelenting alien invasion. In every battle, the planet you are protecting is right there in the combat arena under active assault—safeguard the atmospheric planetary defense shield from incoming alien dive-bombers and plasma bombardment before the world is overrun!
+
+---
+
+## Gameplay & Planetary Defense Features
+
+- 🪐 **Defend the Celestial World**: The planet being defended is rendered right on screen with realistic 3D atmospheric lighting, rotation, and high-resolution planetary textures across all 20 campaign worlds.
+- 🛡️ **Atmospheric Planetary Shield**: Every planet is protected by an energy defense shield dome with real-time integrity tracking (100% HP). Incoming alien invaders dive toward the atmosphere; protect the shield from bombardment!
+- ⚡ **Guardian Energy Nova Strikes (Taps)**: Strategically place celestial orbital strikes to detonate alien invaders and ignite cascading chain reaction supernovas.
+- 🔋 **Planetary EMP Defense Wave**: As alien invaders are eliminated in combo cascades, the planet charges a massive EMP superweapon. Tap to discharge an arena-wide stasis shockwave that clears enemy bombardment and freezes invaders in deep space!
+- 🛰️ **Surface Defense Turrets & Orbital Sentinel**: Automated interceptor laser cannons on the planet horizon track descending invaders and fire tracer pulses to aid defense.
+- 💎 **Energy Repair Core Drops**: Destroying heavy alien Dreadnoughts and Interceptors drops glowing Guardian Repair Cores that drift to the shield, restoring +10% to +15% Planetary Integrity.
 
 ---
 
 ## Story & Planetary Campaign
 
-When you enter **Campaign Mode**, you open the **Galaxy Star Map** showcasing 20 unique planetary worlds:
+When you enter **Campaign Mode**, you open the **Cosmic Cartography • Celestial Star Map** showcasing 20 unique planetary worlds:
 - 🪐 **Planet Aerilon**: Lush terrestrial sanctuary under assault by Scout drones.
 - 🌊 **Planet Aquatis**: Bioluminescent ocean world facing deep-trench swarms.
 - 🔥 **Planet Solaria**: Molten Sunforge where alien Dreadnoughts first strike.
-- 🌌 **Planet Vespera**, **Nebulon**, **Glacies**, **Chronos**, **Obsidian Citadel**... leading up to **Genesis Core (Heart of the Universe)**!
+- 🌌 **Planet Vespera**, **Nebulon**, **Glacies**, **Chronos**, **Obsidian Citadel**... leading up to **Genesis Core (Galactic Core)**!
 
 ---
 
 ## The Alien Armada
 
-- 🔷 **Alien Scout (Cyan)**: Fast delta-wing recon fighters.
-- 🟡 **Alien Dreadnought (Gold)**: Armored fortress flagships that release screen-clearing solar novas when destroyed.
-- 🌸 **Alien Interceptor (Magenta)**: Trident warships that launch 4 piercing plasma bolts across space upon destruction.
+- 🔷 **Alien Scout (Cyan)**: Fast delta-wing recon fighters that swarm planetary perimeters.
+- 🟡 **Alien Dreadnought (Gold)**: Heavy flagship fortresses that launch plasma bombardment bolts and detonate in massive solar novas.
+- 🌸 **Alien Interceptor (Magenta)**: Trident warships that dive toward the shield and launch 4 piercing plasma bolts upon destruction.
 - ❄️ **Alien Cryo-Ship (Mint)**: Stasis cruisers that slow down all surrounding invaders by 75%.
 - 🔮 **Alien Phase-Shifter (Violet)**: Warp vessels that pulse secondary shockwaves through space-time.
 
@@ -28,6 +39,7 @@ When you enter **Campaign Mode**, you open the **Galaxy Star Map** showcasing 20
 ## Controls
 
 - **Touch / Mouse Click**: Trigger Guardian Energy Nova
+- **[EMP Button] or Tap Shield**: Discharge Planetary EMP Shockwave when charged
 - **[Space] or [R]**: Quick retry planetary defense
 - **[P] or [Escape]**: Tactical pause / Galaxy Map
 - **[M]**: Mute / Unmute sound

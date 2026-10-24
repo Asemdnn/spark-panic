@@ -1,11 +1,12 @@
 // Spark Panic - Game State & Simulation Coordinator
 
-import { SPARK_CONFIG, SPARK_TYPES } from '../config.js';
+import { SPARK_CONFIG, SPARK_TYPES, PLANETS } from '../config.js';
 import { Explosion } from './explosion.js';
 import { ParticleManager } from './particle.js';
 import { FloaterManager } from './floater.js';
 import { LevelManager } from './level-manager.js';
 import { StarMap } from './star-map.js';
+import { PlanetDefense } from './planet-defense.js';
 import { audio } from '../engine/audio.js';
 import { storage } from '../engine/storage.js';
 
@@ -27,6 +28,7 @@ export class GameState {
 
     this.levelManager = new LevelManager(canvasManager.virtualWidth, canvasManager.virtualHeight);
     this.starMap = new StarMap(canvasManager);
+    this.planetDefense = new PlanetDefense(canvasManager);
     this.particles = new ParticleManager();
     this.floaters = new FloaterManager();
 
@@ -51,6 +53,9 @@ export class GameState {
     this.particles.clear();
     this.floaters.clear();
 
+    const planet = PLANETS[levelIndex - 1] || PLANETS[0];
+    this.planetDefense.reset(planet);
+
     this.orbs = this.levelManager.loadLevel(levelIndex);
     this.currentState = GAME_STATES.PLAYING;
   }
@@ -65,6 +70,14 @@ export class GameState {
     this.explosions = [];
     this.particles.clear();
     this.floaters.clear();
+
+    this.planetDefense.reset({
+      level: 20,
+      name: 'Earth Prime',
+      title: 'Earth Sanctuary',
+      sector: 'COSMIC CORE',
+      shadowColor: 'rgba(0, 240, 255, 0.75)'
+    });
 
     this.orbs = this.levelManager.startEndless();
     this.currentState = GAME_STATES.PLAYING;
@@ -89,6 +102,15 @@ export class GameState {
 
   handleTap(virtualCoords) {
     if (this.currentState !== GAME_STATES.PLAYING) return;
+
+    // Check if player tapped near the planetary shield while EMP is fully charged
+    if (this.planetDefense && this.planetDefense.isEmpReady()) {
+      const distToPlanet = Math.hypot(virtualCoords.x - this.planetDefense.x, virtualCoords.y - this.planetDefense.y);
+      if (distToPlanet <= this.planetDefense.shieldRadius + 40 && virtualCoords.y > 800) {
+        this.planetDefense.triggerEmp(this.orbs, this.particles, this.floaters);
+        return;
+      }
+    }
 
     // Check if player can use a tap
     if (!this.levelManager.useTap()) {
@@ -130,6 +152,11 @@ export class GameState {
     this.floaters.update(cappedDt);
 
     if (this.currentState !== GAME_STATES.PLAYING) return;
+
+    // Update Planet Defense Subsystem (planetary shield dome, turrets, bombardment bolts, cores)
+    if (this.planetDefense) {
+      this.planetDefense.update(cappedDt, this.orbs, this.explosions, this.particles, this.floaters);
+    }
 
     // Update active orbs
     for (const orb of this.orbs) {
@@ -219,12 +246,27 @@ export class GameState {
       }
     }
 
+    // Charge Planetary EMP Defense Energy & drop repair cores from heavy invaders
+    if (this.planetDefense) {
+      this.planetDefense.chargeEmp(12);
+      if (orb.type === SPARK_TYPES.MEGA || orb.type === SPARK_TYPES.SPLITTER) {
+        this.planetDefense.spawnRepairCore(orb.x, orb.y, orb.type === SPARK_TYPES.MEGA ? 16 : 10);
+      }
+    }
+
     // Spawn new chain explosion
     const newExp = new Explosion(orb.x, orb.y, orb.type, this.currentCombo);
     this.explosions.push(newExp);
   }
 
   checkRoundStatus(dt) {
+    // Immediate invasion defeat if planetary shield integrity is completely destroyed
+    if (this.planetDefense && this.planetDefense.shieldHp <= 0) {
+      audio.playDefeat();
+      this.currentState = GAME_STATES.LEVEL_FAILED;
+      return;
+    }
+
     if (this.explosions.length > 0) {
       this.settleDelayTimer = 0;
       return;
@@ -285,7 +327,12 @@ export class GameState {
       return;
     }
 
-    // 1. Render all orbs
+    // 0. Render Celestial Defended Planet & Atmospheric Shield Dome
+    if (this.planetDefense) {
+      this.planetDefense.render(ctx);
+    }
+
+    // 1. Render all orbs (alien invaders)
     for (const orb of this.orbs) {
       orb.render(ctx);
     }
