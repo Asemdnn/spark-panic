@@ -81,7 +81,7 @@ export class ProjectileManager {
     }
   }
 
-  update(dt, canvasWidth, canvasHeight, aliens, planet, onAlienHitCallback, onTorpedoDestroyedCallback) {
+  update(dt, canvasWidth, canvasHeight, aliens, planet, onAlienHitCallback, onTorpedoDestroyedCallback, onBossPhase2Callback = null, hazardManager = null, supplyPodManager = null, speedScale = 1.0, onAsteroidShatterCallback = null, onPodDestroyedCallback = null) {
     // 1. Update Player Plasma Bolts
     for (let i = this.bolts.length - 1; i >= 0; i--) {
       const b = this.bolts[i];
@@ -103,13 +103,35 @@ export class ProjectileManager {
         }
       }
 
+      // Check collision with Orbital Supply Pods
+      if (b.alive && supplyPodManager) {
+        const hitPod = supplyPodManager.checkHit(b.x, b.y, 6, b.damage, onPodDestroyedCallback);
+        if (hitPod) {
+          b.pierce--;
+          if (b.pierce <= 0) {
+            b.alive = false;
+          }
+        }
+      }
+
+      // Check collision with Drifting Asteroids (Sector I)
+      if (b.alive && hazardManager) {
+        const hitAst = hazardManager.checkHitAsteroids(b.x, b.y, 6, b.damage, onAsteroidShatterCallback);
+        if (hitAst) {
+          b.pierce--;
+          if (b.pierce <= 0) {
+            b.alive = false;
+          }
+        }
+      }
+
       // Check collision with Aliens
       if (b.alive) {
         for (const alien of aliens) {
           if (!alien.alive) continue;
           const d = Math.hypot(alien.x - b.x, alien.y - b.y);
           if (d <= alien.radius + 6) {
-            const destroyed = alien.takeDamage(b.damage);
+            const destroyed = alien.takeDamage(b.damage, b.x, b.y, false, onBossPhase2Callback);
             if (onAlienHitCallback) onAlienHitCallback(alien, destroyed, b.x, b.y);
             b.pierce--;
             if (b.pierce <= 0) {
@@ -126,11 +148,11 @@ export class ProjectileManager {
       }
     }
 
-    // 2. Update Enemy Torpedoes
+    // 2. Update Enemy Torpedoes (affected by Cryo Time-Warp speedScale)
     for (let i = this.torpedoes.length - 1; i >= 0; i--) {
       const torp = this.torpedoes[i];
-      torp.x += torp.vx * dt;
-      torp.y += torp.vy * dt;
+      torp.x += torp.vx * dt * speedScale;
+      torp.y += torp.vy * dt * speedScale;
 
       // Check collision with planet shield/core
       if (planet) {

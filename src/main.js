@@ -4,6 +4,7 @@ import { PLANETS, SECTORS, ALIEN_CLASSES, ARMORY_CONFIG, TROPHIES, GUARDIAN_RANK
 import { audio } from './engine/audio.js';
 import { saveSystem } from './engine/storage.js';
 import { GameEngine } from './game/engine.js';
+import { ICON_SVG } from './ui/icons.js';
 
 window.addEventListener('DOMContentLoaded', () => {
   const canvas = document.getElementById('gameCanvas');
@@ -69,7 +70,8 @@ window.addEventListener('DOMContentLoaded', () => {
       togglePause();
     } else if (key === 'M') {
       const isMuted = audio.toggleMute();
-      document.getElementById('btnMute').textContent = isMuted ? '🔇' : '🔊';
+      const muteBtn = document.getElementById('btnMute');
+      if (muteBtn) muteBtn.innerHTML = ICON_SVG.volume(isMuted, 'w-4 h-4');
     } else if (key === 'R') {
       if (engine.state === 'PLAYING' || engine.state === 'DEFEAT' || engine.state === 'PAUSED') {
         restartCurrent();
@@ -99,7 +101,8 @@ window.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btnMute')?.addEventListener('click', () => {
     audio.init();
     const isMuted = audio.toggleMute();
-    document.getElementById('btnMute').textContent = isMuted ? '🔇' : '🔊';
+    const muteBtn = document.getElementById('btnMute');
+    if (muteBtn) muteBtn.innerHTML = ICON_SVG.volume(isMuted, 'w-4 h-4');
   });
   document.getElementById('btnPause')?.addEventListener('click', () => {
     togglePause();
@@ -161,7 +164,7 @@ window.addEventListener('DOMContentLoaded', () => {
     const refunded = saveSystem.refundAllTech();
     renderArmoryGrid();
     engine.applyUpgrades();
-    engine.showToast(`↺ REFUNDED ${refunded} ✦ STAR SHARDS!`, '#00e676');
+    engine.showToast(`REFUNDED ${refunded} STAR SHARDS!`, '#00e676');
   });
 
   // Codex Close
@@ -256,7 +259,9 @@ window.addEventListener('DOMContentLoaded', () => {
     }
     const totalStars = saveSystem.getTotalStars();
     const starsEl = document.getElementById('titleTotalStars');
-    if (starsEl) starsEl.textContent = `${totalStars} / 60 ★`;
+    if (starsEl) {
+      starsEl.innerHTML = `<span class="flex items-center gap-1.5">${totalStars} / 60 ${ICON_SVG.star('w-4 h-4 text-cosmic-gold')}</span>`;
+    }
   }
 
   function openStarMap() {
@@ -305,15 +310,19 @@ window.addEventListener('DOMContentLoaded', () => {
         isSelected ? 'border-cosmic-cyan ring-2 ring-cosmic-cyan/50 bg-cosmic-cyan/10' : (isLocked ? 'border-slate-800 opacity-60' : 'border-slate-700/60 hover:border-cosmic-cyan/60')
       }`;
 
+      const starIcons = isLocked
+        ? '<span class="text-[10px] text-slate-500 font-orbitron">LOCKED</span>'
+        : Array.from({ length: 3 }, (_, i) => ICON_SVG.star('w-3.5 h-3.5 ' + (i < stars ? 'text-cosmic-gold' : 'text-slate-700'), i < stars)).join('');
+
       card.innerHTML = `
         <div class="w-12 h-12 rounded-full mb-2 flex items-center justify-center text-xl shadow-lg relative" style="background: radial-gradient(circle at 35% 35%, ${p.color2}, ${p.color1} 70%, #030712); box-shadow: 0 0 12px ${p.atmo}66;">
-          ${isLocked ? '<span class="text-xs bg-slate-900/80 px-1 py-0.5 rounded-full">🔒</span>' : ''}
-          ${p.bossName ? '<span class="absolute -top-1 -right-1 text-xs">👑</span>' : ''}
+          ${isLocked ? `<span class="bg-slate-900/90 p-1 rounded-full flex items-center justify-center">${ICON_SVG.lock('w-3 h-3 text-slate-300')}</span>` : ''}
+          ${p.bossName ? `<span class="absolute -top-1 -right-1 flex items-center justify-center">${ICON_SVG.crown('w-3.5 h-3.5 text-cosmic-gold')}</span>` : ''}
         </div>
         <div class="text-xs font-black font-orbitron text-white truncate w-full">${p.name}</div>
         <div class="text-[9px] text-slate-400 truncate w-full">${p.title}</div>
-        <div class="flex items-center gap-0.5 text-xs text-cosmic-gold mt-1">
-          ${isLocked ? '<span class="text-[10px] text-slate-500 font-orbitron">LOCKED</span>' : '★'.repeat(stars) + '<span class="text-slate-700">' + '★'.repeat(3 - stars) + '</span>'}
+        <div class="flex items-center gap-0.5 text-xs text-cosmic-gold mt-1.5">
+          ${starIcons}
         </div>
       `;
 
@@ -335,7 +344,10 @@ window.addEventListener('DOMContentLoaded', () => {
     const stars = saveSystem.data.planetStars[planet.id] || 0;
 
     document.getElementById('briefingSectorTag').textContent = `SECTOR ${'I'.repeat(planet.sector)}`;
-    document.getElementById('briefingStars').textContent = '★'.repeat(stars) + '☆'.repeat(3 - stars);
+    const starBriefing = Array.from({ length: 3 }, (_, i) => 
+      ICON_SVG.star('w-4 h-4 ' + (i < stars ? 'text-cosmic-gold drop-shadow-[0_0_6px_#ffd700]' : 'text-slate-700'), i < stars)
+    ).join('');
+    document.getElementById('briefingStars').innerHTML = starBriefing;
     document.getElementById('briefingPlanetName').textContent = planet.name.toUpperCase();
     document.getElementById('briefingPlanetTitle').textContent = planet.title;
     document.getElementById('briefingWaves').textContent = `${planet.waves} Invasion Waves`;
@@ -410,7 +422,7 @@ window.addEventListener('DOMContentLoaded', () => {
         <button class="btn-upgrade-tech w-full py-2 rounded-xl font-orbitron font-bold text-xs transition cursor-pointer flex items-center justify-center gap-1.5 ${
           isMaxed ? 'bg-slate-800 text-slate-500 cursor-not-allowed' : (canAfford ? 'bg-gradient-to-r from-cosmic-gold to-amber-600 hover:from-amber-300 hover:to-amber-500 text-slate-950 font-black shadow-md' : 'bg-slate-800/80 text-slate-400 border border-slate-700')
         }" data-tech="${techId}" ${isMaxed || !canAfford ? 'disabled' : ''}>
-          ${isMaxed ? 'TECH MAXED' : `<span>UPGRADE</span> <span>[${cost} ✦]</span>`}
+          ${isMaxed ? 'TECH MAXED' : `<span class="flex items-center gap-1">UPGRADE [${ICON_SVG.shard('w-3.5 h-3.5 ' + (canAfford ? 'text-slate-950' : 'text-cosmic-gold'))} ${cost}]</span>`}
         </button>
       `;
 
@@ -446,26 +458,40 @@ window.addEventListener('DOMContentLoaded', () => {
     // 7 Alien Dossiers
     for (const [key, alien] of Object.entries(ALIEN_CLASSES)) {
       const card = document.createElement('div');
-      card.className = 'glass-card p-3 rounded-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-3 border border-slate-700/50';
+      card.className = 'glass-card p-3.5 rounded-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-3 border border-slate-700/50 hover:border-cosmic-cyan/40 transition';
 
       card.innerHTML = `
-        <div class="flex items-center gap-3">
-          <div class="w-10 h-10 rounded-xl flex items-center justify-center text-lg font-black font-orbitron shrink-0 shadow-md border" style="background: ${alien.color}18; border-color: ${alien.color}55; color: ${alien.color};">
-            👾
+        <div class="flex items-center gap-3.5">
+          <div class="shrink-0 flex items-center justify-center p-1.5 rounded-xl bg-slate-950/70 border" style="border-color: ${alien.color}44;">
+            ${ICON_SVG.shipSvg(key)}
           </div>
           <div>
-            <div class="flex items-center gap-2">
+            <div class="flex flex-wrap items-center gap-2">
               <h4 class="font-orbitron font-bold text-sm text-white">${alien.name}</h4>
-              <span class="text-[9px] font-orbitron px-2 py-0.5 rounded-full font-bold" style="background: ${alien.color}22; color: ${alien.color};">
+              <span class="text-[9px] font-orbitron px-2 py-0.5 rounded-full font-bold" style="background: ${alien.color}22; color: ${alien.color}; border: 1px solid ${alien.color}44;">
                 ${alien.role}
               </span>
             </div>
-            <p class="text-[11px] text-slate-300 mt-0.5">${alien.behaviorDesc}</p>
+            <p class="text-[11px] text-slate-300 mt-1 max-w-md">${alien.behaviorDesc}</p>
+            <div class="flex flex-wrap items-center gap-2 mt-2">
+              <span class="text-[10px] font-orbitron px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-slate-300">
+                HP: <strong class="text-white">${alien.hp}</strong>
+              </span>
+              <span class="text-[10px] font-orbitron px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-slate-300">
+                SPEED: <strong class="text-white">${alien.speed} px/s</strong>
+              </span>
+              <span class="text-[10px] font-orbitron px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-slate-300">
+                NOVA: <strong class="text-cosmic-gold">${alien.novaRadius}px</strong>
+              </span>
+              <span class="text-[10px] font-orbitron px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-slate-300">
+                VAL: <strong class="text-cosmic-cyan">${alien.score} pts</strong>
+              </span>
+            </div>
           </div>
         </div>
 
-        <div class="text-right shrink-0 font-orbitron text-[10px]">
-          <div class="text-slate-400">DEATH PAYLOAD:</div>
+        <div class="text-left md:text-right shrink-0 font-orbitron text-[10px] bg-slate-950/40 p-2.5 rounded-xl border border-slate-800/80 min-w-[170px]">
+          <div class="text-slate-400 font-semibold mb-0.5">DEATH PAYLOAD:</div>
           <div class="font-bold text-xs" style="color: ${alien.color};">${alien.deathPayload}</div>
         </div>
       `;
@@ -476,7 +502,7 @@ window.addEventListener('DOMContentLoaded', () => {
     // Trophies section inside Codex
     const trophHeader = document.createElement('h3');
     trophHeader.className = 'font-orbitron font-black text-sm text-cosmic-gold mt-4 mb-2 flex items-center gap-2';
-    trophHeader.innerHTML = '<span>🏆</span> <span>GUARDIAN TROPHIES SHOWCASE</span>';
+    trophHeader.innerHTML = `${ICON_SVG.trophy('w-4 h-4 text-cosmic-gold')} <span>GUARDIAN TROPHIES SHOWCASE</span>`;
     list.appendChild(trophHeader);
 
     for (const t of TROPHIES) {
@@ -495,7 +521,7 @@ window.addEventListener('DOMContentLoaded', () => {
           </div>
         </div>
         <div class="font-orbitron text-xs font-bold ${isUnlocked ? 'text-cosmic-mint' : 'text-slate-500'}">
-          ${isUnlocked ? 'UNLOCKED (+100 ✦)' : 'LOCKED'}
+          ${isUnlocked ? `<span class="flex items-center gap-1 font-bold">UNLOCKED (+${t.reward} ${ICON_SVG.shard('w-3.5 h-3.5 text-cosmic-gold')})</span>` : 'LOCKED'}
         </div>
       `;
       list.appendChild(card);

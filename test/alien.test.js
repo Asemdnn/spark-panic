@@ -96,4 +96,48 @@ describe('Alien Armada Invader Entities (v2.0)', () => {
     expect(mockFireTorpedo).toHaveBeenCalledTimes(3);
     expect(boss.torpedoTimer).toBe(3.5);
   });
+
+  it('should trigger Boss Phase 2 Overdrive Siege at <= 50% HP with escort wing summon', () => {
+    const boss = new Alien(500, 500, 'BOSS');
+    expect(boss.isPhase2).toBe(false);
+    expect(boss.maxHp).toBe(950);
+
+    const onPhase2 = vi.fn();
+
+    // Damage to 500 HP (> 50%)
+    boss.takeDamage(450, null, null, false, onPhase2);
+    expect(boss.isPhase2).toBe(false);
+    expect(onPhase2).not.toHaveBeenCalled();
+
+    // Damage past 50% threshold (hp becomes 400 <= 475)
+    boss.takeDamage(100, null, null, false, onPhase2);
+    expect(boss.isPhase2).toBe(true);
+    expect(onPhase2).toHaveBeenCalledWith(boss);
+  });
+
+  it('should deflect frontal turret fire by 50% via 110° rotating shield arc in Phase 2, but allow rear hits and piercing attacks', () => {
+    const boss = new Alien(500, 500, 'BOSS');
+    boss.isPhase2 = true;
+    boss.shieldAngle = 0; // Shield facing directly to the right (+X)
+    boss.hp = 400;
+
+    // 1. Frontal hit along shield vector (angle 0)
+    const frontHitX = boss.x + 30;
+    const frontHitY = boss.y;
+    boss.takeDamage(40, frontHitX, frontHitY, false);
+    // Deflected by 50%: damage is 20, HP goes from 400 to 380
+    expect(boss.hp).toBe(380);
+
+    // 2. Rear hit from behind (angle PI, 180 degrees away)
+    const rearHitX = boss.x - 30;
+    const rearHitY = boss.y;
+    boss.takeDamage(40, rearHitX, rearHitY, false);
+    // Not in 110° arc: takes full 40 damage, HP goes from 380 to 340
+    expect(boss.hp).toBe(340);
+
+    // 3. Piercing hit (Spark Nova / Ion Beam) hitting frontal shield
+    boss.takeDamage(40, frontHitX, frontHitY, true); // isDirectPierce = true
+    // Pierces through shield: takes full 40 damage, HP goes from 340 to 300
+    expect(boss.hp).toBe(300);
+  });
 });

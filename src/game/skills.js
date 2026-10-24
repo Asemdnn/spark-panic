@@ -116,7 +116,7 @@ export class TacticalSkills {
         const parDist = dist * Math.cos(angleDiff);
 
         if (parDist > 0 && parDist < beamLength && perpDist < (beamWidth / 2 + alien.radius)) {
-          alien.takeDamage(dmgThisFrame);
+          alien.takeDamage(dmgThisFrame, null, null, true);
         }
       }
 
@@ -159,7 +159,7 @@ export class TacticalSkills {
         const dist = Math.hypot(alien.x - this.empOriginX, alien.y - this.empOriginY);
         if (Math.abs(dist - this.empRadius) < 60) {
           alien.freeze(3.0);
-          alien.takeDamage(24 * novaMultiplier);
+          alien.takeDamage(24 * novaMultiplier, null, null, true);
           if (alien.classKey !== 'BOSS') {
             const pushAngle = Math.atan2(alien.y - this.empOriginY, alien.x - this.empOriginX);
             alien.x += Math.cos(pushAngle) * 75;

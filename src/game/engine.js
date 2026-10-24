@@ -10,6 +10,9 @@ import { Alien } from './alien.js';
 import { TacticalSkills } from './skills.js';
 import { ProjectileManager } from './projectiles.js';
 import { ParticleEngine } from './particles.js';
+import { HazardManager } from './hazards.js';
+import { SupplyPodManager } from './supply-pods.js';
+import { ICON_SVG } from '../ui/icons.js';
 
 export class GameEngine {
   constructor(canvas) {
@@ -31,6 +34,8 @@ export class GameEngine {
     this.skills = new TacticalSkills();
     this.projectiles = new ProjectileManager();
     this.particles = new ParticleEngine();
+    this.hazards = new HazardManager();
+    this.supplyPods = new SupplyPodManager();
 
     // Active Mission State
     this.currentPlanetId = 1;
@@ -146,6 +151,8 @@ export class GameEngine {
     this.resetCombatState();
     this.planet.setPlanet(cfg, saveSystem.data.upgrades.shieldGrid || 0);
     this.applyUpgrades();
+    this.hazards.initSector(cfg.sector, this.planet.x, this.planet.y, this.planet.planetRadius);
+    this.supplyPods.reset();
     this.setupWaveSpawns();
 
     this.state = 'PLAYING';
@@ -168,6 +175,8 @@ export class GameEngine {
     };
     this.planet.setPlanet(endlessPlanet, saveSystem.data.upgrades.shieldGrid || 0);
     this.applyUpgrades();
+    this.hazards.initSector(1, this.planet.x, this.planet.y, this.planet.planetRadius);
+    this.supplyPods.reset();
     this.setupWaveSpawns();
 
     this.state = 'PLAYING';
@@ -243,15 +252,107 @@ export class GameEngine {
     this.novaCharges--;
 
     audio.playNovaLaunch();
-    const blastRadius = 86 * this.novaMultiplier;
-    this.particles.spawnNova(targetX, targetY, blastRadius, '#00e5ff', 38 * this.novaMultiplier, true);
-    this.addScreenShake(6, 0.2);
+    const inNebula = this.hazards.isInsideNebula(targetX, targetY);
+    let blastRadius = 86 * this.novaMultiplier;
+    let damage = 38 * this.novaMultiplier;
+    let color = '#00e5ff';
+
+    if (inNebula) {
+      blastRadius *= 1.35; // +35% blast radius in Ion Nebula
+      damage *= 1.25;      // +25% damage in Ion Nebula
+      color = '#e040fb';
+      this.particles.addFloater(targetX, targetY - 24, '⚡ ION SUPERCHARGE!', '#e040fb', 18);
+      this.particles.spawnDebris(targetX, targetY, '#e040fb', 16);
+    }
+
+    this.particles.spawnNova(targetX, targetY, blastRadius, color, damage, true);
+    this.addScreenShake(inNebula ? 9 : 6, 0.2);
     return true;
   }
 
   addScreenShake(intensity = 6, duration = 0.2) {
     this.shakeIntensity = Math.max(this.shakeIntensity, intensity);
     this.shakeTimer = duration;
+  }
+
+  onBossPhase2(boss) {
+    this.addScreenShake(16, 0.45);
+    audio.playSkill('W');
+    this.particles.addFloater(boss.x, boss.y - 45, '⚠️ PHASE 2: OVERDRIVE SIEGE! ⚠️', '#ff1744', 22);
+
+    const bossBar = document.getElementById('bossHudBar');
+    if (bossBar) {
+      bossBar.classList.add('ring-4', 'ring-cosmic-crimson', 'animate-pulse');
+    }
+
+    // Boss Escort Wing Summon: 3 Trident Interceptors + 2 Cryo-Cruisers
+    const escorts = [
+      { classKey: 'INTERCEPTOR', angleOffset: -0.6, dist: 75 },
+      { classKey: 'INTERCEPTOR', angleOffset: 0, dist: 85 },
+      { classKey: 'INTERCEPTOR', angleOffset: 0.6, dist: 75 },
+      { classKey: 'CRYO', angleOffset: -1.2, dist: 70 },
+      { classKey: 'CRYO', angleOffset: 1.2, dist: 70 }
+    ];
+
+    for (const e of escorts) {
+      const ex = boss.x + Math.cos(boss.heading + e.angleOffset) * e.dist;
+      const ey = boss.y + Math.sin(boss.heading + e.angleOffset) * e.dist;
+      const escortShip = new Alien(ex, ey, e.classKey);
+      this.aliens.push(escortShip);
+      this.particles.spawnDebris(ex, ey, escortShip.color, 8);
+    }
+  }
+
+  onSupplyPodDestroyed(x, y, buffType) {
+    audio.playShardPickup();
+    this.particles.spawnDebris(x, y, '#ffd700', 16);
+    this.addScreenShake(6, 0.15);
+
+    if (buffType === 'QUAD_PULSE') {
+      this.particles.addFloater(x, y, '🔥 QUAD-PULSE OVERCLOCK (8s)!', '#f97316', 18);
+      this.showToast('🔥 QUAD-PULSE OVERCLOCK! +2 BARRELS & +35% FIRE RATE', '#f97316');
+    } else if (buffType === 'CRYO_TIMEWARP') {
+      this.particles.addFloater(x, y, '❄️ CRYO TIME-WARP (6s)!', '#00e676', 18);
+      this.showToast('❄️ CRYO TIME-WARP! ALL ENEMIES SLOWED 60%', '#00e676');
+    } else if (buffType === 'NOVA_SURGE') {
+      this.novaCharges = Math.min(this.maxNovaCharges, this.novaCharges + 2);
+      const shieldRestored = this.planet.restoreShield(Math.round(this.planet.maxShield * 0.35));
+      this.particles.addFloater(x, y, `⚡ +2 NOVAS & +${shieldRestored} SHIELD!`, '#00e5ff', 18);
+      this.showToast('⚡ NOVA & SHIELD SURGE! +2 NOVAS & +35% SHIELD', '#00e5ff');
+    }
+  }
+
+  onAsteroidShattered(x, y) {
+    saveSystem.addShards(15);
+    audio.playShardPickup();
+    this.particles.spawnDebris(x, y, '#94a3b8', 14);
+    this.particles.spawnCosmicSpark(x, y, 3);
+    this.particles.addFloater(x, y, '+15 SHARDS! ASTEROID SHATTER!', '#ffd700', 16);
+    this.addScreenShake(6, 0.2);
+
+    // Kinetic shockwave (65px, damages nearby aliens for 40 dmg)
+    this.particles.spawnNova(x, y, 65, '#94a3b8', 40, false);
+  }
+
+  onSolarFlarePulse(px, py, maxRadius) {
+    audio.playSkill('W');
+    this.addScreenShake(10, 0.3);
+    this.particles.addFloater(px, py - 90, '☀️ SOLAR CORONA ERUPTION!', '#ffd700', 20);
+
+    for (const alien of this.aliens) {
+      if (!alien.alive) continue;
+      const d = Math.hypot(alien.x - px, alien.y - py);
+      if (d <= maxRadius + alien.radius) {
+        alien.takeDamage(35, null, null, true);
+        this.particles.spawnDebris(alien.x, alien.y, '#ffd700', 6);
+      }
+    }
+
+    this.novaProgress += 0.15;
+    if (this.novaProgress >= 1.0) {
+      this.novaProgress -= 1.0;
+      this.novaCharges = Math.min(this.maxNovaCharges, this.novaCharges + 1);
+    }
   }
 
   onAlienDestroyed(alien, killerNova = null) {
@@ -282,9 +383,17 @@ export class GameEngine {
       this.particles.addFloater(alien.x, alien.y - 30, `x${this.combo} CHAIN!`, '#e040fb', 17);
     }
 
-    // Secondary Class-Specific Death Payload Shockwave
-    const nRadius = (alien.novaRadius || 68) * this.novaMultiplier;
-    this.particles.spawnNova(alien.x, alien.y, nRadius, alien.color, 32 * this.novaMultiplier, false);
+    // Secondary Class-Specific Death Payload Shockwave (boosted in Ion Nebula)
+    const inNebula = this.hazards.isInsideNebula(alien.x, alien.y);
+    let nRadius = (alien.novaRadius || 68) * this.novaMultiplier;
+    let nDmg = 32 * this.novaMultiplier;
+    if (inNebula) {
+      nRadius *= 1.35;
+      nDmg *= 1.25;
+      this.particles.addFloater(alien.x, alien.y - 36, '⚡ ION RESONANCE!', '#00e5ff', 16);
+    }
+
+    this.particles.spawnNova(alien.x, alien.y, nRadius, alien.color, nDmg, false);
     this.particles.spawnDebris(alien.x, alien.y, alien.color, 14);
 
     // Class specific death payload mechanics
@@ -331,7 +440,7 @@ export class GameEngine {
   checkTrophy(trophyId) {
     const unlocked = saveSystem.unlockTrophy(trophyId);
     if (unlocked) {
-      this.showToast(`🏆 UNLOCKED: ${unlocked.name}! (+100 ✦)`, '#ffd700');
+      this.showToast(`UNLOCKED: ${unlocked.name}! (+100 SHARDS)`, '#ffd700');
     }
   }
 
@@ -384,7 +493,8 @@ export class GameEngine {
       return;
     }
 
-    // 2. Update Guardian Turret
+    // 2. Update Guardian Turret (+2 barrels & +35% fire rate when Overclock is active)
+    const isOverclock = this.supplyPods.isQuadPulseActive();
     this.turret.update(
       dt,
       this.pointerX,
@@ -394,7 +504,8 @@ export class GameEngine {
       isOverdrive,
       (bolts, angle) => {
         this.projectiles.spawnTurretBolts(this.planet.x, this.planet.y, this.planet.planetRadius, bolts);
-      }
+      },
+      isOverclock
     );
 
     // 3. Update Autonomous Defense Satellites
@@ -424,6 +535,29 @@ export class GameEngine {
       (int, dur) => this.addScreenShake(int, dur)
     );
 
+    // Update Sector Environmental Hazards
+    this.hazards.update(
+      dt,
+      this.planet.x,
+      this.planet.y,
+      this.planet.planetRadius,
+      this.aliens,
+      (ax, ay) => this.onAsteroidShattered(ax, ay),
+      (px, py, rad) => this.onSolarFlarePulse(px, py, rad)
+    );
+
+    // Update Mid-Battle Orbital Supply Pods
+    this.supplyPods.update(
+      dt,
+      this.planet.x,
+      this.planet.y,
+      this.planet.planetRadius,
+      (px, py, buffType) => this.onSupplyPodDestroyed(px, py, buffType)
+    );
+
+    // Enemy movement speed scale (Slowed by 60% during Cryo Time-Warp)
+    const enemySpeedScale = this.supplyPods.isCryoTimeWarpActive() ? 0.40 : 1.0;
+
     // 5. Update Projectiles
     this.projectiles.update(
       dt,
@@ -438,7 +572,13 @@ export class GameEngine {
       (torpX, torpY) => {
         this.particles.spawnDebris(torpX, torpY, '#e040fb', 6);
         this.particles.addFloater(torpX, torpY, 'TORPEDO DOWN!', '#00e5ff', 12);
-      }
+      },
+      (boss) => this.onBossPhase2(boss),
+      this.hazards,
+      this.supplyPods,
+      enemySpeedScale,
+      (ax, ay) => this.onAsteroidShattered(ax, ay),
+      (px, py, bType) => this.onSupplyPodDestroyed(px, py, bType)
     );
 
     // 6. Spawn Alien Wave Incursions
@@ -464,7 +604,7 @@ export class GameEngine {
     for (let i = this.aliens.length - 1; i >= 0; i--) {
       const alien = this.aliens[i];
       alien.update(
-        dt,
+        dt * enemySpeedScale,
         this.planet.x,
         this.planet.y,
         this.planet.shieldRadius,
@@ -509,7 +649,12 @@ export class GameEngine {
       },
       (val) => {
         saveSystem.addShards(val);
-      }
+      },
+      (boss) => this.onBossPhase2(boss),
+      this.hazards,
+      this.supplyPods,
+      (ax, ay) => this.onAsteroidShattered(ax, ay),
+      (px, py, bType) => this.onSupplyPodDestroyed(px, py, bType)
     );
 
     // 9. Wave Progression / Victory Check
@@ -559,7 +704,7 @@ export class GameEngine {
     const elCore = document.getElementById('vicStatCore');
     if (elCore) elCore.textContent = `${corePct}%`;
     const elShards = document.getElementById('vicStatShards');
-    if (elShards) elShards.textContent = `+${stars * 45} ✦`;
+    if (elShards) elShards.innerHTML = `<span class="flex items-center justify-end gap-1 font-bold text-cosmic-gold">+${stars * 45} ${ICON_SVG.shard('w-3.5 h-3.5 text-cosmic-gold')}</span>`;
     const elScore = document.getElementById('vicStatScore');
     if (elScore) elScore.textContent = this.score.toLocaleString();
 
@@ -569,8 +714,8 @@ export class GameEngine {
       starsEl.innerHTML = '';
       for (let s = 1; s <= 3; s++) {
         const sp = document.createElement('span');
-        sp.textContent = '★';
-        sp.className = s <= stars ? 'text-cosmic-gold text-glow-gold' : 'text-slate-700';
+        sp.className = s <= stars ? 'text-cosmic-gold drop-shadow-[0_0_12px_#ffd700]' : 'text-slate-700 opacity-40';
+        sp.innerHTML = ICON_SVG.star('w-8 h-8', s <= stars);
         starsEl.appendChild(sp);
       }
     }
@@ -590,7 +735,7 @@ export class GameEngine {
     const elEnemies = document.getElementById('defStatEnemies');
     if (elEnemies) elEnemies.textContent = `${this.enemiesVaporized}`;
     const elShards = document.getElementById('defStatShards');
-    if (elShards) elShards.textContent = `+${Math.round(this.enemiesVaporized * 0.5)} ✦`;
+    if (elShards) elShards.innerHTML = `<span class="flex items-center justify-end gap-1 font-bold text-cosmic-gold">+${Math.round(this.enemiesVaporized * 0.5)} ${ICON_SVG.shard('w-3.5 h-3.5 text-cosmic-gold')}</span>`;
 
     document.getElementById('modalDefeat')?.classList.remove('hidden');
   }
@@ -651,6 +796,12 @@ export class GameEngine {
 
     // 7. Render Active Tactical Skills (Ion Beam & EMP)
     this.skills.render(ctx, this.planet.x, this.planet.y);
+
+    // Render Sector Environmental Hazards
+    this.hazards.render(ctx, this.planet.x, this.planet.y);
+
+    // Render Mid-Battle Orbital Supply Pods
+    this.supplyPods.render(ctx);
 
     // 8. Render Aliens
     for (const alien of this.aliens) {
@@ -767,6 +918,35 @@ export class GameEngine {
     const autoLabel = document.getElementById('autoFireLabel');
     if (autoLabel) {
       autoLabel.textContent = this.turret.autoFire ? 'AUTO: ON' : 'AUTO: OFF';
+    }
+
+    // Sector Environmental Hazard Badge
+    const hBadge = document.getElementById('hudHazardBadge');
+    if (hBadge) {
+      const hInfo = this.hazards.getHazardInfo();
+      const hIcon = document.getElementById('hazardIcon');
+      const hLabel = document.getElementById('hazardLabel');
+      if (hIcon) hIcon.textContent = hInfo.icon;
+      if (hLabel) hLabel.textContent = hInfo.name;
+      hBadge.title = hInfo.desc;
+    }
+
+    // Active Temporary Buff Timers Pills
+    const buffsContainer = document.getElementById('hudBuffs');
+    if (buffsContainer) {
+      buffsContainer.innerHTML = '';
+      if (this.supplyPods.isQuadPulseActive()) {
+        const pill = document.createElement('div');
+        pill.className = 'glass-panel px-3 py-1 rounded-full flex items-center gap-1.5 font-orbitron font-extrabold text-[10px] md:text-xs text-amber-300 border-amber-400/60 shadow-[0_0_12px_rgba(251,191,36,0.4)] animate-pulse';
+        pill.innerHTML = `<span>🔥 OVERCLOCK</span> <span>${this.supplyPods.quadPulseTimer.toFixed(1)}s</span>`;
+        buffsContainer.appendChild(pill);
+      }
+      if (this.supplyPods.isCryoTimeWarpActive()) {
+        const pill = document.createElement('div');
+        pill.className = 'glass-panel px-3 py-1 rounded-full flex items-center gap-1.5 font-orbitron font-extrabold text-[10px] md:text-xs text-cosmic-mint border-cosmic-mint/60 shadow-[0_0_12px_rgba(0,230,118,0.4)] animate-pulse';
+        pill.innerHTML = `<span>❄️ TIME-WARP</span> <span>${this.supplyPods.cryoTimeWarpTimer.toFixed(1)}s</span>`;
+        buffsContainer.appendChild(pill);
+      }
     }
   }
 }

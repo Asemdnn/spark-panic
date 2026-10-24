@@ -83,4 +83,26 @@ describe('360° Orbital Guardian Turret (v2.0)', () => {
     turret.update(0.1, 400, 100, 400, 300, false, mockOnFire);
     expect(mockOnFire).toHaveBeenCalled();
   });
+
+  it('should apply Quad-Pulse Overclock mode (+35% fire rate and +2 extra barrels)', () => {
+    const mockOnFire = vi.fn();
+    // At Level 0 normally 1 barrel, with Overclock becomes 3 barrels
+    turret.setUpgradeLevel(0);
+    turret.fireTimer = 1.0;
+
+    turret.update(0.1, 400, 100, 400, 300, false, mockOnFire, true); // isOverclock = true
+    expect(mockOnFire).toHaveBeenCalled();
+    const firedBoltsLv0 = mockOnFire.mock.calls[0][0];
+    expect(firedBoltsLv0.length).toBe(3); // 1 + 2 = 3
+
+    // At Level 3 normally 2 barrels, with Overclock becomes 4 barrels
+    mockOnFire.mockClear();
+    turret.setUpgradeLevel(3);
+    turret.fireTimer = 1.0;
+
+    turret.update(0.1, 400, 100, 400, 300, false, mockOnFire, true); // isOverclock = true
+    expect(mockOnFire).toHaveBeenCalled();
+    const firedBoltsLv3 = mockOnFire.mock.calls[0][0];
+    expect(firedBoltsLv3.length).toBe(4); // 2 + 2 = 4
+  });
 });

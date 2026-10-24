@@ -76,24 +76,34 @@ export class ParticleEngine {
     });
   }
 
-  update(dt, planetX, planetY, turretRadius, aliens, onNovaHitCallback, onSparkCollectedCallback) {
+  update(dt, planetX, planetY, turretRadius, aliens, onNovaHitCallback, onSparkCollectedCallback, onBossPhase2Callback = null, hazardManager = null, supplyPodManager = null, onAsteroidShatterCallback = null, onPodDestroyedCallback = null) {
     // 1. Update Chain Nova Shockwaves
     for (let i = this.novas.length - 1; i >= 0; i--) {
       const n = this.novas[i];
       n.radius += n.speed * dt;
       n.alpha = Math.max(0, 1 - (n.radius / n.maxRadius));
 
-      // Damage aliens within expanding shockwave ring
+      // Damage aliens within expanding shockwave ring (Novas pierce boss shield)
       for (const alien of aliens) {
         if (!alien.alive || n.hitAliens.has(alien)) continue;
         const d = Math.hypot(alien.x - n.x, alien.y - n.y);
         if (Math.abs(d - n.radius) < 32 || d <= n.radius) {
           n.hitAliens.add(alien);
-          const destroyed = alien.takeDamage(n.damage);
+          const destroyed = alien.takeDamage(n.damage, null, null, true, onBossPhase2Callback);
           if (onNovaHitCallback) {
             onNovaHitCallback(alien, destroyed, n);
           }
         }
+      }
+
+      // Check Nova impact on Drifting Asteroids (Sector I)
+      if (hazardManager) {
+        hazardManager.checkHitAsteroids(n.x, n.y, n.radius, n.damage, onAsteroidShatterCallback);
+      }
+
+      // Check Nova impact on Orbital Supply Pods
+      if (supplyPodManager) {
+        supplyPodManager.checkHit(n.x, n.y, n.radius, n.damage, onPodDestroyedCallback);
       }
 
       if (n.radius >= n.maxRadius || n.alpha <= 0.01) {

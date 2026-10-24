@@ -28,7 +28,7 @@ export class GuardianTurret {
     return isOverdrive ? baseDmg * 1.5 : baseDmg;
   }
 
-  update(dt, pointerX, pointerY, planetX, planetY, isOverdrive = false, onFireCallback) {
+  update(dt, pointerX, pointerY, planetX, planetY, isOverdrive = false, onFireCallback, isOverclock = false) {
     // Smooth aim tracking towards pointer
     this.targetAngle = Math.atan2(pointerY - planetY, pointerX - planetX);
     
@@ -42,26 +42,32 @@ export class GuardianTurret {
       this.muzzleFlash -= dt * 10;
     }
 
-    // Fire timer
+    // Fire timer (+35% fire rate when Overclock is active)
     this.fireTimer += dt;
-    const interval = isOverdrive ? this.fireInterval * 0.55 : this.fireInterval;
+    let interval = isOverdrive ? this.fireInterval * 0.55 : this.fireInterval;
+    if (isOverclock) {
+      interval /= 1.35;
+    }
 
     if ((this.autoFire || this.isFiring) && this.fireTimer >= interval) {
       this.fireTimer = 0;
       this.muzzleFlash = 1.0;
-      this.firePlasmaBolts(planetX, planetY, isOverdrive, onFireCallback);
+      this.firePlasmaBolts(planetX, planetY, isOverdrive, onFireCallback, isOverclock);
     }
   }
 
-  firePlasmaBolts(planetX, planetY, isOverdrive, onFireCallback) {
+  firePlasmaBolts(planetX, planetY, isOverdrive, onFireCallback, isOverclock = false) {
     audio.playLaser(isOverdrive);
     const speed = 520;
     const dmg = this.getDamage(isOverdrive);
-    const color = isOverdrive ? '#ffd700' : '#00e5ff';
+    const color = isOverdrive ? '#ffd700' : (isOverclock ? '#38bdf8' : '#00e5ff');
     const bolts = [];
 
-    // Barrel count: Lv.1-2 Single, Lv.3-4 Twin, Lv.5-6 Triple
-    const barrelTier = this.level >= 5 ? 3 : (this.level >= 3 ? 2 : 1);
+    // Barrel count: Lv.1-2 Single, Lv.3-4 Twin, Lv.5-6 Triple (+2 extra barrels during Overclock)
+    let barrelTier = this.level >= 5 ? 3 : (this.level >= 3 ? 2 : 1);
+    if (isOverclock) {
+      barrelTier += 2;
+    }
 
     if (barrelTier === 1) {
       bolts.push({
@@ -86,7 +92,7 @@ export class GuardianTurret {
         color,
         pierce: isOverdrive ? 2 : 1
       });
-    } else {
+    } else if (barrelTier === 3) {
       bolts.push({
         angle: this.angle - 0.14,
         speed,
@@ -108,6 +114,29 @@ export class GuardianTurret {
         color,
         pierce: isOverdrive ? 2 : 1
       });
+    } else if (barrelTier === 4) {
+      const spread = [-0.15, -0.05, 0.05, 0.15];
+      for (const offset of spread) {
+        bolts.push({
+          angle: this.angle + offset,
+          speed,
+          damage: dmg * 0.8,
+          color,
+          pierce: isOverdrive ? 2 : 1
+        });
+      }
+    } else {
+      // 5+ Barrels
+      const spread = [-0.22, -0.11, 0, 0.11, 0.22];
+      for (const offset of spread) {
+        bolts.push({
+          angle: this.angle + offset,
+          speed,
+          damage: dmg * 0.75,
+          color,
+          pierce: isOverdrive ? 2 : 1
+        });
+      }
     }
 
     if (onFireCallback) {

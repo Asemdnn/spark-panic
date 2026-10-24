@@ -26,8 +26,9 @@
       theme: {
         extend: {
           fontFamily: {
-            orbitron: ['Orbitron', 'sans-serif'],
-            inter: ['Inter', 'sans-serif']
+            orbitron: ['Orbitron', 'Inter', 'system-ui', '-apple-system', 'Segoe UI Symbol', 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', 'sans-serif'],
+            display: ['Orbitron', 'Inter', 'system-ui', '-apple-system', 'Segoe UI Symbol', 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', 'sans-serif'],
+            inter: ['Inter', 'system-ui', '-apple-system', 'sans-serif']
           },
           colors: {
             cosmic: {
@@ -59,8 +60,8 @@
       overflow: hidden;
       background-color: #050814;
     }
-    .font-orbitron {
-      font-family: 'Orbitron', sans-serif;
+    .font-display, .font-orbitron {
+      font-family: 'Orbitron', 'Inter', system-ui, -apple-system, 'Segoe UI Symbol', 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif;
     }
     .glass-panel {
       background: rgba(10, 16, 38, 0.78);
@@ -149,7 +150,10 @@
     <!-- Left: Sector & Planet & Wave -->
     <div class="flex items-center gap-2.5 pointer-events-auto">
       <div id="hudPlanetBadge" class="glass-panel px-3.5 py-1.5 rounded-xl flex items-center gap-2">
-        <span class="text-base md:text-lg animate-pulse-soft">🪐</span>
+        <svg class="w-5 h-5 text-cosmic-cyan shrink-0 animate-pulse-soft" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="7" />
+          <path d="M3.5 14.5c4-7 13-7 17 0" />
+        </svg>
         <div>
           <div class="text-[9px] font-bold text-cosmic-cyan tracking-widest font-orbitron uppercase" id="hudSectorLabel">SECTOR I</div>
           <div class="text-xs md:text-sm font-black font-orbitron text-white tracking-wider" id="hudPlanetLabel">AERILON PRIME</div>
@@ -158,6 +162,11 @@
       <div id="hudWaveBadge" class="glass-panel px-3 py-1.5 rounded-xl text-center">
         <div class="text-[9px] font-bold text-slate-400 tracking-widest font-orbitron">WAVE</div>
         <div class="text-xs md:text-sm font-black font-orbitron text-cosmic-gold" id="hudWaveValue">1 / 2</div>
+      </div>
+      <!-- Sector Environmental Hazard Badge -->
+      <div id="hudHazardBadge" class="glass-panel px-3 py-1.5 rounded-xl flex items-center gap-1.5 text-xs font-orbitron font-bold border-cosmic-cyan/40 text-cosmic-cyan">
+        <span id="hazardIcon">☄️</span>
+        <span id="hazardLabel" class="text-[10px] md:text-xs">ASTEROID DRIFT</span>
       </div>
     </div>
 
@@ -195,7 +204,7 @@
       <div id="bossHudBar" class="w-full glass-panel px-3 py-1.5 rounded-xl border-cosmic-crimson/50 hidden">
         <div class="flex justify-between items-center text-[10px] font-orbitron font-bold mb-1">
           <span class="flex items-center gap-1.5 text-cosmic-crimson animate-pulse">
-            <span>⚠️</span>
+            <svg class="w-3.5 h-3.5 shrink-0 fill-current" viewBox="0 0 24 24"><path d="M12 2L1 21h22L12 2zm0 3.99L19.53 19H4.47L12 5.99zM11 10v4h2v-4h-2zm0 6v2h2v-2h-2z"/></svg>
             <span id="bossNameLabel">SECTOR MOTHERSHIP</span>
           </span>
           <span id="bossHealthText" class="text-cosmic-crimson font-black">100%</span>
@@ -209,7 +218,9 @@
     <!-- Right: Currency, Score, Combo & Controls -->
     <div class="flex items-center gap-2.5 pointer-events-auto">
       <div class="glass-panel px-3 py-1.5 rounded-xl flex items-center gap-2">
-        <span class="text-cosmic-gold text-sm md:text-base font-black">✦</span>
+        <svg class="w-4 h-4 text-cosmic-gold inline-block shrink-0 fill-current" viewBox="0 0 24 24">
+          <path d="M12 2L14.8 9.2L22 12L14.8 14.8L12 22L9.2 14.8L2 12L9.2 9.2L12 2Z" />
+        </svg>
         <div class="text-right">
           <div class="text-[8px] font-bold text-slate-400 font-orbitron">SHARDS</div>
           <div id="hudShards" class="text-xs md:text-sm font-black font-orbitron text-cosmic-gold">0</div>
@@ -227,13 +238,22 @@
       </div>
 
       <button id="btnMute" class="glass-panel w-9 h-9 rounded-xl flex items-center justify-center hover:border-cosmic-cyan transition cursor-pointer text-sm" title="Toggle Sound (M)">
-        🔊
+        <svg id="muteIconSvg" class="w-4 h-4 text-cosmic-cyan" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+          <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07" />
+        </svg>
       </button>
-      <button id="btnPause" class="glass-panel w-9 h-9 rounded-xl flex items-center justify-center hover:border-cosmic-cyan transition cursor-pointer text-sm font-black font-orbitron" title="Pause Game (P/Esc)">
-        ⏸
+      <button id="btnPause" class="glass-panel w-9 h-9 rounded-xl flex items-center justify-center hover:border-cosmic-cyan transition cursor-pointer text-sm font-black font-orbitron text-cosmic-cyan" title="Pause Game (P/Esc)">
+        <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24">
+          <rect x="6" y="4" width="4" height="16" rx="1" />
+          <rect x="14" y="4" width="4" height="16" rx="1" />
+        </svg>
       </button>
     </div>
   </div>
+
+  <!-- ACTIVE TEMPORARY TACTICAL BUFFS PILLS -->
+  <div id="hudBuffs" class="absolute top-16 md:top-20 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 pointer-events-none"></div>
 
   <!-- IN-GAME BOTTOM TACTICAL DECK -->
   <div id="hudBottom" class="absolute bottom-3 left-0 right-0 z-20 px-3 md:px-6 flex flex-col md:flex-row items-center justify-between gap-3 pointer-events-none transition-opacity duration-300">
@@ -345,29 +365,29 @@
           </div>
           <div class="text-right">
             <div class="text-[9px] text-slate-400 font-orbitron">LIBERATED STARS</div>
-            <div id="titleTotalStars" class="font-orbitron font-bold text-cosmic-gold">0 / 60 ★</div>
+            <div id="titleTotalStars" class="font-orbitron font-bold text-cosmic-gold flex items-center justify-end gap-1">0 / 60</div>
           </div>
         </div>
 
         <!-- Action Buttons -->
         <div class="w-full flex flex-col gap-2.5">
           <button id="btnStartCampaign" class="w-full py-3.5 px-6 rounded-2xl font-orbitron font-black text-sm tracking-wider bg-gradient-to-r from-cosmic-cyan to-blue-600 hover:from-cyan-300 hover:to-blue-500 text-slate-950 shadow-[0_0_20px_rgba(0,229,255,0.4)] transition transform hover:-translate-y-0.5 active:translate-y-0 cursor-pointer flex items-center justify-center gap-2">
-            <span>🪐</span>
+            <svg class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="7"/><path d="M3.5 14.5c4-7 13-7 17 0"/></svg>
             <span>ENTER UNIVERSE STAR MAP</span>
           </button>
 
           <button id="btnStartEndless" class="w-full py-3 px-6 rounded-2xl font-orbitron font-bold text-xs tracking-wider bg-gradient-to-r from-cosmic-magenta to-purple-700 hover:from-fuchsia-400 hover:to-purple-600 text-white shadow-[0_0_15px_rgba(224,64,251,0.3)] transition cursor-pointer flex items-center justify-center gap-2">
-            <span>♾️</span>
+            <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18.178 8c5.096 0 5.096 8 0 8-2.695 0-4.717-3.238-6.178-5-1.461 1.762-3.483 5-6.178 5-5.096 0-5.096-8 0-8 2.695 0 4.717 3.238 6.178 5 1.461-1.762 3.483-5 6.178-5z"/></svg>
             <span>ENDLESS COSMIC SIEGE</span>
           </button>
 
           <div class="grid grid-cols-2 gap-2 mt-1">
-            <button id="btnOpenArmory" class="py-2.5 px-4 rounded-xl font-orbitron font-bold text-xs tracking-wider glass-panel border-cosmic-gold/40 hover:border-cosmic-gold text-cosmic-gold transition cursor-pointer flex items-center justify-center gap-1.5">
-              <span>🛠️</span>
+            <button id="btnOpenArmory" class="py-2.5 px-4 rounded-xl font-orbitron font-bold text-xs tracking-wider glass-panel border-cosmic-gold/40 hover:border-cosmic-gold text-cosmic-gold transition cursor-pointer flex items-center justify-center gap-2">
+              <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
               <span>ARMORY</span>
             </button>
-            <button id="btnOpenCodex" class="py-2.5 px-4 rounded-xl font-orbitron font-bold text-xs tracking-wider glass-panel border-cosmic-mint/40 hover:border-cosmic-mint text-cosmic-mint transition cursor-pointer flex items-center justify-center gap-1.5">
-              <span>📖</span>
+            <button id="btnOpenCodex" class="py-2.5 px-4 rounded-xl font-orbitron font-bold text-xs tracking-wider glass-panel border-cosmic-mint/40 hover:border-cosmic-mint text-cosmic-mint transition cursor-pointer flex items-center justify-center gap-2">
+              <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
               <span>CODEX</span>
             </button>
           </div>
@@ -384,7 +404,7 @@
       <div class="flex items-center justify-between pb-3 border-b border-slate-800">
         <div class="flex items-center gap-3">
           <button id="btnStarMapBack" class="w-9 h-9 rounded-xl glass-panel flex items-center justify-center hover:border-cosmic-cyan transition cursor-pointer font-orbitron text-sm">
-            ←
+            <svg class="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
           </button>
           <div>
             <h2 class="text-base md:text-xl font-black font-orbitron text-white tracking-wide">
@@ -396,7 +416,7 @@
 
         <div class="flex items-center gap-3">
           <div class="glass-panel px-3 py-1.5 rounded-xl font-orbitron text-xs text-cosmic-gold flex items-center gap-1.5">
-            <span>✦</span>
+            <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M12 2L14.8 9.2L22 12L14.8 14.8L12 22L9.2 14.8L2 12L9.2 9.2L12 2Z"/></svg>
             <span id="starMapShards">0</span>
           </div>
         </div>
@@ -432,7 +452,11 @@
               <span id="briefingSectorTag" class="text-[9px] font-orbitron font-bold px-2 py-0.5 rounded-md bg-cosmic-cyan/20 text-cosmic-cyan border border-cosmic-cyan/30">
                 SECTOR I
               </span>
-              <span id="briefingStars" class="text-cosmic-gold text-sm font-orbitron">★★★</span>
+              <span id="briefingStars" class="flex items-center gap-1 text-cosmic-gold text-sm font-orbitron">
+                <svg class="w-4 h-4 fill-current inline-block" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                <svg class="w-4 h-4 fill-current inline-block" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                <svg class="w-4 h-4 fill-current inline-block" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+              </span>
             </div>
 
             <div class="flex items-center gap-3 my-2">
@@ -464,7 +488,7 @@
           </div>
 
           <button id="btnLaunchMission" class="w-full py-3 rounded-xl font-orbitron font-black text-xs tracking-wider bg-gradient-to-r from-cosmic-cyan to-blue-600 hover:from-cyan-300 hover:to-blue-500 text-slate-950 shadow-[0_0_15px_rgba(0,229,255,0.4)] transition cursor-pointer flex items-center justify-center gap-2">
-            <span>🚀</span>
+            <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4.5c1.62-1.63 5-2.5 5-2.5"/><path d="M12 15v5s3.03-.55 4.5-2c1.63-1.62 2.5-5 2.5-5"/></svg>
             <span>LAUNCH PLANETARY DEFENSE</span>
           </button>
         </div>
@@ -478,7 +502,7 @@
       <!-- Armory Header -->
       <div class="flex items-center justify-between pb-4 border-b border-slate-800">
         <div class="flex items-center gap-3">
-          <span class="text-2xl">🛠️</span>
+          <svg class="w-6 h-6 text-cosmic-gold shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
           <div>
             <h2 class="text-lg md:text-xl font-black font-orbitron text-white tracking-wide">
               GUARDIAN ARMORY • TECH TREE UPGRADES
@@ -489,11 +513,11 @@
 
         <div class="flex items-center gap-3">
           <div class="glass-panel px-4 py-2 rounded-xl font-orbitron font-bold text-sm text-cosmic-gold flex items-center gap-2">
-            <span>✦</span>
+            <svg class="w-4 h-4 fill-current shrink-0" viewBox="0 0 24 24"><path d="M12 2L14.8 9.2L22 12L14.8 14.8L12 22L9.2 14.8L2 12L9.2 9.2L12 2Z"/></svg>
             <span id="armoryShards">0</span>
           </div>
-          <button id="btnArmoryClose" class="w-9 h-9 rounded-xl glass-panel flex items-center justify-center hover:border-cosmic-gold transition cursor-pointer text-sm font-bold">
-            ✕
+          <button id="btnArmoryClose" class="w-9 h-9 rounded-xl glass-panel flex items-center justify-center hover:border-cosmic-gold transition cursor-pointer text-sm font-bold text-slate-300">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" d="M6 6l12 12M18 6L6 18"/></svg>
           </button>
         </div>
       </div>
@@ -506,8 +530,9 @@
       <!-- Armory Footer with Refund All Tech Button -->
       <div class="pt-4 border-t border-slate-800 flex items-center justify-between">
         <p class="text-xs text-slate-400">Earn Star Shards from alien kills and stage stars.</p>
-        <button id="btnRefundTech" class="px-4 py-2 rounded-xl text-xs font-orbitron font-bold text-rose-400 border border-rose-500/40 hover:bg-rose-500/20 transition cursor-pointer">
-          ↺ REFUND ALL TECH UPGRADES (100%)
+        <button id="btnRefundTech" class="px-4 py-2 rounded-xl text-xs font-orbitron font-bold text-rose-400 border border-rose-500/40 hover:bg-rose-500/20 transition cursor-pointer flex items-center gap-1.5">
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>
+          <span>REFUND ALL TECH UPGRADES (100%)</span>
         </button>
       </div>
     </div>
@@ -519,7 +544,7 @@
       <!-- Codex Header -->
       <div class="flex items-center justify-between pb-3 border-b border-slate-800">
         <div class="flex items-center gap-3">
-          <span class="text-2xl">📖</span>
+          <svg class="w-6 h-6 text-cosmic-mint shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
           <div>
             <h2 class="text-lg md:text-xl font-black font-orbitron text-white tracking-wide">
               GUARDIAN ARCHIVES & ALIEN CODEX
@@ -527,8 +552,8 @@
             <p class="text-xs text-slate-400">Tactical intelligence on 7 invading alien ship classes and Guardian Trophies</p>
           </div>
         </div>
-        <button id="btnCodexClose" class="w-9 h-9 rounded-xl glass-panel flex items-center justify-center hover:border-cosmic-mint transition cursor-pointer text-sm font-bold">
-          ✕
+        <button id="btnCodexClose" class="w-9 h-9 rounded-xl glass-panel flex items-center justify-center hover:border-cosmic-mint transition cursor-pointer text-sm font-bold text-slate-300">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" d="M6 6l12 12M18 6L6 18"/></svg>
         </button>
       </div>
 
@@ -563,10 +588,10 @@
       </p>
 
       <!-- 3-Star Rating Animation -->
-      <div id="victoryStarsContainer" class="flex items-center gap-3 text-3xl my-2">
-        <span class="text-cosmic-gold text-glow-gold">★</span>
-        <span class="text-cosmic-gold text-glow-gold">★</span>
-        <span class="text-cosmic-gold text-glow-gold">★</span>
+      <div id="victoryStarsContainer" class="flex items-center gap-3 my-2">
+        <span class="text-cosmic-gold drop-shadow-[0_0_12px_#ffd700]"><svg class="w-8 h-8 fill-current" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg></span>
+        <span class="text-cosmic-gold drop-shadow-[0_0_12px_#ffd700]"><svg class="w-8 h-8 fill-current" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg></span>
+        <span class="text-cosmic-gold drop-shadow-[0_0_12px_#ffd700]"><svg class="w-8 h-8 fill-current" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg></span>
       </div>
 
       <!-- Stats Summary -->
@@ -583,9 +608,9 @@
           <span class="text-slate-400">Planetary Core HP:</span>
           <span id="vicStatCore" class="font-orbitron font-bold text-cosmic-mint">100%</span>
         </div>
-        <div class="flex justify-between">
+        <div class="flex justify-between items-center">
           <span class="text-slate-400">Star Shards Earned:</span>
-          <span id="vicStatShards" class="font-orbitron font-bold text-cosmic-gold">+0 ✦</span>
+          <span id="vicStatShards" class="font-orbitron font-bold text-cosmic-gold flex items-center gap-1">+0</span>
         </div>
         <div class="flex justify-between border-t border-slate-700/60 pt-1.5 font-bold">
           <span class="text-slate-300">Mission Score:</span>
@@ -595,15 +620,18 @@
 
       <!-- Buttons -->
       <div class="w-full flex flex-col gap-2">
-        <button id="btnVictoryNext" class="w-full py-3 rounded-xl font-orbitron font-black text-xs tracking-wider bg-gradient-to-r from-cosmic-cyan to-blue-600 hover:from-cyan-300 hover:to-blue-500 text-slate-950 shadow-lg transition cursor-pointer">
-          NEXT PLANETARY SYSTEM ➔
+        <button id="btnVictoryNext" class="w-full py-3 rounded-xl font-orbitron font-black text-xs tracking-wider bg-gradient-to-r from-cosmic-cyan to-blue-600 hover:from-cyan-300 hover:to-blue-500 text-slate-950 shadow-lg transition cursor-pointer flex items-center justify-center gap-2">
+          <span>NEXT PLANETARY SYSTEM</span>
+          <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
         </button>
         <div class="grid grid-cols-2 gap-2">
-          <button id="btnVictoryRetry" class="py-2.5 rounded-xl font-orbitron font-bold text-xs glass-panel hover:border-cosmic-cyan text-white transition cursor-pointer">
-            RETRY STAGE ⟲
+          <button id="btnVictoryRetry" class="py-2.5 rounded-xl font-orbitron font-bold text-xs glass-panel hover:border-cosmic-cyan text-white transition cursor-pointer flex items-center justify-center gap-1.5">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>
+            <span>RETRY STAGE</span>
           </button>
-          <button id="btnVictoryMap" class="py-2.5 rounded-xl font-orbitron font-bold text-xs glass-panel hover:border-cosmic-gold text-cosmic-gold transition cursor-pointer">
-            GALAXY MAP ☰
+          <button id="btnVictoryMap" class="py-2.5 rounded-xl font-orbitron font-bold text-xs glass-panel hover:border-cosmic-gold text-cosmic-gold transition cursor-pointer flex items-center justify-center gap-1.5">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+            <span>GALAXY MAP</span>
           </button>
         </div>
       </div>
@@ -630,22 +658,25 @@
           <span class="text-slate-400">Aliens Destroyed:</span>
           <span id="defStatEnemies" class="font-orbitron font-bold text-cosmic-cyan">0</span>
         </div>
-        <div class="flex justify-between">
+        <div class="flex justify-between items-center">
           <span class="text-slate-400">Star Shards Salvaged:</span>
-          <span id="defStatShards" class="font-orbitron font-bold text-cosmic-gold">+0 ✦</span>
+          <span id="defStatShards" class="font-orbitron font-bold text-cosmic-gold flex items-center gap-1">+0</span>
         </div>
       </div>
 
       <div class="w-full flex flex-col gap-2 mt-2">
-        <button id="btnDefeatRetry" class="w-full py-3 rounded-xl font-orbitron font-black text-xs tracking-wider bg-gradient-to-r from-cosmic-crimson to-rose-700 hover:from-rose-500 hover:to-rose-600 text-white shadow-lg transition cursor-pointer">
-          RETRY ORBITAL DEFENSE ⟲
+        <button id="btnDefeatRetry" class="w-full py-3 rounded-xl font-orbitron font-black text-xs tracking-wider bg-gradient-to-r from-cosmic-crimson to-rose-700 hover:from-rose-500 hover:to-rose-600 text-white shadow-lg transition cursor-pointer flex items-center justify-center gap-2">
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>
+          <span>RETRY ORBITAL DEFENSE</span>
         </button>
         <div class="grid grid-cols-2 gap-2">
-          <button id="btnDefeatArmory" class="py-2.5 rounded-xl font-orbitron font-bold text-xs glass-panel hover:border-cosmic-gold text-cosmic-gold transition cursor-pointer">
-            UPGRADE ARMORY 🛠️
+          <button id="btnDefeatArmory" class="py-2.5 rounded-xl font-orbitron font-bold text-xs glass-panel hover:border-cosmic-gold text-cosmic-gold transition cursor-pointer flex items-center justify-center gap-1.5">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+            <span>UPGRADE ARMORY</span>
           </button>
-          <button id="btnDefeatMap" class="py-2.5 rounded-xl font-orbitron font-bold text-xs glass-panel hover:border-cosmic-cyan text-white transition cursor-pointer">
-            GALAXY MAP ☰
+          <button id="btnDefeatMap" class="py-2.5 rounded-xl font-orbitron font-bold text-xs glass-panel hover:border-cosmic-cyan text-white transition cursor-pointer flex items-center justify-center gap-1.5">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+            <span>GALAXY MAP</span>
           </button>
         </div>
       </div>
@@ -661,14 +692,17 @@
       <p class="text-xs text-slate-400 mb-5">Defense systems suspended</p>
 
       <div class="w-full flex flex-col gap-2.5">
-        <button id="btnResume" class="w-full py-3 rounded-xl font-orbitron font-black text-xs tracking-wider bg-gradient-to-r from-cosmic-cyan to-blue-600 text-slate-950 transition cursor-pointer">
-          RESUME DEFENSE ▶
+        <button id="btnResume" class="w-full py-3 rounded-xl font-orbitron font-black text-xs tracking-wider bg-gradient-to-r from-cosmic-cyan to-blue-600 text-slate-950 transition cursor-pointer flex items-center justify-center gap-2">
+          <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          <span>RESUME DEFENSE</span>
         </button>
-        <button id="btnPauseRestart" class="w-full py-2.5 rounded-xl font-orbitron font-bold text-xs glass-panel hover:border-cosmic-cyan text-white transition cursor-pointer">
-          RESTART MISSION ⟲
+        <button id="btnPauseRestart" class="w-full py-2.5 rounded-xl font-orbitron font-bold text-xs glass-panel hover:border-cosmic-cyan text-white transition cursor-pointer flex items-center justify-center gap-1.5">
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>
+          <span>RESTART MISSION</span>
         </button>
-        <button id="btnPauseStarMap" class="w-full py-2.5 rounded-xl font-orbitron font-bold text-xs glass-panel hover:border-cosmic-gold text-cosmic-gold transition cursor-pointer">
-          GALAXY STAR MAP ☰
+        <button id="btnPauseStarMap" class="w-full py-2.5 rounded-xl font-orbitron font-bold text-xs glass-panel hover:border-cosmic-gold text-cosmic-gold transition cursor-pointer flex items-center justify-center gap-1.5">
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+          <span>GALAXY STAR MAP</span>
         </button>
       </div>
     </div>

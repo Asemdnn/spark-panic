@@ -24,6 +24,13 @@ export class Alien {
     this.pulsePhase = Math.random() * Math.PI * 2;
     this.heading = 0;
 
+    // Boss Multi-Phase Overdrive Mechanics
+    this.isBoss = (classKey === 'BOSS');
+    this.phase = 1;
+    this.isPhase2 = false;
+    this.shieldAngle = 0;
+    this.shieldHitFlash = 0;
+
     // Class specific AI timers
     this.torpedoTimer = 1.5 + Math.random() * 2.0;
     this.blinkTimer = 3.4;
@@ -36,9 +43,32 @@ export class Alien {
     this.frozenTimer = Math.max(this.frozenTimer, duration);
   }
 
-  takeDamage(amount) {
+  takeDamage(amount, hitX = null, hitY = null, isDirectPierce = false, onBossPhase2 = null) {
     if (!this.alive) return false;
+
+    // Boss Phase 2 Rotating Directional Shield Arc deflection (50% reduction for standard turret fire)
+    if (this.isBoss && this.isPhase2 && !isDirectPierce && hitX !== null && hitY !== null) {
+      const hitAngle = Math.atan2(hitY - this.y, hitX - this.x);
+      let diff = Math.abs(hitAngle - this.shieldAngle);
+      while (diff > Math.PI) diff = Math.abs(diff - Math.PI * 2);
+      const halfArc = (110 * Math.PI) / 360; // 55° (110° total arc)
+      if (diff <= halfArc) {
+        amount *= 0.5; // Deflected by 50%
+        this.shieldHitFlash = 0.22;
+      }
+    }
+
     this.hp -= amount;
+
+    // Multi-Phase Boss Enrage: Enters Phase 2 at <= 50% HP
+    if (this.isBoss && !this.isPhase2 && this.hp <= this.maxHp * 0.5 && this.hp > 0) {
+      this.isPhase2 = true;
+      this.phase = 2;
+      if (onBossPhase2) {
+        onBossPhase2(this);
+      }
+    }
+
     if (this.hp <= 0) {
       this.alive = false;
       return true; // Destroyed
@@ -50,6 +80,11 @@ export class Alien {
     if (!this.alive) return;
 
     this.pulsePhase += dt * 4;
+
+    if (this.isBoss && this.isPhase2) {
+      this.shieldAngle += dt * 1.8;
+      if (this.shieldHitFlash > 0) this.shieldHitFlash -= dt;
+    }
 
     let speedMult = 1.0;
     if (this.frozenTimer > 0) {
@@ -336,5 +371,33 @@ export class Alien {
     }
 
     ctx.restore();
+
+    // Phase 2 Rotating 110° Front Energy Shield Arc
+    if (this.isBoss && this.isPhase2) {
+      ctx.save();
+      ctx.translate(this.x, this.y);
+      ctx.beginPath();
+      const halfArc = (110 * Math.PI) / 360; // 55°
+      ctx.arc(0, 0, r + 14, this.shieldAngle - halfArc, this.shieldAngle + halfArc);
+      ctx.strokeStyle = this.shieldHitFlash > 0 ? '#ffffff' : '#ffd700';
+      ctx.lineWidth = 4.5;
+      ctx.shadowColor = '#ffd700';
+      ctx.shadowBlur = 16;
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+
+      // Directional emitter nodes at arc ends
+      const end1X = Math.cos(this.shieldAngle - halfArc) * (r + 14);
+      const end1Y = Math.sin(this.shieldAngle - halfArc) * (r + 14);
+      const end2X = Math.cos(this.shieldAngle + halfArc) * (r + 14);
+      const end2Y = Math.sin(this.shieldAngle + halfArc) * (r + 14);
+      ctx.fillStyle = '#ff1744';
+      ctx.beginPath();
+      ctx.arc(end1X, end1Y, 3, 0, Math.PI * 2);
+      ctx.arc(end2X, end2Y, 3, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.restore();
+    }
   }
 }
