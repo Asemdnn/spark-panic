@@ -1,36 +1,680 @@
 <!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
-    />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="theme-color" content="#070913" />
-    <title>Guardian of the Universe - Cosmic Chain Defense</title>
-    <link rel="icon" type="image/jpeg" href="./assets/game-icon.jpg" />
-    <link rel="apple-touch-icon" href="./assets/game-icon.jpg" />
-    <meta property="og:title" content="Guardian of the Universe - Cosmic Chain Defense" />
-    <meta property="og:description" content="Defend 20 planetary worlds across the galaxy from an invading alien armada in this chain reaction arcade game." />
-    <meta property="og:image" content="./assets/game-cover.jpg" />
-    <meta name="twitter:card" content="summary_large_image" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;800;900&display=swap"
-      rel="stylesheet"
-    />
-    <link rel="stylesheet" href="./src/styles/style.css" />
-    <!-- YouTube Playables Official SDK (no-op when outside of YouTube) -->
-    <script async src="https://www.youtube.com/game_api/v1"></script>
-  </head>
-  <body>
-    <div id="app-container">
-      <canvas id="game-canvas"></canvas>
-      <div id="ui-layer"></div>
+<html lang="en" class="h-full bg-[#050814] text-white">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="theme-color" content="#050814" />
+  <title>Spark Panic: Planetary Invasion Defense — Guardian of the Universe (2.0 Planetary Invasion Edition)</title>
+  
+  <link rel="icon" type="image/jpeg" href="./assets/hero-key-art.jpg" />
+  <link rel="apple-touch-icon" href="./assets/hero-key-art.jpg" />
+  <meta property="og:title" content="Spark Panic: Planetary Invasion Defense — Guardian of the Universe" />
+  <meta property="og:description" content="360° Orbital Guardian Action Strategy Game. Defend 20 celestial worlds across 4 Cosmic Sectors from unrelenting alien invasion fleets." />
+  <meta property="og:image" content="./assets/hero-key-art.jpg" />
+
+  <!-- Google Fonts: Orbitron (Headers) & Inter (Body) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Orbitron:wght@500;600;700;800;900&display=swap" rel="stylesheet" />
+
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            orbitron: ['Orbitron', 'sans-serif'],
+            inter: ['Inter', 'sans-serif']
+          },
+          colors: {
+            cosmic: {
+              950: '#03050c',
+              900: '#050814',
+              800: '#0c1228',
+              700: '#152042',
+              cyan: '#00e5ff',
+              magenta: '#e040fb',
+              gold: '#ffd700',
+              mint: '#00e676',
+              crimson: '#ff3366',
+              purple: '#a855f7'
+            }
+          }
+        }
+      }
+    };
+  </script>
+
+  <style>
+    * {
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: manipulation;
+    }
+    body {
+      font-family: 'Inter', sans-serif;
+      overflow: hidden;
+      background-color: #050814;
+    }
+    .font-orbitron {
+      font-family: 'Orbitron', sans-serif;
+    }
+    .glass-panel {
+      background: rgba(10, 16, 38, 0.78);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid rgba(0, 229, 255, 0.22);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    }
+    .glass-card {
+      background: rgba(14, 22, 48, 0.65);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .glow-cyan {
+      box-shadow: 0 0 20px rgba(0, 229, 255, 0.45);
+    }
+    .glow-gold {
+      box-shadow: 0 0 20px rgba(255, 215, 0, 0.45);
+    }
+    .glow-magenta {
+      box-shadow: 0 0 20px rgba(224, 64, 251, 0.45);
+    }
+    .glow-crimson {
+      box-shadow: 0 0 20px rgba(255, 51, 102, 0.45);
+    }
+    .text-glow-cyan {
+      text-shadow: 0 0 10px rgba(0, 229, 255, 0.75);
+    }
+    .text-glow-gold {
+      text-shadow: 0 0 10px rgba(255, 215, 0, 0.75);
+    }
+    .text-glow-magenta {
+      text-shadow: 0 0 10px rgba(224, 64, 251, 0.75);
+    }
+    .nova-dot {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #00e5ff;
+      box-shadow: 0 0 10px #00e5ff;
+      transition: all 0.2s ease;
+    }
+    .nova-dot.empty {
+      background: rgba(255, 255, 255, 0.15);
+      box-shadow: none;
+    }
+    @keyframes pulseSoft {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.05); opacity: 0.85; }
+    }
+    .animate-pulse-soft {
+      animation: pulseSoft 2.2s infinite ease-in-out;
+    }
+    /* Custom scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(5, 8, 20, 0.8);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(0, 229, 255, 0.3);
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(0, 229, 255, 0.6);
+    }
+  </style>
+</head>
+<body class="w-full h-full relative overflow-hidden select-none bg-[#050814]">
+
+  <!-- Fullscreen WebGL/Canvas Arena -->
+  <canvas id="gameCanvas" class="absolute inset-0 w-full h-full z-0 block cursor-crosshair"></canvas>
+
+  <!-- Animated Top Toast Banner -->
+  <div id="toastBanner" class="fixed top-5 left-1/2 -translate-x-1/2 z-50 pointer-events-none transition-all duration-500 opacity-0 -translate-y-8">
+    <div class="glass-panel px-6 py-2.5 rounded-full flex items-center gap-3 border border-cosmic-gold/50 shadow-2xl">
+      <span id="toastIcon" class="text-xl">🏆</span>
+      <span id="toastText" class="font-orbitron text-xs md:text-sm font-bold tracking-wider text-cosmic-gold">TROPHY UNLOCKED!</span>
     </div>
-    <script type="module" src="./src/main.js"></script>
-  </body>
+  </div>
+
+  <!-- IN-GAME TOP HUD -->
+  <div id="hudTop" class="absolute top-0 left-0 right-0 z-20 p-3 md:p-4 flex flex-col md:flex-row items-center justify-between gap-3 pointer-events-none transition-opacity duration-300">
+    <!-- Left: Sector & Planet & Wave -->
+    <div class="flex items-center gap-2.5 pointer-events-auto">
+      <div id="hudPlanetBadge" class="glass-panel px-3.5 py-1.5 rounded-xl flex items-center gap-2">
+        <span class="text-base md:text-lg animate-pulse-soft">🪐</span>
+        <div>
+          <div class="text-[9px] font-bold text-cosmic-cyan tracking-widest font-orbitron uppercase" id="hudSectorLabel">SECTOR I</div>
+          <div class="text-xs md:text-sm font-black font-orbitron text-white tracking-wider" id="hudPlanetLabel">AERILON PRIME</div>
+        </div>
+      </div>
+      <div id="hudWaveBadge" class="glass-panel px-3 py-1.5 rounded-xl text-center">
+        <div class="text-[9px] font-bold text-slate-400 tracking-widest font-orbitron">WAVE</div>
+        <div class="text-xs md:text-sm font-black font-orbitron text-cosmic-gold" id="hudWaveValue">1 / 2</div>
+      </div>
+    </div>
+
+    <!-- Center: Planetary Defense Integrity & Boss Bar -->
+    <div class="w-full md:w-96 flex flex-col items-center gap-1.5 pointer-events-auto">
+      <!-- Aegis Shield Bar -->
+      <div class="w-full glass-panel px-3 py-1.5 rounded-xl">
+        <div class="flex justify-between items-center text-[10px] font-orbitron font-bold mb-1">
+          <span class="flex items-center gap-1.5 text-cosmic-cyan">
+            <span class="w-2 h-2 rounded-full bg-cosmic-cyan shadow-[0_0_8px_#00e5ff]"></span>
+            AEGIS ENERGY SHIELD
+          </span>
+          <span id="hudShieldText" class="text-cosmic-cyan text-glow-cyan font-black">100%</span>
+        </div>
+        <div class="w-full h-2 bg-slate-900/80 rounded-full overflow-hidden border border-cosmic-cyan/20">
+          <div id="hudShieldBar" class="h-full bg-gradient-to-r from-cyan-400 to-blue-500 rounded-full transition-all duration-200 shadow-[0_0_12px_#00e5ff]" style="width: 100%;"></div>
+        </div>
+      </div>
+
+      <!-- Planetary Core HP Bar -->
+      <div class="w-full glass-panel px-3 py-1.5 rounded-xl">
+        <div class="flex justify-between items-center text-[10px] font-orbitron font-bold mb-1">
+          <span class="flex items-center gap-1.5 text-cosmic-mint">
+            <span class="w-2 h-2 rounded-full bg-cosmic-mint shadow-[0_0_8px_#00e676]"></span>
+            PLANETARY CORE HP
+          </span>
+          <span id="hudCoreText" class="text-cosmic-mint font-black">100%</span>
+        </div>
+        <div class="w-full h-2 bg-slate-900/80 rounded-full overflow-hidden border border-cosmic-mint/20">
+          <div id="hudCoreBar" class="h-full bg-gradient-to-r from-emerald-400 to-teal-500 rounded-full transition-all duration-200 shadow-[0_0_12px_#00e676]" style="width: 100%;"></div>
+        </div>
+      </div>
+
+      <!-- Sector Boss Health Bar (Conditional) -->
+      <div id="bossHudBar" class="w-full glass-panel px-3 py-1.5 rounded-xl border-cosmic-crimson/50 hidden">
+        <div class="flex justify-between items-center text-[10px] font-orbitron font-bold mb-1">
+          <span class="flex items-center gap-1.5 text-cosmic-crimson animate-pulse">
+            <span>⚠️</span>
+            <span id="bossNameLabel">SECTOR MOTHERSHIP</span>
+          </span>
+          <span id="bossHealthText" class="text-cosmic-crimson font-black">100%</span>
+        </div>
+        <div class="w-full h-2.5 bg-slate-900/80 rounded-full overflow-hidden border border-cosmic-crimson/40">
+          <div id="bossHealthFill" class="h-full bg-gradient-to-r from-rose-500 via-red-600 to-amber-500 rounded-full transition-all duration-150 shadow-[0_0_14px_#ff1744]" style="width: 100%;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Currency, Score, Combo & Controls -->
+    <div class="flex items-center gap-2.5 pointer-events-auto">
+      <div class="glass-panel px-3 py-1.5 rounded-xl flex items-center gap-2">
+        <span class="text-cosmic-gold text-sm md:text-base font-black">✦</span>
+        <div class="text-right">
+          <div class="text-[8px] font-bold text-slate-400 font-orbitron">SHARDS</div>
+          <div id="hudShards" class="text-xs md:text-sm font-black font-orbitron text-cosmic-gold">0</div>
+        </div>
+      </div>
+
+      <div class="glass-panel px-3.5 py-1.5 rounded-xl text-right min-w-[70px]">
+        <div class="text-[8px] font-bold text-slate-400 font-orbitron">SCORE</div>
+        <div id="hudScore" class="text-xs md:text-sm font-black font-orbitron text-white">0</div>
+      </div>
+
+      <!-- Combo Indicator -->
+      <div id="hudCombo" class="glass-panel px-2.5 py-1.5 rounded-xl text-center font-orbitron font-black text-xs md:text-sm text-cosmic-magenta border-cosmic-magenta/40 transition-transform duration-200 scale-95 opacity-80">
+        x1
+      </div>
+
+      <button id="btnMute" class="glass-panel w-9 h-9 rounded-xl flex items-center justify-center hover:border-cosmic-cyan transition cursor-pointer text-sm" title="Toggle Sound (M)">
+        🔊
+      </button>
+      <button id="btnPause" class="glass-panel w-9 h-9 rounded-xl flex items-center justify-center hover:border-cosmic-cyan transition cursor-pointer text-sm font-black font-orbitron" title="Pause Game (P/Esc)">
+        ⏸
+      </button>
+    </div>
+  </div>
+
+  <!-- IN-GAME BOTTOM TACTICAL DECK -->
+  <div id="hudBottom" class="absolute bottom-3 left-0 right-0 z-20 px-3 md:px-6 flex flex-col md:flex-row items-center justify-between gap-3 pointer-events-none transition-opacity duration-300">
+    <!-- Left: Spark Nova Charges -->
+    <div class="glass-panel p-2.5 rounded-2xl flex items-center gap-3 pointer-events-auto border-cosmic-cyan/30">
+      <div class="flex flex-col gap-1">
+        <div class="flex items-center justify-between text-[9px] font-orbitron font-bold text-cosmic-cyan tracking-wider">
+          <span>SPARK NOVAS [SPACE]</span>
+          <span id="hudNovaCount" class="text-white">3 / 3</span>
+        </div>
+        <div id="hudNovaDots" class="flex items-center gap-1.5">
+          <div class="nova-dot"></div>
+          <div class="nova-dot"></div>
+          <div class="nova-dot"></div>
+        </div>
+        <!-- Kill Recharge Progress -->
+        <div class="w-28 h-1 bg-slate-900 rounded-full overflow-hidden mt-0.5 border border-cosmic-cyan/20">
+          <div id="hudNovaProgress" class="h-full bg-cosmic-cyan transition-all duration-150" style="width: 0%;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Center: 3 Active Tactical Skills -->
+    <div class="flex items-center gap-2 pointer-events-auto">
+      <!-- Skill Q: Ion Beam -->
+      <button id="btnSkillQ" class="group glass-panel relative p-2 md:p-2.5 rounded-2xl flex flex-col items-center min-w-[76px] md:min-w-[88px] border-cosmic-cyan/40 hover:border-cosmic-cyan cursor-pointer transition active:scale-95">
+        <div id="skillCdQ" class="absolute inset-0 bg-slate-950/80 rounded-2xl flex items-center justify-center font-orbitron text-xs font-bold text-cosmic-cyan hidden">
+          0.0s
+        </div>
+        <div class="text-base md:text-lg mb-0.5 group-hover:scale-110 transition">⚡</div>
+        <div class="text-[9px] font-orbitron font-black text-white">ION BEAM</div>
+        <div class="text-[8px] font-orbitron font-bold text-cosmic-cyan mt-0.5">[Q / 1]</div>
+      </button>
+
+      <!-- Skill W: EMP Shockwave -->
+      <button id="btnSkillW" class="group glass-panel relative p-2 md:p-2.5 rounded-2xl flex flex-col items-center min-w-[76px] md:min-w-[88px] border-cosmic-magenta/40 hover:border-cosmic-magenta cursor-pointer transition active:scale-95">
+        <div id="skillCdW" class="absolute inset-0 bg-slate-950/80 rounded-2xl flex items-center justify-center font-orbitron text-xs font-bold text-cosmic-magenta hidden">
+          0.0s
+        </div>
+        <div class="text-base md:text-lg mb-0.5 group-hover:scale-110 transition">💥</div>
+        <div class="text-[9px] font-orbitron font-black text-white">EMP WAVE</div>
+        <div class="text-[8px] font-orbitron font-bold text-cosmic-magenta mt-0.5">[W / 2]</div>
+      </button>
+
+      <!-- Skill E: Aegis Overdrive -->
+      <button id="btnSkillE" class="group glass-panel relative p-2 md:p-2.5 rounded-2xl flex flex-col items-center min-w-[76px] md:min-w-[88px] border-cosmic-gold/40 hover:border-cosmic-gold cursor-pointer transition active:scale-95">
+        <div id="skillCdE" class="absolute inset-0 bg-slate-950/80 rounded-2xl flex items-center justify-center font-orbitron text-xs font-bold text-cosmic-gold hidden">
+          0.0s
+        </div>
+        <div class="text-base md:text-lg mb-0.5 group-hover:scale-110 transition">🛡️</div>
+        <div class="text-[9px] font-orbitron font-black text-white">OVERDRIVE</div>
+        <div class="text-[8px] font-orbitron font-bold text-cosmic-gold mt-0.5">[E / 3]</div>
+      </button>
+    </div>
+
+    <!-- Right: Auto-Fire Toggle & Tactical Shortcuts -->
+    <div class="glass-panel p-2.5 rounded-2xl flex items-center gap-2 pointer-events-auto border-cosmic-mint/30">
+      <button id="btnAutoFire" class="px-3.5 py-2 rounded-xl font-orbitron text-xs font-bold transition flex items-center gap-1.5 cursor-pointer bg-cosmic-mint/20 text-cosmic-mint border border-cosmic-mint/40 hover:bg-cosmic-mint/30" title="Toggle Auto-Fire (T)">
+        <span class="w-2 h-2 rounded-full bg-cosmic-mint animate-ping"></span>
+        <span id="autoFireLabel">AUTO: ON</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ==================== MODALS & MENUS ==================== -->
+
+  <!-- 1. TITLE COMMAND DECK MODAL (#modalTitle) -->
+  <div id="modalTitle" class="fixed inset-0 z-40 flex items-center justify-center p-4 bg-cosmic-950/85 backdrop-blur-md">
+    <div class="glass-panel w-full max-w-4xl max-h-[92vh] overflow-y-auto rounded-3xl p-6 md:p-8 flex flex-col md:flex-row gap-6 md:gap-8 items-center border border-cosmic-cyan/35 shadow-[0_0_50px_rgba(0,229,255,0.2)]">
+      
+      <!-- Left Hero Column with Attached Artwork 1 -->
+      <div class="w-full md:w-1/2 flex flex-col items-center justify-center relative group">
+        <div class="relative w-full aspect-video md:aspect-[4/5] rounded-2xl overflow-hidden border-2 border-cosmic-cyan/50 shadow-[0_0_25px_rgba(0,229,255,0.35)]">
+          <img src="./assets/hero-key-art.jpg" alt="Orbital Guardian Defending Shielded Planet" class="w-full h-full object-cover group-hover:scale-105 transition duration-700" />
+          <div class="absolute inset-0 bg-gradient-to-t from-[#050814] via-transparent to-transparent opacity-80"></div>
+          <div class="absolute bottom-3 left-3 right-3 text-center">
+            <span class="inline-block px-3 py-1 rounded-full text-[10px] font-orbitron font-extrabold tracking-widest bg-cosmic-cyan/20 text-cosmic-cyan border border-cosmic-cyan/40">
+              ORBITAL DEFENSE INVASION 2.0
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Column: Title, Ranks, Actions -->
+      <div class="w-full md:w-1/2 flex flex-col items-center md:items-start text-center md:text-left">
+        <div class="inline-block px-3 py-1 rounded-full text-[9px] font-orbitron font-extrabold tracking-widest bg-cosmic-magenta/20 text-cosmic-magenta border border-cosmic-magenta/40 mb-2">
+          ARCADE STRATEGY ACTION
+        </div>
+
+        <h1 class="text-2xl md:text-4xl font-black font-orbitron tracking-tight text-white mb-1">
+          SPARK <span class="text-cosmic-cyan text-glow-cyan">PANIC</span>
+        </h1>
+        <h2 class="text-xs md:text-sm font-orbitron font-bold tracking-widest text-cosmic-gold mb-3">
+          PLANETARY INVASION DEFENSE
+        </h2>
+
+        <p class="text-xs text-slate-300 leading-relaxed mb-4">
+          Defend 20 living celestial worlds across 4 Cosmic Sectors. Control your 360° Orbital Guardian Turret, detonate cascading Spark Novas, and repel alien armada siege fleets before the planet falls!
+        </p>
+
+        <!-- Guardian Rank & Statistics Pill -->
+        <div class="w-full glass-card p-3 rounded-2xl mb-5 flex items-center justify-between gap-3 text-xs">
+          <div class="flex items-center gap-2">
+            <span class="text-lg">🛡️</span>
+            <div>
+              <div class="text-[9px] text-slate-400 font-orbitron">GUARDIAN RANK</div>
+              <div id="titleGuardianRank" class="font-orbitron font-bold text-cosmic-cyan">CADET GUARDIAN</div>
+            </div>
+          </div>
+          <div class="text-right">
+            <div class="text-[9px] text-slate-400 font-orbitron">LIBERATED STARS</div>
+            <div id="titleTotalStars" class="font-orbitron font-bold text-cosmic-gold">0 / 60 ★</div>
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="w-full flex flex-col gap-2.5">
+          <button id="btnStartCampaign" class="w-full py-3.5 px-6 rounded-2xl font-orbitron font-black text-sm tracking-wider bg-gradient-to-r from-cosmic-cyan to-blue-600 hover:from-cyan-300 hover:to-blue-500 text-slate-950 shadow-[0_0_20px_rgba(0,229,255,0.4)] transition transform hover:-translate-y-0.5 active:translate-y-0 cursor-pointer flex items-center justify-center gap-2">
+            <span>🪐</span>
+            <span>ENTER UNIVERSE STAR MAP</span>
+          </button>
+
+          <button id="btnStartEndless" class="w-full py-3 px-6 rounded-2xl font-orbitron font-bold text-xs tracking-wider bg-gradient-to-r from-cosmic-magenta to-purple-700 hover:from-fuchsia-400 hover:to-purple-600 text-white shadow-[0_0_15px_rgba(224,64,251,0.3)] transition cursor-pointer flex items-center justify-center gap-2">
+            <span>♾️</span>
+            <span>ENDLESS COSMIC SIEGE</span>
+          </button>
+
+          <div class="grid grid-cols-2 gap-2 mt-1">
+            <button id="btnOpenArmory" class="py-2.5 px-4 rounded-xl font-orbitron font-bold text-xs tracking-wider glass-panel border-cosmic-gold/40 hover:border-cosmic-gold text-cosmic-gold transition cursor-pointer flex items-center justify-center gap-1.5">
+              <span>🛠️</span>
+              <span>ARMORY</span>
+            </button>
+            <button id="btnOpenCodex" class="py-2.5 px-4 rounded-xl font-orbitron font-bold text-xs tracking-wider glass-panel border-cosmic-mint/40 hover:border-cosmic-mint text-cosmic-mint transition cursor-pointer flex items-center justify-center gap-1.5">
+              <span>📖</span>
+              <span>CODEX</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. GALAXY STAR MAP MODAL (#modalStarMap) -->
+  <div id="modalStarMap" class="fixed inset-0 z-40 flex items-center justify-center p-3 md:p-6 bg-cosmic-950/90 backdrop-blur-md hidden">
+    <div class="glass-panel w-full max-w-5xl h-[92vh] rounded-3xl p-4 md:p-6 flex flex-col border border-cosmic-cyan/30 shadow-2xl relative">
+      
+      <!-- Star Map Header -->
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+        <div class="flex items-center gap-3">
+          <button id="btnStarMapBack" class="w-9 h-9 rounded-xl glass-panel flex items-center justify-center hover:border-cosmic-cyan transition cursor-pointer font-orbitron text-sm">
+            ←
+          </button>
+          <div>
+            <h2 class="text-base md:text-xl font-black font-orbitron text-white tracking-wide">
+              COSMIC CARTOGRAPHY • CELESTIAL STAR MAP
+            </h2>
+            <p class="text-[10px] text-slate-400">Select an unlocked planetary world to defend against the invasion fleets</p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <div class="glass-panel px-3 py-1.5 rounded-xl font-orbitron text-xs text-cosmic-gold flex items-center gap-1.5">
+            <span>✦</span>
+            <span id="starMapShards">0</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sector Tabs -->
+      <div class="flex items-center gap-2 py-3 overflow-x-auto" id="sectorTabs">
+        <button class="sector-tab active px-4 py-1.5 rounded-xl text-xs font-orbitron font-bold transition cursor-pointer bg-cosmic-cyan/20 text-cosmic-cyan border border-cosmic-cyan" data-sector="1">
+          SECTOR I: INNER SANCTUARIES
+        </button>
+        <button class="sector-tab px-4 py-1.5 rounded-xl text-xs font-orbitron font-bold transition cursor-pointer bg-slate-900/50 text-slate-400 border border-slate-800 hover:border-cosmic-magenta/40" data-sector="2">
+          SECTOR II: NEBULA FRONTIER
+        </button>
+        <button class="sector-tab px-4 py-1.5 rounded-xl text-xs font-orbitron font-bold transition cursor-pointer bg-slate-900/50 text-slate-400 border border-slate-800 hover:border-cosmic-gold/40" data-sector="3">
+          SECTOR III: DARK RIFT
+        </button>
+        <button class="sector-tab px-4 py-1.5 rounded-xl text-xs font-orbitron font-bold transition cursor-pointer bg-slate-900/50 text-slate-400 border border-slate-800 hover:border-cosmic-crimson/40" data-sector="4">
+          SECTOR IV: SOL GENESIS
+        </button>
+      </div>
+
+      <!-- Main Map Grid & Mission Briefing Panel -->
+      <div class="flex-1 flex flex-col md:flex-row gap-4 overflow-hidden pt-2">
+        <!-- Planet Nodes Grid with Interactive Constellation Links -->
+        <div class="flex-1 overflow-y-auto pr-2 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3" id="planetsGrid">
+          <!-- Populated dynamically via JS -->
+        </div>
+
+        <!-- Tactical Mission Briefing Card -->
+        <div id="briefingPanel" class="w-full md:w-80 glass-card p-4 rounded-2xl flex flex-col justify-between border border-cosmic-cyan/30">
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <span id="briefingSectorTag" class="text-[9px] font-orbitron font-bold px-2 py-0.5 rounded-md bg-cosmic-cyan/20 text-cosmic-cyan border border-cosmic-cyan/30">
+                SECTOR I
+              </span>
+              <span id="briefingStars" class="text-cosmic-gold text-sm font-orbitron">★★★</span>
+            </div>
+
+            <div class="flex items-center gap-3 my-2">
+              <canvas id="briefingPlanetCanvas" width="70" height="70" class="rounded-full shadow-lg border border-white/20"></canvas>
+              <div>
+                <h3 id="briefingPlanetName" class="font-orbitron font-black text-base text-white">AERILON</h3>
+                <p id="briefingPlanetTitle" class="text-[11px] text-slate-300">Terran Haven</p>
+              </div>
+            </div>
+
+            <div class="space-y-1.5 my-3 text-xs">
+              <div class="flex justify-between py-1 border-b border-slate-800">
+                <span class="text-slate-400">Invasion Waves:</span>
+                <span id="briefingWaves" class="font-orbitron font-bold text-white">2 Waves</span>
+              </div>
+              <div class="flex justify-between py-1 border-b border-slate-800">
+                <span class="text-slate-400">Armada Fleet Size:</span>
+                <span id="briefingEnemies" class="font-orbitron font-bold text-cosmic-cyan">12 Invaders</span>
+              </div>
+              <div class="flex justify-between py-1 border-b border-slate-800">
+                <span class="text-slate-400">Planetary Rings:</span>
+                <span id="briefingRings" class="font-orbitron font-bold text-slate-300">None</span>
+              </div>
+              <div class="flex justify-between py-1 border-b border-slate-800">
+                <span class="text-slate-400">Threat Alert:</span>
+                <span id="briefingBoss" class="font-orbitron font-bold text-cosmic-gold">Standard Armada</span>
+              </div>
+            </div>
+          </div>
+
+          <button id="btnLaunchMission" class="w-full py-3 rounded-xl font-orbitron font-black text-xs tracking-wider bg-gradient-to-r from-cosmic-cyan to-blue-600 hover:from-cyan-300 hover:to-blue-500 text-slate-950 shadow-[0_0_15px_rgba(0,229,255,0.4)] transition cursor-pointer flex items-center justify-center gap-2">
+            <span>🚀</span>
+            <span>LAUNCH PLANETARY DEFENSE</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. GUARDIAN ARMORY TECH TREE MODAL (#modalArmory) -->
+  <div id="modalArmory" class="fixed inset-0 z-40 flex items-center justify-center p-3 md:p-6 bg-cosmic-950/90 backdrop-blur-md hidden">
+    <div class="glass-panel w-full max-w-4xl max-h-[92vh] rounded-3xl p-6 flex flex-col border border-cosmic-gold/30 shadow-2xl relative overflow-hidden">
+      <!-- Armory Header -->
+      <div class="flex items-center justify-between pb-4 border-b border-slate-800">
+        <div class="flex items-center gap-3">
+          <span class="text-2xl">🛠️</span>
+          <div>
+            <h2 class="text-lg md:text-xl font-black font-orbitron text-white tracking-wide">
+              GUARDIAN ARMORY • TECH TREE UPGRADES
+            </h2>
+            <p class="text-xs text-slate-400">Upgrade turret firepower, Spark Novas, Aegis Shields, and autonomous satellites</p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <div class="glass-panel px-4 py-2 rounded-xl font-orbitron font-bold text-sm text-cosmic-gold flex items-center gap-2">
+            <span>✦</span>
+            <span id="armoryShards">0</span>
+          </div>
+          <button id="btnArmoryClose" class="w-9 h-9 rounded-xl glass-panel flex items-center justify-center hover:border-cosmic-gold transition cursor-pointer text-sm font-bold">
+            ✕
+          </button>
+        </div>
+      </div>
+
+      <!-- 6-Tier Tech Tree Grid -->
+      <div class="flex-1 overflow-y-auto py-4 grid grid-cols-1 md:grid-cols-2 gap-3.5" id="armoryGrid">
+        <!-- Populated dynamically via JS -->
+      </div>
+
+      <!-- Armory Footer with Refund All Tech Button -->
+      <div class="pt-4 border-t border-slate-800 flex items-center justify-between">
+        <p class="text-xs text-slate-400">Earn Star Shards from alien kills and stage stars.</p>
+        <button id="btnRefundTech" class="px-4 py-2 rounded-xl text-xs font-orbitron font-bold text-rose-400 border border-rose-500/40 hover:bg-rose-500/20 transition cursor-pointer">
+          ↺ REFUND ALL TECH UPGRADES (100%)
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. GUARDIAN ARCHIVES & ALIEN CODEX MODAL (#modalCodex) -->
+  <div id="modalCodex" class="fixed inset-0 z-40 flex items-center justify-center p-3 md:p-6 bg-cosmic-950/90 backdrop-blur-md hidden">
+    <div class="glass-panel w-full max-w-4xl max-h-[92vh] rounded-3xl p-6 flex flex-col border border-cosmic-mint/30 shadow-2xl relative overflow-hidden">
+      <!-- Codex Header -->
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+        <div class="flex items-center gap-3">
+          <span class="text-2xl">📖</span>
+          <div>
+            <h2 class="text-lg md:text-xl font-black font-orbitron text-white tracking-wide">
+              GUARDIAN ARCHIVES & ALIEN CODEX
+            </h2>
+            <p class="text-xs text-slate-400">Tactical intelligence on 7 invading alien ship classes and Guardian Trophies</p>
+          </div>
+        </div>
+        <button id="btnCodexClose" class="w-9 h-9 rounded-xl glass-panel flex items-center justify-center hover:border-cosmic-mint transition cursor-pointer text-sm font-bold">
+          ✕
+        </button>
+      </div>
+
+      <!-- Header Banner: Attached Artwork 2 -->
+      <div class="relative w-full h-36 md:h-44 rounded-2xl overflow-hidden my-3 border border-cosmic-cyan/40 shadow-lg shrink-0">
+        <img src="./assets/cosmic-sectors-boss.jpg" alt="Four Cosmic Sectors & Apex Mothership" class="w-full h-full object-cover" />
+        <div class="absolute inset-0 bg-gradient-to-t from-[#050814] via-transparent to-transparent opacity-75"></div>
+        <div class="absolute bottom-3 left-4 right-4 flex justify-between items-end">
+          <span class="font-orbitron text-xs md:text-sm font-black text-cosmic-cyan text-glow-cyan tracking-wider">
+            FOUR COSMIC SECTORS & APEX MOTHERSHIP
+          </span>
+          <span class="text-[10px] font-orbitron text-cosmic-gold">CLASSIFIED INTEL</span>
+        </div>
+      </div>
+
+      <!-- Codex Content Tabs -->
+      <div class="flex-1 overflow-y-auto space-y-3 pr-1" id="codexList">
+        <!-- 7 Alien Ship Class Dossiers populated dynamically via JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. VICTORY MISSION COMPLETE MODAL (#modalVictory) -->
+  <div id="modalVictory" class="fixed inset-0 z-40 flex items-center justify-center p-4 bg-cosmic-950/85 backdrop-blur-md hidden">
+    <div class="glass-panel w-full max-w-md rounded-3xl p-6 md:p-8 flex flex-col items-center text-center border border-cosmic-cyan/50 shadow-[0_0_40px_rgba(0,229,255,0.3)]">
+      <div class="text-4xl mb-2 animate-bounce">🪐</div>
+      <h2 class="text-2xl font-black font-orbitron text-white tracking-wide mb-1">
+        PLANET <span class="text-cosmic-cyan text-glow-cyan">LIBERATED!</span>
+      </h2>
+      <p id="victoryPlanetTitle" class="text-xs font-orbitron text-cosmic-gold tracking-widest mb-4">
+        AERILON PRIME SAVED
+      </p>
+
+      <!-- 3-Star Rating Animation -->
+      <div id="victoryStarsContainer" class="flex items-center gap-3 text-3xl my-2">
+        <span class="text-cosmic-gold text-glow-gold">★</span>
+        <span class="text-cosmic-gold text-glow-gold">★</span>
+        <span class="text-cosmic-gold text-glow-gold">★</span>
+      </div>
+
+      <!-- Stats Summary -->
+      <div class="w-full glass-card p-3 rounded-2xl my-4 space-y-1.5 text-xs">
+        <div class="flex justify-between">
+          <span class="text-slate-400">Aliens Vaporized:</span>
+          <span id="vicStatEnemies" class="font-orbitron font-bold text-white">0</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-slate-400">Max Chain Combo:</span>
+          <span id="vicStatCombo" class="font-orbitron font-bold text-cosmic-magenta">x0</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-slate-400">Planetary Core HP:</span>
+          <span id="vicStatCore" class="font-orbitron font-bold text-cosmic-mint">100%</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-slate-400">Star Shards Earned:</span>
+          <span id="vicStatShards" class="font-orbitron font-bold text-cosmic-gold">+0 ✦</span>
+        </div>
+        <div class="flex justify-between border-t border-slate-700/60 pt-1.5 font-bold">
+          <span class="text-slate-300">Mission Score:</span>
+          <span id="vicStatScore" class="font-orbitron text-cosmic-cyan">0</span>
+        </div>
+      </div>
+
+      <!-- Buttons -->
+      <div class="w-full flex flex-col gap-2">
+        <button id="btnVictoryNext" class="w-full py-3 rounded-xl font-orbitron font-black text-xs tracking-wider bg-gradient-to-r from-cosmic-cyan to-blue-600 hover:from-cyan-300 hover:to-blue-500 text-slate-950 shadow-lg transition cursor-pointer">
+          NEXT PLANETARY SYSTEM ➔
+        </button>
+        <div class="grid grid-cols-2 gap-2">
+          <button id="btnVictoryRetry" class="py-2.5 rounded-xl font-orbitron font-bold text-xs glass-panel hover:border-cosmic-cyan text-white transition cursor-pointer">
+            RETRY STAGE ⟲
+          </button>
+          <button id="btnVictoryMap" class="py-2.5 rounded-xl font-orbitron font-bold text-xs glass-panel hover:border-cosmic-gold text-cosmic-gold transition cursor-pointer">
+            GALAXY MAP ☰
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. DEFEAT / PLANET FALLEN MODAL (#modalDefeat) -->
+  <div id="modalDefeat" class="fixed inset-0 z-40 flex items-center justify-center p-4 bg-cosmic-950/90 backdrop-blur-md hidden">
+    <div class="glass-panel w-full max-w-md rounded-3xl p-6 md:p-8 flex flex-col items-center text-center border border-cosmic-crimson/50 shadow-[0_0_40px_rgba(255,51,102,0.35)]">
+      <div class="text-4xl mb-2">💥</div>
+      <h2 class="text-2xl font-black font-orbitron text-cosmic-crimson tracking-wide mb-1">
+        PLANET OVERRUN!
+      </h2>
+      <p id="defeatPlanetTitle" class="text-xs font-orbitron text-slate-400 tracking-widest mb-4">
+        PLANETARY CORE DEFENSES BREACHED
+      </p>
+
+      <div class="w-full glass-card p-3 rounded-2xl my-3 space-y-1.5 text-xs">
+        <div class="flex justify-between">
+          <span class="text-slate-400">Wave Reached:</span>
+          <span id="defStatWave" class="font-orbitron font-bold text-white">Wave 1</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-slate-400">Aliens Destroyed:</span>
+          <span id="defStatEnemies" class="font-orbitron font-bold text-cosmic-cyan">0</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-slate-400">Star Shards Salvaged:</span>
+          <span id="defStatShards" class="font-orbitron font-bold text-cosmic-gold">+0 ✦</span>
+        </div>
+      </div>
+
+      <div class="w-full flex flex-col gap-2 mt-2">
+        <button id="btnDefeatRetry" class="w-full py-3 rounded-xl font-orbitron font-black text-xs tracking-wider bg-gradient-to-r from-cosmic-crimson to-rose-700 hover:from-rose-500 hover:to-rose-600 text-white shadow-lg transition cursor-pointer">
+          RETRY ORBITAL DEFENSE ⟲
+        </button>
+        <div class="grid grid-cols-2 gap-2">
+          <button id="btnDefeatArmory" class="py-2.5 rounded-xl font-orbitron font-bold text-xs glass-panel hover:border-cosmic-gold text-cosmic-gold transition cursor-pointer">
+            UPGRADE ARMORY 🛠️
+          </button>
+          <button id="btnDefeatMap" class="py-2.5 rounded-xl font-orbitron font-bold text-xs glass-panel hover:border-cosmic-cyan text-white transition cursor-pointer">
+            GALAXY MAP ☰
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 7. TACTICAL PAUSE MODAL (#modalPause) -->
+  <div id="modalPause" class="fixed inset-0 z-40 flex items-center justify-center p-4 bg-cosmic-950/85 backdrop-blur-md hidden">
+    <div class="glass-panel w-full max-w-sm rounded-3xl p-6 flex flex-col items-center text-center border border-cosmic-cyan/40">
+      <h2 class="text-xl font-black font-orbitron text-white tracking-wider mb-1">
+        TACTICAL PAUSE
+      </h2>
+      <p class="text-xs text-slate-400 mb-5">Defense systems suspended</p>
+
+      <div class="w-full flex flex-col gap-2.5">
+        <button id="btnResume" class="w-full py-3 rounded-xl font-orbitron font-black text-xs tracking-wider bg-gradient-to-r from-cosmic-cyan to-blue-600 text-slate-950 transition cursor-pointer">
+          RESUME DEFENSE ▶
+        </button>
+        <button id="btnPauseRestart" class="w-full py-2.5 rounded-xl font-orbitron font-bold text-xs glass-panel hover:border-cosmic-cyan text-white transition cursor-pointer">
+          RESTART MISSION ⟲
+        </button>
+        <button id="btnPauseStarMap" class="w-full py-2.5 rounded-xl font-orbitron font-bold text-xs glass-panel hover:border-cosmic-gold text-cosmic-gold transition cursor-pointer">
+          GALAXY STAR MAP ☰
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Complete Standalone Game Engine Script -->
+  <script type="module" src="./src/main.js"></script>
+</body>
 </html>

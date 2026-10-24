@@ -1,495 +1,542 @@
-// Guardian of the Universe - Game Configuration & Planetary Defense Data
-
-export const CANVAS_VIRTUAL_WIDTH = 720;
-export const CANVAS_VIRTUAL_HEIGHT = 1280;
-
-export const SPARK_TYPES = {
-  NORMAL: 'NORMAL',
-  MEGA: 'MEGA',
-  SPLITTER: 'SPLITTER',
-  FREEZE: 'FREEZE',
-  REPULSOR: 'REPULSOR'
-};
-
-export const SPARK_CONFIG = {
-  [SPARK_TYPES.NORMAL]: {
-    name: 'Alien Scout',
-    role: 'Vanguard Drone',
-    radius: 14,
-    color: '#00f0ff',
-    glowColor: 'rgba(0, 240, 255, 0.65)',
-    blastRadius: 96,
-    blastDuration: 2.8,
-    score: 100,
-    speed: 130
-  },
-  [SPARK_TYPES.MEGA]: {
-    name: 'Alien Dreadnought',
-    role: 'Heavy Flagship',
-    radius: 20,
-    color: '#ffe600',
-    glowColor: 'rgba(255, 230, 0, 0.75)',
-    blastRadius: 180,
-    blastDuration: 3.4,
-    score: 250,
-    speed: 85
-  },
-  [SPARK_TYPES.SPLITTER]: {
-    name: 'Alien Interceptor',
-    role: 'Swarm Fighter',
-    radius: 15,
-    color: '#ff00aa',
-    glowColor: 'rgba(255, 0, 170, 0.75)',
-    blastRadius: 88,
-    blastDuration: 2.4,
-    score: 200,
-    speed: 140,
-    dartCount: 4,
-    dartSpeed: 450,
-    dartRadius: 28,
-    dartMaxDist: 480
-  },
-  [SPARK_TYPES.FREEZE]: {
-    name: 'Alien Cryo-Ship',
-    role: 'Stasis Cruiser',
-    radius: 16,
-    color: '#00ffa3',
-    glowColor: 'rgba(0, 255, 163, 0.75)',
-    blastRadius: 110,
-    blastDuration: 3.2,
-    score: 180,
-    speed: 95,
-    slowFactor: 0.25,
-    slowDuration: 4.0
-  },
-  [SPARK_TYPES.REPULSOR]: {
-    name: 'Alien Phase-Shifter',
-    role: 'Warp Infiltrator',
-    radius: 15,
-    color: '#b55fe6',
-    glowColor: 'rgba(181, 95, 230, 0.75)',
-    blastRadius: 105,
-    blastDuration: 3.0,
-    score: 220,
-    speed: 130,
-    secondaryBlastDelay: 0.8
-  }
-};
+// Spark Panic: Planetary Invasion Defense 2.0 - Configuration & Universe Data
 
 export const SECTORS = [
-  { id: 'sector-1', name: 'SECTOR I', title: 'Inner Sanctuaries', range: [1, 5] },
-  { id: 'sector-2', name: 'SECTOR II', title: 'Cryo-Crystal Rim', range: [6, 10] },
-  { id: 'sector-3', name: 'SECTOR III', title: 'Outer Maelstrom', range: [11, 15] },
-  { id: 'sector-4', name: 'SECTOR IV', title: 'Void & Genesis Core', range: [16, 20] }
-];
-
-// 20 Planetary Worlds with Universe Star Map 2D Coordinates (percentage 0-100)
-export const PLANETS = [
   {
-    level: 1,
-    name: 'Aerilon',
-    title: 'Aerilon Prime',
-    sector: 'SECTOR I',
-    sectorName: 'Inner Sanctuaries',
-    mapX: 6,
-    mapY: 66,
-    typeDesc: 'Lush Terrestrial Sanctuary',
-    gradient: 'radial-gradient(circle at 35% 35%, #56ccf2, #2f80ed 70%, #0c3882)',
-    shadowColor: 'rgba(47, 128, 237, 0.65)',
-    hasRings: false,
-    totalSparks: 18,
-    target: 4,
-    taps: 1,
-    types: { [SPARK_TYPES.NORMAL]: 18 },
-    tip: 'Guardian, tap near the alien swarm to trigger a cascading energy nova!'
+    id: 1,
+    name: 'SECTOR I: INNER SANCTUARIES',
+    shortName: 'SECTOR I',
+    themeColor: '#00e5ff',
+    range: [1, 5],
+    bossStage: 5
   },
   {
-    level: 2,
-    name: 'Aquatis',
-    title: 'Aquatis Deep',
-    sector: 'SECTOR I',
-    sectorName: 'Inner Sanctuaries',
-    mapX: 13,
-    mapY: 42,
-    typeDesc: 'Bioluminescent Ocean World',
-    gradient: 'radial-gradient(circle at 35% 35%, #29ffc6, #20e3b2 65%, #0e7258)',
-    shadowColor: 'rgba(32, 227, 178, 0.65)',
-    hasRings: false,
-    totalSparks: 24,
-    target: 8,
-    taps: 1,
-    types: { [SPARK_TYPES.NORMAL]: 24 },
-    tip: 'Wait until alien scouts cluster above the ocean trenches before striking.'
+    id: 2,
+    name: 'SECTOR II: NEBULA FRONTIER',
+    shortName: 'SECTOR II',
+    themeColor: '#e040fb',
+    range: [6, 10],
+    bossStage: 10
   },
   {
-    level: 3,
-    name: 'Solaria',
-    title: 'Solaria Forge',
-    sector: 'SECTOR I',
-    sectorName: 'Inner Sanctuaries',
-    mapX: 9,
-    mapY: 20,
-    typeDesc: 'Molten Sunforge Planet',
-    gradient: 'radial-gradient(circle at 35% 35%, #f5af19, #f12711 70%, #680505)',
-    shadowColor: 'rgba(245, 175, 25, 0.75)',
-    hasRings: true,
-    ringColor: 'rgba(245, 175, 25, 0.6)',
-    totalSparks: 28,
-    target: 14,
-    taps: 1,
-    types: { [SPARK_TYPES.NORMAL]: 23, [SPARK_TYPES.MEGA]: 5 },
-    tip: 'Alien Dreadnoughts detected! Detonating one unleashes a massive solar nova.'
+    id: 3,
+    name: 'SECTOR III: DARK RIFT',
+    shortName: 'SECTOR III',
+    themeColor: '#ffd700',
+    range: [11, 15],
+    bossStage: 15
   },
   {
-    level: 4,
-    name: 'Vespera',
-    title: 'Vespera Twilight',
-    sector: 'SECTOR I',
-    sectorName: 'Inner Sanctuaries',
-    mapX: 19,
-    mapY: 15,
-    typeDesc: 'Ringed Gas Giant',
-    gradient: 'radial-gradient(circle at 35% 35%, #eaafc8, #654ea3 70%, #2e1c59)',
-    shadowColor: 'rgba(101, 78, 163, 0.65)',
-    hasRings: true,
-    ringColor: 'rgba(234, 175, 200, 0.55)',
-    totalSparks: 36,
-    target: 20,
-    taps: 2,
-    types: { [SPARK_TYPES.NORMAL]: 30, [SPARK_TYPES.MEGA]: 6 },
-    tip: 'You have 2 Guardian energy strikes. Use the second to catch stragglers.'
-  },
-  {
-    level: 5,
-    name: 'Nebulon',
-    title: 'Nebulon Core',
-    sector: 'SECTOR I',
-    sectorName: 'Inner Sanctuaries',
-    mapX: 23,
-    mapY: 40,
-    typeDesc: 'Plasma Storm Nebula',
-    gradient: 'radial-gradient(circle at 35% 35%, #ffb199, #ff0844 70%, #75001c)',
-    shadowColor: 'rgba(255, 8, 68, 0.65)',
-    hasRings: false,
-    totalSparks: 34,
-    target: 18,
-    taps: 1,
-    types: { [SPARK_TYPES.NORMAL]: 26, [SPARK_TYPES.SPLITTER]: 8 },
-    tip: 'Alien Interceptors shoot high-speed homing plasma darts when destroyed!'
-  },
-  {
-    level: 6,
-    name: 'Cygnus',
-    title: 'Cygnus Prime',
-    sector: 'SECTOR II',
-    sectorName: 'Cryo-Crystal Rim',
-    mapX: 29,
-    mapY: 64,
-    typeDesc: 'Starlight Ring Fortress',
-    gradient: 'radial-gradient(circle at 35% 35%, #38ef7d, #11998e 70%, #074742)',
-    shadowColor: 'rgba(56, 239, 125, 0.65)',
-    hasRings: true,
-    ringColor: 'rgba(56, 239, 125, 0.55)',
-    totalSparks: 42,
-    target: 26,
-    taps: 2,
-    types: { [SPARK_TYPES.NORMAL]: 30, [SPARK_TYPES.MEGA]: 6, [SPARK_TYPES.SPLITTER]: 6 },
-    tip: 'Target Dreadnoughts to trigger chain reactions across the crystalline rings.'
-  },
-  {
-    level: 7,
-    name: 'Glacies',
-    title: 'Glacies Tundra',
-    sector: 'SECTOR II',
-    sectorName: 'Cryo-Crystal Rim',
-    mapX: 26,
-    mapY: 84,
-    typeDesc: 'Permafrost Ice World',
-    gradient: 'radial-gradient(circle at 35% 35%, #a8ff78, #78ffd6 70%, #157960)',
-    shadowColor: 'rgba(120, 255, 214, 0.65)',
-    hasRings: false,
-    totalSparks: 40,
-    target: 22,
-    taps: 1,
-    types: { [SPARK_TYPES.NORMAL]: 30, [SPARK_TYPES.FREEZE]: 10 },
-    tip: 'Alien Cryo-ships emit a freezing shockwave that traps nearby invaders.'
-  },
-  {
-    level: 8,
-    name: 'Boreas',
-    title: 'Boreas Spire',
-    sector: 'SECTOR II',
-    sectorName: 'Cryo-Crystal Rim',
-    mapX: 37,
-    mapY: 82,
-    typeDesc: 'Frozen Aurora Citadel',
-    gradient: 'radial-gradient(circle at 35% 35%, #c2e9fb, #a1c4fd 70%, #3e68b5)',
-    shadowColor: 'rgba(161, 196, 253, 0.7)',
-    hasRings: true,
-    ringColor: 'rgba(194, 233, 251, 0.6)',
-    totalSparks: 46,
-    target: 30,
-    taps: 2,
-    types: { [SPARK_TYPES.NORMAL]: 28, [SPARK_TYPES.FREEZE]: 10, [SPARK_TYPES.MEGA]: 8 },
-    tip: 'Freeze alien packs first, then detonate the Dreadnought for maximum impact.'
-  },
-  {
-    level: 9,
-    name: 'Chronos',
-    title: 'Chronos Rift',
-    sector: 'SECTOR II',
-    sectorName: 'Cryo-Crystal Rim',
-    mapX: 40,
-    mapY: 54,
-    typeDesc: 'Temporal Anomaly World',
-    gradient: 'radial-gradient(circle at 35% 35%, #c471ed, #f64f59 70%, #5d0f14)',
-    shadowColor: 'rgba(196, 113, 237, 0.7)',
-    hasRings: true,
-    ringColor: 'rgba(196, 113, 237, 0.6)',
-    totalSparks: 44,
-    target: 26,
-    taps: 1,
-    types: { [SPARK_TYPES.NORMAL]: 26, [SPARK_TYPES.REPULSOR]: 10, [SPARK_TYPES.SPLITTER]: 8 },
-    tip: 'Phase-Shifting invaders pulse a secondary shockwave through space-time.'
-  },
-  {
-    level: 10,
-    name: 'Obsidian',
-    title: 'Obsidian Citadel',
-    sector: 'SECTOR II',
-    sectorName: 'Cryo-Crystal Rim',
-    mapX: 36,
-    mapY: 26,
-    typeDesc: 'Dark Energy Core Fortress',
-    gradient: 'radial-gradient(circle at 35% 35%, #434343, #000000 70%, #ff4500)',
-    shadowColor: 'rgba(255, 69, 0, 0.75)',
-    hasRings: true,
-    ringColor: 'rgba(255, 69, 0, 0.6)',
-    totalSparks: 50,
-    target: 34,
-    taps: 2,
-    types: { [SPARK_TYPES.NORMAL]: 26, [SPARK_TYPES.MEGA]: 8, [SPARK_TYPES.SPLITTER]: 8, [SPARK_TYPES.FREEZE]: 8 },
-    tip: 'The main alien armada has breached the core. All special invaders are present!'
-  },
-  {
-    level: 11,
-    name: 'Zephyrus',
-    title: 'Zephyrus Storm',
-    sector: 'SECTOR III',
-    sectorName: 'Outer Maelstrom',
-    mapX: 47,
-    mapY: 16,
-    typeDesc: 'Hyper-Atmospheric Giant',
-    gradient: 'radial-gradient(circle at 35% 35%, #30cfd0, #330867 75%, #0e0220)',
-    shadowColor: 'rgba(48, 207, 208, 0.7)',
-    hasRings: true,
-    ringColor: 'rgba(48, 207, 208, 0.55)',
-    totalSparks: 54,
-    target: 38,
-    taps: 2,
-    types: { [SPARK_TYPES.NORMAL]: 28, [SPARK_TYPES.MEGA]: 10, [SPARK_TYPES.SPLITTER]: 10, [SPARK_TYPES.REPULSOR]: 6 },
-    tip: 'Aim for high-density fleet intersections in the vortex.'
-  },
-  {
-    level: 12,
-    name: 'Astraea',
-    title: 'Astraea Sanctuary',
-    sector: 'SECTOR III',
-    sectorName: 'Outer Maelstrom',
-    mapX: 57,
-    mapY: 22,
-    typeDesc: 'Prismatic Crystal Planet',
-    gradient: 'radial-gradient(circle at 35% 35%, #ff7eb3, #ff758c 70%, #6f1122)',
-    shadowColor: 'rgba(255, 117, 140, 0.7)',
-    hasRings: false,
-    totalSparks: 48,
-    target: 32,
-    taps: 1,
-    types: { [SPARK_TYPES.NORMAL]: 22, [SPARK_TYPES.SPLITTER]: 16, [SPARK_TYPES.MEGA]: 10 },
-    tip: 'Single Guardian strike only! Let Interceptor plasma darts do the work.'
-  },
-  {
-    level: 13,
-    name: 'Elysium',
-    title: 'Elysium Garden',
-    sector: 'SECTOR III',
-    sectorName: 'Outer Maelstrom',
-    mapX: 53,
-    mapY: 50,
-    typeDesc: 'Bio-Silicon Garden World',
-    gradient: 'radial-gradient(circle at 35% 35%, #00f260, #0575e6 75%, #02264c)',
-    shadowColor: 'rgba(0, 242, 96, 0.7)',
-    hasRings: true,
-    ringColor: 'rgba(0, 242, 96, 0.5)',
-    totalSparks: 56,
-    target: 40,
-    taps: 2,
-    types: { [SPARK_TYPES.NORMAL]: 26, [SPARK_TYPES.FREEZE]: 15, [SPARK_TYPES.MEGA]: 15 },
-    tip: 'Use freeze waves to bunch alien ships together before detonating.'
-  },
-  {
-    level: 14,
-    name: 'Supernova',
-    title: 'Supernova Gate',
-    sector: 'SECTOR III',
-    sectorName: 'Outer Maelstrom',
-    mapX: 50,
-    mapY: 76,
-    typeDesc: 'Stellar Ignition Boundary',
-    gradient: 'radial-gradient(circle at 35% 35%, #ff5858, #f857a6 70%, #680838)',
-    shadowColor: 'rgba(255, 88, 88, 0.8)',
-    hasRings: true,
-    ringColor: 'rgba(248, 87, 166, 0.6)',
-    totalSparks: 62,
-    target: 45,
-    taps: 2,
-    types: { [SPARK_TYPES.NORMAL]: 22, [SPARK_TYPES.MEGA]: 20, [SPARK_TYPES.SPLITTER]: 12, [SPARK_TYPES.REPULSOR]: 8 },
-    tip: 'Dreadnought explosions create domino shockwaves across the star boundary.'
-  },
-  {
-    level: 15,
-    name: 'Hyperion',
-    title: 'Hyperion Ringworld',
-    sector: 'SECTOR III',
-    sectorName: 'Outer Maelstrom',
-    mapX: 63,
-    mapY: 82,
-    typeDesc: 'Ancient Precursor Megastructure',
-    gradient: 'radial-gradient(circle at 35% 35%, #7579ff, #b224ef 70%, #3e0559)',
-    shadowColor: 'rgba(178, 36, 239, 0.75)',
-    hasRings: true,
-    ringColor: 'rgba(117, 121, 255, 0.65)',
-    totalSparks: 66,
-    target: 48,
-    taps: 2,
-    types: { [SPARK_TYPES.NORMAL]: 26, [SPARK_TYPES.MEGA]: 15, [SPARK_TYPES.SPLITTER]: 15, [SPARK_TYPES.FREEZE]: 10 },
-    tip: 'Patience, Guardian: let the alien armada cluster around the ring spires.'
-  },
-  {
-    level: 16,
-    name: 'Voidhaven',
-    title: 'Voidhaven Deep',
-    sector: 'SECTOR IV',
-    sectorName: 'Void & Genesis Core',
-    mapX: 70,
-    mapY: 56,
-    typeDesc: 'Edge of Dark Matter Space',
-    gradient: 'radial-gradient(circle at 35% 35%, #99f2c8, #1f4037 75%, #061510)',
-    shadowColor: 'rgba(153, 242, 200, 0.7)',
-    hasRings: false,
-    totalSparks: 52,
-    target: 38,
-    taps: 1,
-    types: { [SPARK_TYPES.NORMAL]: 16, [SPARK_TYPES.MEGA]: 16, [SPARK_TYPES.SPLITTER]: 12, [SPARK_TYPES.REPULSOR]: 8 },
-    tip: 'One cosmic strike needed! Target the Dreadnought at the formation center.'
-  },
-  {
-    level: 17,
-    name: 'Tempest',
-    title: 'Tempest Maelstrom',
-    sector: 'SECTOR IV',
-    sectorName: 'Void & Genesis Core',
-    mapX: 73,
-    mapY: 30,
-    typeDesc: 'Plasma Discharge World',
-    gradient: 'radial-gradient(circle at 35% 35%, #ffd200, #f7971e 70%, #683605)',
-    shadowColor: 'rgba(255, 210, 0, 0.8)',
-    hasRings: true,
-    ringColor: 'rgba(247, 151, 30, 0.6)',
-    totalSparks: 70,
-    target: 52,
-    taps: 2,
-    types: { [SPARK_TYPES.NORMAL]: 25, [SPARK_TYPES.MEGA]: 15, [SPARK_TYPES.SPLITTER]: 15, [SPARK_TYPES.FREEZE]: 15 },
-    tip: 'Watch for the freeze slow-motion window to execute your secondary blast.'
-  },
-  {
-    level: 18,
-    name: 'Pulsar',
-    title: 'Pulsar Beacon',
-    sector: 'SECTOR IV',
-    sectorName: 'Void & Genesis Core',
-    mapX: 83,
-    mapY: 18,
-    typeDesc: 'Magnetic Harmonic Array',
-    gradient: 'radial-gradient(circle at 35% 35%, #92fe9d, #00c9ff 70%, #034b5e)',
-    shadowColor: 'rgba(0, 201, 255, 0.8)',
-    hasRings: true,
-    ringColor: 'rgba(146, 254, 157, 0.65)',
-    totalSparks: 75,
-    target: 58,
-    taps: 2,
-    types: { [SPARK_TYPES.NORMAL]: 25, [SPARK_TYPES.MEGA]: 20, [SPARK_TYPES.SPLITTER]: 18, [SPARK_TYPES.REPULSOR]: 12 },
-    tip: 'High combo chains produce massive cosmic score multipliers!'
-  },
-  {
-    level: 19,
-    name: 'Singularity',
-    title: 'Singularity Horizon',
-    sector: 'SECTOR IV',
-    sectorName: 'Void & Genesis Core',
-    mapX: 88,
-    mapY: 46,
-    typeDesc: 'Event Horizon of the Void',
-    gradient: 'radial-gradient(circle at 35% 35%, #1bcedf, #5b247a 75%, #1e052d)',
-    shadowColor: 'rgba(27, 206, 223, 0.85)',
-    hasRings: true,
-    ringColor: 'rgba(91, 36, 122, 0.75)',
-    totalSparks: 80,
-    target: 64,
-    taps: 2,
-    types: { [SPARK_TYPES.NORMAL]: 20, [SPARK_TYPES.MEGA]: 25, [SPARK_TYPES.SPLITTER]: 20, [SPARK_TYPES.FREEZE]: 15 },
-    tip: 'The alien mothership armada surrounds the black hole. Defend the boundary!'
-  },
-  {
-    level: 20,
-    name: 'Genesis',
-    title: 'Genesis Core',
-    sector: 'SECTOR IV',
-    sectorName: 'Void & Genesis Core',
-    mapX: 86,
-    mapY: 76,
-    typeDesc: 'Heart of the Universe',
-    gradient: 'radial-gradient(circle at 35% 35%, #ffe600, #ff00cc 55%, #333399 85%, #050529)',
-    shadowColor: 'rgba(255, 0, 204, 0.95)',
-    hasRings: true,
-    ringColor: 'rgba(255, 230, 0, 0.85)',
-    totalSparks: 90,
-    target: 72,
-    taps: 2,
-    types: { [SPARK_TYPES.NORMAL]: 20, [SPARK_TYPES.MEGA]: 25, [SPARK_TYPES.SPLITTER]: 25, [SPARK_TYPES.FREEZE]: 10, [SPARK_TYPES.REPULSOR]: 10 },
-    tip: 'The ultimate battle! Save the Heart of the Universe from total alien extinction!'
+    id: 4,
+    name: 'SECTOR IV: SOL GENESIS',
+    shortName: 'SECTOR IV',
+    themeColor: '#ff3366',
+    range: [16, 20],
+    bossStage: 20
   }
-].map(p => ({
-  ...p,
-  image: `./assets/planets/${p.name.toLowerCase()}.jpg`
-}));
-
-export const LEVELS = PLANETS;
-
-export const COMBO_TITLES = [
-  { min: 4, text: 'GUARDIAN STRIKE!', color: '#00f0ff' },
-  { min: 8, text: 'COSMIC NOVA!', color: '#00ffa3' },
-  { min: 15, text: 'STARBURST!', color: '#ffe600' },
-  { min: 25, text: 'GALAXY BUSTER!', color: '#ff8800' },
-  { min: 38, text: 'SUPERNOVA!', color: '#ff00aa' },
-  { min: 50, text: 'GUARDIAN OF THE UNIVERSE!', color: '#e040fb' }
 ];
 
-// Pentatonic scale frequencies for musical combo escalation
-export const COMBO_MELODY_FREQS = [
-  261.63, // C4
-  293.66, // D4
-  329.63, // E4
-  392.00, // G4
-  440.00, // A4
-  523.25, // C5
-  587.33, // D5
-  659.25, // E5
-  783.99, // G5
-  880.00, // A5
-  1046.50, // C6
-  1174.66, // D6
-  1318.51, // E6
-  1567.98, // G6
-  1760.00  // A6
+export const PLANETS = [
+  // SECTOR I: INNER SANCTUARIES
+  {
+    id: 1,
+    name: 'Aerilon',
+    title: 'Terran Haven',
+    sector: 1,
+    color1: '#0ea5e9',
+    color2: '#10b981',
+    atmo: '#38bdf8',
+    rings: false,
+    waves: 2,
+    baseEnemies: 12,
+    bossName: null,
+    desc: 'Lush terrestrial cradle under attack by Vanguard Recon Scout fleets.'
+  },
+  {
+    id: 2,
+    name: 'Aquatis',
+    title: 'Pelagic Sphere',
+    sector: 1,
+    color1: '#0284c7',
+    color2: '#06b6d4',
+    atmo: '#00e5ff',
+    rings: false,
+    waves: 2,
+    baseEnemies: 15,
+    bossName: null,
+    desc: 'Bioluminescent oceanic sanctuary threatened by mid-range Trident Interceptors.'
+  },
+  {
+    id: 3,
+    name: 'Solaria',
+    title: 'Helios Dunes',
+    sector: 1,
+    color1: '#d97706',
+    color2: '#f59e0b',
+    atmo: '#fbbf24',
+    rings: true,
+    waves: 3,
+    baseEnemies: 18,
+    bossName: null,
+    desc: 'Ringed desert super-forge besieged by heavy armored siege dropships.'
+  },
+  {
+    id: 4,
+    name: 'Verdantia',
+    title: 'Bio-Jungle',
+    sector: 1,
+    color1: '#059669',
+    color2: '#84cc16',
+    atmo: '#34d399',
+    rings: false,
+    waves: 3,
+    baseEnemies: 22,
+    bossName: null,
+    desc: 'Dense bioluminescent forest world facing multi-vector swarm incursions.'
+  },
+  {
+    id: 5,
+    name: 'Cryon',
+    title: 'Glacial Bastion',
+    sector: 1,
+    color1: '#38bdf8',
+    color2: '#e0f2fe',
+    atmo: '#7dd3fc',
+    rings: true,
+    waves: 3,
+    baseEnemies: 26,
+    bossName: 'Dreadnought Vexor',
+    desc: 'Frozen outer bastion defended against Flagship Dreadnought Vexor!'
+  },
+
+  // SECTOR II: NEBULA FRONTIER
+  {
+    id: 6,
+    name: 'Pyros',
+    title: 'Magma Core',
+    sector: 2,
+    color1: '#dc2626',
+    color2: '#f97316',
+    atmo: '#fb923c',
+    rings: false,
+    waves: 3,
+    baseEnemies: 24,
+    bossName: null,
+    desc: 'Volcanic super-heated world with turbulent plasma invasions.'
+  },
+  {
+    id: 7,
+    name: 'Zephyria',
+    title: 'Aether Giant',
+    sector: 2,
+    color1: '#0891b2',
+    color2: '#a855f7',
+    atmo: '#c084fc',
+    rings: true,
+    waves: 3,
+    baseEnemies: 28,
+    bossName: null,
+    desc: 'Massive swirling gas giant encircled by crystalline particle rings.'
+  },
+  {
+    id: 8,
+    name: 'Obsidian',
+    title: 'Null Crystal',
+    sector: 2,
+    color1: '#312e81',
+    color2: '#6366f1',
+    atmo: '#818cf8',
+    rings: false,
+    waves: 3,
+    baseEnemies: 30,
+    bossName: null,
+    desc: 'Dark matter crystalline sphere where quantum Phase-Shifter ships blink through space.'
+  },
+  {
+    id: 9,
+    name: 'Lumina',
+    title: 'Prism Star-World',
+    sector: 2,
+    color1: '#db2777',
+    color2: '#f472b6',
+    atmo: '#f9a8d4',
+    rings: true,
+    waves: 3,
+    baseEnemies: 34,
+    bossName: null,
+    desc: 'Luminous world reflecting stellar radiation through radiant atmospheric halos.'
+  },
+  {
+    id: 10,
+    name: 'Vortexia',
+    title: 'Gravity Well',
+    sector: 2,
+    color1: '#7c3aed',
+    color2: '#ec4899',
+    atmo: '#e879f9',
+    rings: true,
+    waves: 4,
+    baseEnemies: 38,
+    bossName: 'Mothership Kaelen',
+    desc: 'Gravitational anomaly where Sector Mothership Kaelen launches orbital siege attacks.'
+  },
+
+  // SECTOR III: DARK RIFT
+  {
+    id: 11,
+    name: 'Aethelgard',
+    title: 'Relic Citadel',
+    sector: 3,
+    color1: '#ca8a04',
+    color2: '#14b8a6',
+    atmo: '#fde047',
+    rings: true,
+    waves: 3,
+    baseEnemies: 36,
+    bossName: null,
+    desc: 'Ancient cosmic monument world besieged by relentless alien fleets.'
+  },
+  {
+    id: 12,
+    name: 'Chronos',
+    title: 'Temporal Sphere',
+    sector: 3,
+    color1: '#0d9488',
+    color2: '#fbbf24',
+    atmo: '#2dd4bf',
+    rings: false,
+    waves: 3,
+    baseEnemies: 40,
+    bossName: null,
+    desc: 'Anomalous world wrapped in temporal stasis waves and heavy cruiser assaults.'
+  },
+  {
+    id: 13,
+    name: 'Mycelia',
+    title: 'Spore Nebula',
+    sector: 3,
+    color1: '#16a34a',
+    color2: '#a855f7',
+    atmo: '#4ade80',
+    rings: false,
+    waves: 4,
+    baseEnemies: 44,
+    bossName: null,
+    desc: 'Bio-luminescent spore planet under siege by fast assault dropships.'
+  },
+  {
+    id: 14,
+    name: 'Ferrum',
+    title: 'Forge Mech-World',
+    sector: 3,
+    color1: '#475569',
+    color2: '#f97316',
+    atmo: '#fb923c',
+    rings: true,
+    waves: 4,
+    baseEnemies: 48,
+    bossName: null,
+    desc: 'Armored titanium fortress world with industrial defense batteries.'
+  },
+  {
+    id: 15,
+    name: 'Eclipse',
+    title: 'Shadow Corona',
+    sector: 3,
+    color1: '#1e1b4b',
+    color2: '#f43f5e',
+    atmo: '#fb7185',
+    rings: true,
+    waves: 4,
+    baseEnemies: 52,
+    bossName: 'Void Harbinger',
+    desc: 'Tomb world at the edge of the void where Flagship Void Harbinger reigns.'
+  },
+
+  // SECTOR IV: SOL GENESIS
+  {
+    id: 16,
+    name: 'Hyperion',
+    title: 'Helios Core',
+    sector: 4,
+    color1: '#ea580c',
+    color2: '#fde047',
+    atmo: '#fef08a',
+    rings: true,
+    waves: 4,
+    baseEnemies: 50,
+    bossName: null,
+    desc: 'Blazing solar paradise encircled by coronal energy rings.'
+  },
+  {
+    id: 17,
+    name: 'Astralis',
+    title: 'Starlight Sanctum',
+    sector: 4,
+    color1: '#2563eb',
+    color2: '#38bdf8',
+    atmo: '#93c5fd',
+    rings: false,
+    waves: 4,
+    baseEnemies: 55,
+    bossName: null,
+    desc: 'Deep cosmic haven radiating concentrated starlight defense grids.'
+  },
+  {
+    id: 18,
+    name: 'Voidreach',
+    title: 'Outer Bastion',
+    sector: 4,
+    color1: '#4f46e5',
+    color2: '#e11d48',
+    atmo: '#f43f5e',
+    rings: true,
+    waves: 4,
+    baseEnemies: 60,
+    bossName: null,
+    desc: 'Final defense checkpoint before the celestial center of the universe.'
+  },
+  {
+    id: 19,
+    name: 'Omega Prime',
+    title: 'Dyson Citadel',
+    sector: 4,
+    color1: '#0284c7',
+    color2: '#f59e0b',
+    atmo: '#38bdf8',
+    rings: true,
+    waves: 4,
+    baseEnemies: 65,
+    bossName: null,
+    desc: 'Enormous megastructure world housing the galaxy’s central power archives.'
+  },
+  {
+    id: 20,
+    name: 'Genesis Core',
+    title: 'Origin World',
+    sector: 4,
+    color1: '#00e5ff',
+    color2: '#e040fb',
+    atmo: '#ffd700',
+    rings: true,
+    waves: 5,
+    baseEnemies: 72,
+    bossName: 'The Apex Leviathan',
+    desc: 'Heart of the Universe. Defend Genesis Core against The Apex Leviathan to save all reality!'
+  }
+];
+
+export const ALIEN_CLASSES = {
+  SCOUT: {
+    type: 'SCOUT',
+    name: 'Alien Scout',
+    color: '#00e5ff',
+    hp: 22,
+    speed: 62,
+    radius: 12,
+    score: 25,
+    damage: 8,
+    novaRadius: 68,
+    role: 'Vanguard Ramming Fighter',
+    behaviorDesc: 'Fast delta-wing dart fighter that spirals inward to ram the planetary shield.',
+    deathPayload: 'Standard Plasma Chain Nova'
+  },
+  INTERCEPTOR: {
+    type: 'INTERCEPTOR',
+    name: 'Trident Interceptor',
+    color: '#e040fb',
+    hp: 40,
+    speed: 48,
+    radius: 15,
+    score: 45,
+    damage: 12,
+    novaRadius: 74,
+    role: 'Mid-Range Torpedo Skirmisher',
+    behaviorDesc: 'Orbits at mid-range firing plasma siege torpedoes at the planet.',
+    deathPayload: 'QUAD PLASMA BURST! Fires 4 piercing bolts at 45°/135°/225°/315°.'
+  },
+  CRYO: {
+    type: 'CRYO',
+    name: 'Cryo-Cruiser',
+    color: '#00e676',
+    hp: 48,
+    speed: 42,
+    radius: 16,
+    score: 50,
+    damage: 10,
+    novaRadius: 95,
+    role: 'Stasis Suppression Warship',
+    behaviorDesc: 'Hexagonal crystalline cruiser advancing steadily toward orbit.',
+    deathPayload: 'CRYO STASIS FIELD! Emits a 155px field slowing surrounding aliens by 75% for 4.5s.'
+  },
+  PHASE: {
+    type: 'PHASE',
+    name: 'Phase-Shifter',
+    color: '#a855f7',
+    hp: 38,
+    speed: 55,
+    radius: 14,
+    score: 55,
+    damage: 11,
+    novaRadius: 82,
+    role: 'Quantum Warp Infiltrator',
+    behaviorDesc: 'Diamond quantum vessel that blinks 48px closer every 3.4 seconds.',
+    deathPayload: 'ECHO WARP NOVA! Triggers a second delayed Echo Nova 220ms after destruction.'
+  },
+  DROPSHIP: {
+    type: 'DROPSHIP',
+    name: 'Invasion Dropship',
+    color: '#ff3366',
+    hp: 75,
+    speed: 34,
+    radius: 19,
+    score: 70,
+    damage: 18,
+    novaRadius: 88,
+    role: 'Heavy Siege Lander',
+    behaviorDesc: 'Heavily armored assault lander marching toward the planet, spawning mini Scouts every 4.5s.',
+    deathPayload: 'Heavy Shrapnel Cascade'
+  },
+  DREADNOUGHT: {
+    type: 'DREADNOUGHT',
+    name: 'Solar Dreadnought',
+    color: '#ffd700',
+    hp: 135,
+    speed: 26,
+    radius: 23,
+    score: 120,
+    damage: 26,
+    novaRadius: 135,
+    role: 'Capital Siege Battleship',
+    behaviorDesc: 'Armored fortress flagship that launches heavy plasma siege torpedoes.',
+    deathPayload: '☀️ SOLAR SUPER-NOVA! Colossal screen-shaking 135px blast.'
+  },
+  BOSS: {
+    type: 'BOSS',
+    name: 'Sector Mothership',
+    color: '#ff1744',
+    hp: 950,
+    speed: 20,
+    radius: 40,
+    score: 800,
+    damage: 35,
+    novaRadius: 210,
+    role: 'Armada Command Flagship',
+    behaviorDesc: 'Giant command leviathan with top HUD Boss Health Bar, firing 3-torpedo spread salvos.',
+    deathPayload: 'Colossal 210px Galaxy Super-Nova!'
+  }
+};
+
+export const ARMORY_CONFIG = {
+  turretDmg: {
+    id: 'turretDmg',
+    name: 'Pulse Cannon Firepower',
+    icon: '🔫',
+    maxLevel: 6,
+    baseCost: 80,
+    costFactor: 1.6,
+    desc: '+4.5 laser damage/lvl, faster fire rate. Unlocks Twin Barrels at Lv.3 and Triple Barrels at Lv.5.'
+  },
+  novaRadius: {
+    id: 'novaRadius',
+    name: 'Spark Nova Catalyst',
+    icon: '💥',
+    maxLevel: 6,
+    baseCost: 90,
+    costFactor: 1.6,
+    desc: '+14% blast radius and damage per level for player Spark Novas and secondary chain reactions.'
+  },
+  novaCharges: {
+    id: 'novaCharges',
+    name: 'Nova Capacitor Core',
+    icon: '⚡',
+    maxLevel: 5,
+    baseCost: 110,
+    costFactor: 1.7,
+    desc: '+1 max Spark Nova charge per level (starts at 3, up to 7 max charges) and faster kill recharge.'
+  },
+  shieldGrid: {
+    id: 'shieldGrid',
+    name: 'Planetary Aegis Shield',
+    icon: '🛡️',
+    maxLevel: 6,
+    baseCost: 85,
+    costFactor: 1.6,
+    desc: '+22% max Planetary Shield and Core HP per level, plus faster shield regeneration.'
+  },
+  satellites: {
+    id: 'satellites',
+    name: 'Orbital Defense Satellites',
+    icon: '🛰️',
+    maxLevel: 4,
+    baseCost: 140,
+    costFactor: 1.8,
+    desc: 'Deploys 1 autonomous laser defense satellite per level (up to 4 satellites) in orbit.'
+  },
+  tacticalCd: {
+    id: 'tacticalCd',
+    name: 'Tactical Core Reactor',
+    icon: '⏱️',
+    maxLevel: 5,
+    baseCost: 95,
+    costFactor: 1.6,
+    desc: 'Reduces cooldowns of [Q] Ion Beam, [W] EMP Shockwave, and [E] Aegis Overdrive by 12% per level.'
+  }
+};
+
+export const TROPHIES = [
+  {
+    id: 'FIRST_DEFENSE',
+    name: 'First Orbital Defense',
+    desc: 'Successfully liberate and defend any planetary world.',
+    icon: '🛡️',
+    reward: 100
+  },
+  {
+    id: 'NOVA_CATALYST',
+    name: 'Nova Catalyst x10',
+    desc: 'Trigger a x10 Chain Reaction Combo in a single defense mission.',
+    icon: '⚡',
+    reward: 100
+  },
+  {
+    id: 'SUPERNOVA_ARCHITECT',
+    name: 'Supernova Architect x20',
+    desc: 'Reach an extraordinary x20 Chain Reaction Nova Combo.',
+    icon: '🌟',
+    reward: 100
+  },
+  {
+    id: 'MOTHERSHIP_BREAKER',
+    name: 'Mothership Breaker',
+    desc: 'Vaporize any Sector Mothership or Apex Flagship Boss.',
+    icon: '👑',
+    reward: 100
+  },
+  {
+    id: 'IMPENETRABLE_AEGIS',
+    name: 'Impenetrable Aegis',
+    desc: 'Clear a planetary defense mission with 100% Core HP intact.',
+    icon: '💎',
+    reward: 100
+  },
+  {
+    id: 'SECTOR_ONE_GUARDIAN',
+    name: 'Guardian of Sector I',
+    desc: 'Clear and defend all 5 planetary systems in Sector I.',
+    icon: '🌌',
+    reward: 100
+  }
+];
+
+export const GUARDIAN_RANKS = [
+  { minStars: 0, title: 'CADET GUARDIAN', icon: '🛡️', color: '#94a3b8' },
+  { minStars: 8, title: 'SYSTEM SENTINEL', icon: '⚔️', color: '#00e676' },
+  { minStars: 18, title: 'NEBULA WARDEN', icon: '🌌', color: '#00e5ff' },
+  { minStars: 32, title: 'COSMIC ADMIRAL', icon: '⭐', color: '#ffd700' },
+  { minStars: 45, title: 'GALACTIC CHAMPION', icon: '👑', color: '#e040fb' },
+  { minStars: 55, title: 'SUPREME COSMIC GUARDIAN', icon: '✨', color: '#ff3366' }
+];
+
+export const PENTATONIC_FREQS = [
+  261.63, 293.66, 329.63, 392.00, 440.00, 523.25, 587.33, 659.25, 783.99, 880.00, 1046.50, 1174.66
 ];
