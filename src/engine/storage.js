@@ -1,6 +1,6 @@
-// Spark Panic 2.0 - Persistence & Upgrade Armory Save Engine
+// Spark Panic 2.2 - Persistence & Upgrade Armory Save Engine
 
-import { ARMORY_CONFIG, GUARDIAN_RANKS, TROPHIES } from '../config.js';
+import { ARMORY_CONFIG, GUARDIAN_RANKS, TROPHIES, CHASSIS_CONFIG } from '../config.js';
 
 const STORAGE_KEY = 'spark_panic_v2_save';
 
@@ -24,8 +24,13 @@ export class SaveSystem {
         tacticalCd: 0
       },
       trophies: {},
+      selectedChassis: 'striker',
+      unlockedChassis: { striker: true },
       endlessHighScore: 0,
-      isMuted: false
+      endlessBestWave: 0,
+      endlessMaxWave: 0,
+      isMuted: false,
+      isBgmEnabled: true
     };
 
     if (typeof localStorage === 'undefined') return defaults;
@@ -34,13 +39,19 @@ export class SaveSystem {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (!raw) return defaults;
       const parsed = JSON.parse(raw);
+      const endlessBestWave = parsed.endlessBestWave || parsed.endlessMaxWave || 0;
       return {
         ...defaults,
         ...parsed,
         upgrades: { ...defaults.upgrades, ...(parsed.upgrades || {}) },
         planetStars: { ...(parsed.planetStars || {}) },
         planetHighScores: { ...(parsed.planetHighScores || {}) },
-        trophies: { ...(parsed.trophies || {}) }
+        trophies: { ...(parsed.trophies || {}) },
+        unlockedChassis: { striker: true, ...(parsed.unlockedChassis || {}) },
+        selectedChassis: parsed.selectedChassis || defaults.selectedChassis,
+        endlessBestWave,
+        endlessMaxWave: endlessBestWave,
+        isBgmEnabled: parsed.isBgmEnabled !== undefined ? parsed.isBgmEnabled : defaults.isBgmEnabled
       };
     } catch (e) {
       console.warn('Failed to parse saved game data, using defaults', e);
@@ -176,21 +187,128 @@ export class SaveSystem {
     this.save();
   }
 
+  isBgmEnabled() {
+    return this.data.isBgmEnabled !== false;
+  }
+
+  setBgmEnabled(enabled) {
+    this.data.isBgmEnabled = !!enabled;
+    this.save();
+  }
+
   getData() {
     return this.data;
   }
 
+  isChassisUnlocked(id) {
+    if (id === 'striker') return true;
+    if (this.data.unlockedChassis && this.data.unlockedChassis[id]) return true;
+    const totalStars = this.getTotalStars();
+    if (id === 'tesla' && totalStars >= 15) return true;
+    if (id === 'railgun' && totalStars >= 30) return true;
+    return false;
+  }
+
+  unlockChassis(id) {
+    const cfg = CHASSIS_CONFIG[id];
+    if (!cfg) return false;
+    if (this.isChassisUnlocked(id)) {
+      this.data.selectedChassis = id;
+      this.save();
+      return true;
+    }
+    if (!this.spendShards(cfg.cost)) return false;
+    if (!this.data.unlockedChassis) this.data.unlockedChassis = { striker: true };
+    this.data.unlockedChassis[id] = true;
+    this.data.selectedChassis = id;
+    this.save();
+    return true;
+  }
+
+  selectChassis(id) {
+    if (!this.isChassisUnlocked(id)) return false;
+    this.data.selectedChassis = id;
+    this.save();
+    return true;
+  }
+
+  getSelectedChassis() {
+    return this.data.selectedChassis || 'striker';
+  }
+
   recordEndlessScore(score, wave) {
-    let isNew = false;
+    let isNewScore = false;
+    let isNewWave = false;
     if (score > (this.data.endlessHighScore || 0)) {
       this.data.endlessHighScore = score;
-      isNew = true;
+      isNewScore = true;
     }
-    if (wave > (this.data.endlessMaxWave || 0)) {
+    const prevBestWave = this.data.endlessBestWave || this.data.endlessMaxWave || 0;
+    if (wave > prevBestWave) {
+      this.data.endlessBestWave = wave;
       this.data.endlessMaxWave = wave;
+      isNewWave = true;
     }
     this.save();
-    return isNew;
+    return isNewScore || isNewWave;
+  }
+
+  exportSaveCode() {
+    try {
+      const jsonStr = JSON.stringify(this.data);
+      if (typeof window !== 'undefined' && typeof btoa === 'function') {
+        return 'SP2_' + btoa(unescape(encodeURIComponent(jsonStr)));
+      }
+      return 'SP2_' + Buffer.from(jsonStr).toString('base64');
+    } catch (e) {
+      console.warn('Save export error:', e);
+      return '';
+    }
+  }
+
+  importSaveCode(codeStr) {
+    if (!codeStr || typeof codeStr !== 'string') return false;
+    let clean = codeStr.trim();
+    if (clean.startsWith('SP2_')) {
+      clean = clean.slice(4);
+    }
+    try {
+      let jsonStr;
+      if (typeof window !== 'undefined' && typeof atob === 'function') {
+        jsonStr = decodeURIComponent(escape(atob(clean)));
+      } else {
+        jsonStr = Buffer.from(clean, 'base64').toString('utf8');
+      }
+      const parsed = JSON.parse(jsonStr);
+      if (!parsed || typeof parsed !== 'object') return false;
+
+      const endlessBestWave = Math.max(
+        this.data.endlessBestWave || 0,
+        parsed.endlessBestWave || parsed.endlessMaxWave || 0
+      );
+
+      this.data = {
+        ...this.data,
+        shards: typeof parsed.shards === 'number' ? parsed.shards : this.data.shards,
+        unlockedPlanet: typeof parsed.unlockedPlanet === 'number' ? parsed.unlockedPlanet : this.data.unlockedPlanet,
+        planetStars: { ...(this.data.planetStars || {}), ...(parsed.planetStars || {}) },
+        planetHighScores: { ...(this.data.planetHighScores || {}), ...(parsed.planetHighScores || {}) },
+        upgrades: { ...(this.data.upgrades || {}), ...(parsed.upgrades || {}) },
+        trophies: { ...(this.data.trophies || {}), ...(parsed.trophies || {}) },
+        unlockedChassis: { striker: true, ...(this.data.unlockedChassis || {}), ...(parsed.unlockedChassis || {}) },
+        selectedChassis: parsed.selectedChassis || this.data.selectedChassis || 'striker',
+        endlessHighScore: Math.max(this.data.endlessHighScore || 0, parsed.endlessHighScore || 0),
+        endlessBestWave,
+        endlessMaxWave: endlessBestWave,
+        isMuted: parsed.isMuted !== undefined ? parsed.isMuted : this.data.isMuted,
+        isBgmEnabled: parsed.isBgmEnabled !== undefined ? parsed.isBgmEnabled : this.data.isBgmEnabled
+      };
+      this.save();
+      return true;
+    } catch (e) {
+      console.debug('Save import parse error:', e);
+      return false;
+    }
   }
 
   resetAll() {
@@ -208,9 +326,13 @@ export class SaveSystem {
         tacticalCd: 0
       },
       trophies: {},
+      selectedChassis: 'striker',
+      unlockedChassis: { striker: true },
       endlessHighScore: 0,
+      endlessBestWave: 0,
       endlessMaxWave: 0,
-      isMuted: false
+      isMuted: false,
+      isBgmEnabled: true
     };
     this.save();
   }

@@ -1,13 +1,24 @@
-// Spark Panic 2.0 - Procedural Web Audio API Synthesizer
+// Spark Panic 2.2 - Procedural Web Audio API Synthesizer & Synthwave BGM Sequencer
 
 import { PENTATONIC_FREQS } from '../config.js';
+import { storage } from './storage.js';
 
 export class AudioEngine {
   constructor() {
     this.ctx = null;
     this.masterGain = null;
-    this.isMuted = false;
+    this.sfxGain = null;
+    this.bgmGain = null;
+    this.isMuted = storage.isSoundMuted();
+    this.isBgmEnabled = storage.isBgmEnabled();
     this.initialized = false;
+
+    // Procedural Synthwave BGM Sequencer state
+    this.bgmBpm = 118;
+    this.bgmStep = 0;
+    this.bgmTimer = null;
+    this.nextNoteTime = 0;
+    this.isBgmPlaying = false;
   }
 
   init() {
@@ -25,9 +36,15 @@ export class AudioEngine {
       if (!AudioCtx) return;
 
       this.ctx = new AudioCtx();
-      this.masterGain = this.ctx.createGain();
-      this.masterGain.gain.setValueAtTime(this.isMuted ? 0 : 0.65, this.ctx.currentTime);
-      this.masterGain.connect(this.ctx.destination);
+      this.sfxGain = this.ctx.createGain();
+      this.sfxGain.gain.setValueAtTime(this.isMuted ? 0 : 0.65, this.ctx.currentTime);
+      this.sfxGain.connect(this.ctx.destination);
+      this.masterGain = this.sfxGain; // Backward compatibility
+
+      this.bgmGain = this.ctx.createGain();
+      this.bgmGain.gain.setValueAtTime(this.isBgmEnabled ? 0.05 : 0, this.ctx.currentTime);
+      this.bgmGain.connect(this.ctx.destination);
+
       this.initialized = true;
     } catch (e) {
       console.warn('AudioContext init error:', e);
@@ -36,10 +53,115 @@ export class AudioEngine {
 
   toggleMute() {
     this.isMuted = !this.isMuted;
-    if (this.masterGain && this.ctx) {
-      this.masterGain.gain.setValueAtTime(this.isMuted ? 0 : 0.65, this.ctx.currentTime);
+    storage.setSoundMuted(this.isMuted);
+    if (this.sfxGain && this.ctx) {
+      this.sfxGain.gain.setValueAtTime(this.isMuted ? 0 : 0.65, this.ctx.currentTime);
     }
     return this.isMuted;
+  }
+
+  toggleBgm() {
+    this.isBgmEnabled = !this.isBgmEnabled;
+    storage.setBgmEnabled(this.isBgmEnabled);
+    if (this.bgmGain && this.ctx) {
+      this.bgmGain.gain.setValueAtTime(this.isBgmEnabled ? 0.05 : 0, this.ctx.currentTime);
+    }
+    if (!this.isBgmEnabled) {
+      this.stopBgm();
+    } else {
+      this.startBgm();
+    }
+    return this.isBgmEnabled;
+  }
+
+  setBgmTempo(bpm = 118) {
+    this.bgmBpm = bpm;
+  }
+
+  startBgm() {
+    if (!this.isBgmEnabled) return;
+    this.init();
+    if (!this.ctx || this.isBgmPlaying) return;
+
+    this.isBgmPlaying = true;
+    this.nextNoteTime = this.ctx.currentTime + 0.05;
+    if (this.bgmTimer) clearInterval(this.bgmTimer);
+    this.bgmTimer = setInterval(() => this.scheduleBgm(), 35);
+  }
+
+  stopBgm() {
+    this.isBgmPlaying = false;
+    if (this.bgmTimer) {
+      clearInterval(this.bgmTimer);
+      this.bgmTimer = null;
+    }
+  }
+
+  scheduleBgm() {
+    if (!this.ctx || !this.isBgmPlaying || !this.isBgmEnabled) return;
+
+    while (this.nextNoteTime < this.ctx.currentTime + 0.15) {
+      this.playBgmStep(this.bgmStep, this.nextNoteTime);
+      const stepDuration = (60 / this.bgmBpm) / 4; // 16th note step
+      this.nextNoteTime += stepDuration;
+      this.bgmStep = (this.bgmStep + 1) % 64;
+    }
+  }
+
+  playBgmStep(step, time) {
+    if (!this.ctx || !this.bgmGain) return;
+
+    // Driving progression: A1 (55Hz) -> F1 (43.65Hz) -> C2 (65.41Hz) -> G1 (49Hz)
+    const chordIndex = Math.floor(step / 16);
+    const roots = [55.0, 43.65, 65.41, 49.0];
+    const rootFreq = roots[chordIndex % roots.length];
+
+    // 1. Sub-Bass Pulse on 8th notes (steps 0, 2, 4, 6...)
+    if (step % 2 === 0) {
+      try {
+        const bassOsc = this.ctx.createOscillator();
+        const bassFilter = this.ctx.createBiquadFilter();
+        const bassGain = this.ctx.createGain();
+
+        bassOsc.type = 'sawtooth';
+        bassOsc.frequency.setValueAtTime(rootFreq, time);
+
+        bassFilter.type = 'lowpass';
+        bassFilter.frequency.setValueAtTime(260, time);
+        bassFilter.Q.setValueAtTime(3.0, time);
+
+        bassGain.gain.setValueAtTime(0.045, time);
+        bassGain.gain.exponentialRampToValueAtTime(0.001, time + 0.14);
+
+        bassOsc.connect(bassFilter);
+        bassFilter.connect(bassGain);
+        bassGain.connect(this.bgmGain);
+
+        bassOsc.start(time);
+        bassOsc.stop(time + 0.15);
+      } catch (e) {}
+    }
+
+    // 2. Cosmic Arpeggio on 16th notes (A-minor pentatonic)
+    const arpNotes = [220, 261.63, 329.63, 392, 440, 523.25, 440, 329.63, 261.63, 329.63, 392, 440, 523.25, 659.25, 523.25, 392];
+    const arpFreq = arpNotes[step % arpNotes.length];
+
+    try {
+      const arpOsc = this.ctx.createOscillator();
+      const arpGain = this.ctx.createGain();
+
+      arpOsc.type = 'triangle';
+      arpOsc.frequency.setValueAtTime(arpFreq, time);
+
+      arpGain.gain.setValueAtTime(0.025, time);
+      arpGain.gain.exponentialRampToValueAtTime(0.001, time + 0.095);
+
+      arpOsc.connect(arpGain);
+      arpGain.connect(this.bgmGain);
+
+      arpOsc.start(time);
+      arpOsc.stop(time + 0.10);
+    } catch (e) {}
   }
 
   playLaser(isOverdrive = false) {

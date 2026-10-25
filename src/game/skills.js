@@ -20,6 +20,7 @@ export class TacticalSkills {
     this.empActive = false;
     this.empRadius = 0;
     this.empMaxRadius = 1200;
+    this.empStunDuration = 3.0;
 
     this.overdriveActive = false;
     this.overdriveTimer = 0;
@@ -46,13 +47,14 @@ export class TacticalSkills {
     return true;
   }
 
-  useSkillW(planetX, planetY) {
+  useSkillW(planetX, planetY, cdMult = 1.0, stunDuration = 3.0) {
     if (!this.canUseW()) return false;
-    this.timerW = this.baseCdW * this.cdMultiplier;
+    this.timerW = this.baseCdW * this.cdMultiplier * cdMult;
     this.empActive = true;
     this.empRadius = 20;
     this.empOriginX = planetX;
     this.empOriginY = planetY;
+    this.empStunDuration = stunDuration;
     audio.playSkill('W');
     return true;
   }
@@ -158,7 +160,7 @@ export class TacticalSkills {
         if (!alien.alive) continue;
         const dist = Math.hypot(alien.x - this.empOriginX, alien.y - this.empOriginY);
         if (Math.abs(dist - this.empRadius) < 60) {
-          alien.freeze(3.0);
+          alien.freeze(this.empStunDuration || 3.0);
           alien.takeDamage(24 * novaMultiplier, null, null, true);
           if (alien.classKey !== 'BOSS') {
             const pushAngle = Math.atan2(alien.y - this.empOriginY, alien.x - this.empOriginX);

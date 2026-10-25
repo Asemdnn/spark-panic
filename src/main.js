@@ -1,6 +1,6 @@
 // Spark Panic 2.0 - Application Bootstrap & Event Controller
 
-import { PLANETS, SECTORS, ALIEN_CLASSES, ARMORY_CONFIG, TROPHIES, GUARDIAN_RANKS } from './config.js';
+import { PLANETS, SECTORS, ALIEN_CLASSES, ARMORY_CONFIG, TROPHIES, GUARDIAN_RANKS, CHASSIS_CONFIG } from './config.js';
 import { audio } from './engine/audio.js';
 import { saveSystem } from './engine/storage.js';
 import { GameEngine } from './game/engine.js';
@@ -72,6 +72,9 @@ window.addEventListener('DOMContentLoaded', () => {
       const isMuted = audio.toggleMute();
       const muteBtn = document.getElementById('btnMute');
       if (muteBtn) muteBtn.innerHTML = ICON_SVG.volume(isMuted, 'w-4 h-4');
+    } else if (key === 'B') {
+      const isBgm = audio.toggleBgm();
+      updateBgmButton(isBgm);
     } else if (key === 'R') {
       if (engine.state === 'PLAYING' || engine.state === 'DEFEAT' || engine.state === 'PAUSED') {
         restartCurrent();
@@ -79,7 +82,26 @@ window.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  function updateBgmButton(isEnabled) {
+    const btn = document.getElementById('btnBgm');
+    if (btn) {
+      btn.innerHTML = ICON_SVG.music(isEnabled, 'w-4 h-4');
+      btn.classList.toggle('text-cosmic-magenta', isEnabled);
+      btn.classList.toggle('text-slate-500', !isEnabled);
+      btn.title = `Toggle Synthwave BGM (B) - ${isEnabled ? 'ON' : 'OFF'}`;
+    }
+  }
+
+  // Initialize audio button visual states
+  updateBgmButton(audio.isBgmEnabled);
+
   // Bottom Tactical Deck Buttons
+  document.getElementById('btnQuickNova')?.addEventListener('click', () => {
+    audio.init();
+    if (engine.state === 'PLAYING') {
+      engine.triggerQuickNova();
+    }
+  });
   document.getElementById('btnSkillQ')?.addEventListener('click', () => {
     if (engine.state === 'PLAYING') engine.skills.useSkillQ(engine.turret.angle);
   });
@@ -98,6 +120,11 @@ window.addEventListener('DOMContentLoaded', () => {
   });
 
   // Top HUD Controls
+  document.getElementById('btnBgm')?.addEventListener('click', () => {
+    audio.init();
+    const isBgm = audio.toggleBgm();
+    updateBgmButton(isBgm);
+  });
   document.getElementById('btnMute')?.addEventListener('click', () => {
     audio.init();
     const isMuted = audio.toggleMute();
@@ -163,13 +190,48 @@ window.addEventListener('DOMContentLoaded', () => {
     audio.init();
     const refunded = saveSystem.refundAllTech();
     renderArmoryGrid();
+    renderChassisDeck();
     engine.applyUpgrades();
     engine.showToast(`REFUNDED ${refunded} STAR SHARDS!`, '#00e676');
   });
 
-  // Codex Close
+  // Codex Close & Save Backup/Import
   document.getElementById('btnCodexClose')?.addEventListener('click', () => {
     document.getElementById('modalCodex').classList.add('hidden');
+  });
+  document.getElementById('btnExportSave')?.addEventListener('click', () => {
+    audio.init();
+    const code = saveSystem.exportSaveCode();
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(code).then(() => {
+        engine.showToast('SAVE CODE COPIED TO CLIPBOARD!', '#00e5ff');
+      }).catch(() => {
+        prompt('Copy your quantum save code:', code);
+      });
+    } else {
+      prompt('Copy your quantum save code:', code);
+    }
+  });
+  document.getElementById('btnImportSave')?.addEventListener('click', () => {
+    audio.init();
+    const input = document.getElementById('inputImportSave');
+    const raw = input ? input.value.trim() : '';
+    if (!raw) {
+      engine.showToast('PLEASE PASTE A SAVE CODE FIRST!', '#ff3366');
+      return;
+    }
+    const success = saveSystem.importSaveCode(raw);
+    if (success) {
+      if (input) input.value = '';
+      engine.applyUpgrades();
+      updateTitleStats();
+      renderCodexList();
+      const shardsEl = document.getElementById('starMapShards');
+      if (shardsEl) shardsEl.textContent = saveSystem.data.shards.toLocaleString();
+      engine.showToast('SAVE DATA RESTORED SUCCESSFULLY!', '#00e676');
+    } else {
+      engine.showToast('INVALID OR CORRUPTED SAVE CODE!', '#ff3366');
+    }
   });
 
   // Victory Modal Actions
@@ -261,6 +323,12 @@ window.addEventListener('DOMContentLoaded', () => {
     const starsEl = document.getElementById('titleTotalStars');
     if (starsEl) {
       starsEl.innerHTML = `<span class="flex items-center gap-1.5">${totalStars} / 60 ${ICON_SVG.star('w-4 h-4 text-cosmic-gold')}</span>`;
+    }
+    const bestWave = saveSystem.data.endlessBestWave || 0;
+    const bestScore = saveSystem.data.endlessHighScore || 0;
+    const recordEl = document.getElementById('titleRecordStats');
+    if (recordEl) {
+      recordEl.textContent = `Wave ${bestWave} • ${bestScore.toLocaleString()} pts`;
     }
   }
 
@@ -384,7 +452,108 @@ window.addEventListener('DOMContentLoaded', () => {
 
   function openArmory() {
     document.getElementById('modalArmory').classList.remove('hidden');
+    renderChassisDeck();
     renderArmoryGrid();
+  }
+
+  function renderChassisDeck() {
+    const container = document.getElementById('chassisContainer');
+    if (!container) return;
+    container.innerHTML = '';
+
+    const selectedId = saveSystem.getSelectedChassis();
+    const totalStars = saveSystem.getTotalStars();
+    const shards = saveSystem.data.shards;
+
+    for (const [chassisId, cfg] of Object.entries(CHASSIS_CONFIG)) {
+      const isUnlocked = saveSystem.isChassisUnlocked(chassisId);
+      const isSelected = selectedId === chassisId;
+
+      const card = document.createElement('div');
+      card.className = `glass-card p-3 rounded-2xl flex flex-col justify-between border transition ${
+        isSelected ? 'border-cosmic-cyan ring-2 ring-cosmic-cyan/50 bg-cosmic-cyan/10' : (isUnlocked ? 'border-slate-700/60 hover:border-slate-500' : 'border-slate-800 opacity-75')
+      }`;
+
+      let btnHtml = '';
+      if (isSelected) {
+        btnHtml = `
+          <div class="w-full py-1.5 rounded-xl font-orbitron font-black text-[10px] tracking-wider text-center bg-cosmic-cyan/20 text-cosmic-cyan border border-cosmic-cyan/50">
+            EQUIPPED LOADOUT
+          </div>
+        `;
+      } else if (isUnlocked) {
+        btnHtml = `
+          <button class="btn-equip-chassis w-full py-1.5 rounded-xl font-orbitron font-bold text-[10px] tracking-wider transition cursor-pointer bg-slate-800 hover:bg-cosmic-cyan hover:text-slate-950 text-white border border-slate-600 hover:border-cosmic-cyan flex items-center justify-center gap-1.5" data-chassis="${chassisId}">
+            EQUIP CHASSIS
+          </button>
+        `;
+      } else {
+        const canAfford = shards >= cfg.costShards;
+        btnHtml = `
+          <button class="btn-unlock-chassis w-full py-1.5 rounded-xl font-orbitron font-bold text-[10px] tracking-wider transition cursor-pointer flex items-center justify-center gap-1.5 ${
+            canAfford ? 'bg-gradient-to-r from-cosmic-gold to-amber-600 hover:from-amber-300 hover:to-amber-500 text-slate-950 font-black shadow-md' : 'bg-slate-900 text-slate-500 border border-slate-800 cursor-not-allowed'
+          }" data-chassis="${chassisId}" ${canAfford ? '' : 'disabled'}>
+            <span class="flex items-center gap-1">UNLOCK [${ICON_SVG.shard('w-3 h-3 ' + (canAfford ? 'text-slate-950' : 'text-cosmic-gold'))} ${cfg.costShards}]</span>
+          </button>
+        `;
+      }
+
+      card.innerHTML = `
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <div class="flex items-center gap-2">
+              <div class="w-9 h-9 rounded-xl flex items-center justify-center bg-slate-950/80 border border-slate-700/60 shrink-0">
+                ${ICON_SVG.chassisSvg(chassisId)}
+              </div>
+              <div>
+                <div class="font-orbitron font-black text-xs text-white">${cfg.name}</div>
+                <div class="text-[9px] font-orbitron font-bold" style="color: ${cfg.color}">${cfg.role}</div>
+              </div>
+            </div>
+            <span class="text-[9px] font-orbitron font-bold px-1.5 py-0.5 rounded ${
+              isUnlocked ? 'bg-cosmic-mint/20 text-cosmic-mint border border-cosmic-mint/30' : 'bg-slate-800 text-slate-400'
+            }">
+              ${isUnlocked ? 'UNLOCKED' : (cfg.reqStars ? `${cfg.reqStars} ★ REQ` : 'LOCKED')}
+            </span>
+          </div>
+          <p class="text-[10px] text-slate-300 leading-snug mb-2">${cfg.desc}</p>
+          <div class="bg-slate-950/50 p-1.5 rounded-xl border border-slate-800/80 text-[9px] font-orbitron text-cosmic-gold mb-3">
+            PERK: <span class="text-slate-300">${cfg.perkDesc}</span>
+          </div>
+        </div>
+        ${btnHtml}
+      `;
+
+      container.appendChild(card);
+    }
+
+    // Equip listeners
+    container.querySelectorAll('.btn-equip-chassis').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        audio.init();
+        const id = e.currentTarget.getAttribute('data-chassis');
+        saveSystem.selectChassis(id);
+        engine.applyUpgrades();
+        renderChassisDeck();
+        engine.showToast(`EQUIPPED ${CHASSIS_CONFIG[id]?.name.toUpperCase()}!`, '#00e5ff');
+      });
+    });
+
+    // Unlock listeners
+    container.querySelectorAll('.btn-unlock-chassis').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        audio.init();
+        const id = e.currentTarget.getAttribute('data-chassis');
+        const unlocked = saveSystem.unlockChassis(id);
+        if (unlocked) {
+          audio.playShardPickup();
+          engine.applyUpgrades();
+          renderChassisDeck();
+          renderArmoryGrid();
+          engine.showToast(`UNLOCKED ${CHASSIS_CONFIG[id]?.name.toUpperCase()}!`, '#ffd700');
+        }
+      });
+    });
   }
 
   function renderArmoryGrid() {
@@ -439,6 +608,7 @@ window.addEventListener('DOMContentLoaded', () => {
         if (success) {
           audio.playShardPickup();
           renderArmoryGrid();
+          renderChassisDeck();
           engine.applyUpgrades();
         }
       });

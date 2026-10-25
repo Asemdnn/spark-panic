@@ -5,12 +5,16 @@ export class ProjectileManager {
     this.bolts = [];
     this.torpedoes = [];
     this.satelliteLasers = [];
+    this.teslaArcs = [];
+    this.railgunTrails = [];
   }
 
   clear() {
     this.bolts = [];
     this.torpedoes = [];
     this.satelliteLasers = [];
+    this.teslaArcs = [];
+    this.railgunTrails = [];
   }
 
   spawnTurretBolts(planetX, planetY, turretRadius, boltConfigs) {
@@ -26,6 +30,11 @@ export class ProjectileManager {
         damage: b.damage,
         color: b.color,
         pierce: b.pierce || 1,
+        isTesla: !!b.isTesla,
+        turretLevel: b.turretLevel || 0,
+        isRailgun: !!b.isRailgun,
+        isDirectPierce: !!b.isDirectPierce,
+        chassis: b.chassis || 'striker',
         alive: true
       });
     }
@@ -131,8 +140,95 @@ export class ProjectileManager {
           if (!alien.alive) continue;
           const d = Math.hypot(alien.x - b.x, alien.y - b.y);
           if (d <= alien.radius + 6) {
-            const destroyed = alien.takeDamage(b.damage, b.x, b.y, false, onBossPhase2Callback);
-            if (onAlienHitCallback) onAlienHitCallback(alien, destroyed, b.x, b.y);
+            if (b.isRailgun) {
+              // Railgun Lancer: +50% bonus dmg against Solar Dreadnoughts & Mothership Bosses, ignores shields
+              let hitDmg = b.damage;
+              if (alien.classKey === 'DREADNOUGHT' || alien.classKey === 'BOSS') {
+                hitDmg *= 1.5;
+              }
+              const destroyed = alien.takeDamage(hitDmg, b.x, b.y, true, onBossPhase2Callback);
+              if (onAlienHitCallback) onAlienHitCallback(alien, destroyed, b.x, b.y);
+
+              // Add fading golden laser wake trail
+              this.railgunTrails.push({
+                x1: b.x - Math.cos(b.angle) * 45,
+                y1: b.y - Math.sin(b.angle) * 45,
+                x2: b.x + Math.cos(b.angle) * 15,
+                y2: b.y + Math.sin(b.angle) * 15,
+                timer: 0.16,
+                maxTimer: 0.16,
+                color: b.color || '#ffd700'
+              });
+            } else if (b.isTesla) {
+              // Tesla Arc Cannon: Chain-lightning to up to 2 (or 3 at Lv.5+) nearby targets within 115px
+              const destroyed = alien.takeDamage(b.damage, b.x, b.y, false, onBossPhase2Callback);
+              if (onAlienHitCallback) onAlienHitCallback(alien, destroyed, b.x, b.y);
+
+              const candidates = [];
+              for (const other of aliens) {
+                if (other === alien || !other.alive) continue;
+                const cDist = Math.hypot(other.x - alien.x, other.y - alien.y);
+                if (cDist <= 115) {
+                  candidates.push({ alien: other, dist: cDist });
+                }
+              }
+              candidates.sort((a, b) => a.dist - b.dist);
+
+              // 1st arc: 65% damage
+              if (candidates[0]) {
+                const target1 = candidates[0].alien;
+                const k1 = target1.takeDamage(b.damage * 0.65, target1.x, target1.y, false, onBossPhase2Callback);
+                if (onAlienHitCallback) onAlienHitCallback(target1, k1, target1.x, target1.y);
+                this.teslaArcs.push({
+                  x1: alien.x,
+                  y1: alien.y,
+                  x2: target1.x,
+                  y2: target1.y,
+                  timer: 0.12,
+                  maxTimer: 0.12,
+                  color: '#00e5ff'
+                });
+              }
+
+              // 2nd arc: 45% damage
+              if (candidates[1]) {
+                const target2 = candidates[1].alien;
+                const origin = candidates[0] ? candidates[0].alien : alien;
+                const k2 = target2.takeDamage(b.damage * 0.45, target2.x, target2.y, false, onBossPhase2Callback);
+                if (onAlienHitCallback) onAlienHitCallback(target2, k2, target2.x, target2.y);
+                this.teslaArcs.push({
+                  x1: origin.x,
+                  y1: origin.y,
+                  x2: target2.x,
+                  y2: target2.y,
+                  timer: 0.12,
+                  maxTimer: 0.12,
+                  color: '#e040fb'
+                });
+              }
+
+              // 3rd arc: 15% damage (Lv.5+ only)
+              if (b.turretLevel >= 5 && candidates[2]) {
+                const target3 = candidates[2].alien;
+                const origin = candidates[1] ? candidates[1].alien : alien;
+                const k3 = target3.takeDamage(b.damage * 0.15, target3.x, target3.y, false, onBossPhase2Callback);
+                if (onAlienHitCallback) onAlienHitCallback(target3, k3, target3.x, target3.y);
+                this.teslaArcs.push({
+                  x1: origin.x,
+                  y1: origin.y,
+                  x2: target3.x,
+                  y2: target3.y,
+                  timer: 0.12,
+                  maxTimer: 0.12,
+                  color: '#00e5ff'
+                });
+              }
+            } else {
+              // Standard Pulse Striker bolt
+              const destroyed = alien.takeDamage(b.damage, b.x, b.y, false, onBossPhase2Callback);
+              if (onAlienHitCallback) onAlienHitCallback(alien, destroyed, b.x, b.y);
+            }
+
             b.pierce--;
             if (b.pierce <= 0) {
               b.alive = false;
@@ -146,6 +242,20 @@ export class ProjectileManager {
       if (b.x < -60 || b.x > canvasWidth + 60 || b.y < -60 || b.y > canvasHeight + 60 || !b.alive) {
         this.bolts.splice(i, 1);
       }
+    }
+
+    // Update Tesla Arcs
+    for (let i = this.teslaArcs.length - 1; i >= 0; i--) {
+      const arc = this.teslaArcs[i];
+      arc.timer -= dt;
+      if (arc.timer <= 0) this.teslaArcs.splice(i, 1);
+    }
+
+    // Update Railgun Trails
+    for (let i = this.railgunTrails.length - 1; i >= 0; i--) {
+      const trail = this.railgunTrails[i];
+      trail.timer -= dt;
+      if (trail.timer <= 0) this.railgunTrails.splice(i, 1);
     }
 
     // 2. Update Enemy Torpedoes (affected by Cryo Time-Warp speedScale)
@@ -195,32 +305,121 @@ export class ProjectileManager {
       ctx.restore();
     }
 
-    // 2. Render Player Plasma Bolts
+    // 2. Render Railgun Golden Wake Trails
+    for (const tr of this.railgunTrails) {
+      const alpha = Math.max(0, tr.timer / tr.maxTimer);
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.beginPath();
+      ctx.moveTo(tr.x1, tr.y1);
+      ctx.lineTo(tr.x2, tr.y2);
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(tr.x1, tr.y1);
+      ctx.lineTo(tr.x2, tr.y2);
+      ctx.strokeStyle = tr.color || '#ffd700';
+      ctx.lineWidth = 5.0;
+      ctx.shadowColor = '#ffd700';
+      ctx.shadowBlur = 14;
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // 3. Render Tesla Jagged Chain Lightning Arcs
+    for (const arc of this.teslaArcs) {
+      const alpha = Math.max(0, arc.timer / arc.maxTimer);
+      ctx.save();
+      ctx.globalAlpha = alpha;
+
+      const midX = (arc.x1 + arc.x2) / 2 + (Math.random() - 0.5) * 18;
+      const midY = (arc.y1 + arc.y2) / 2 + (Math.random() - 0.5) * 18;
+
+      ctx.beginPath();
+      ctx.moveTo(arc.x1, arc.y1);
+      ctx.lineTo(midX, midY);
+      ctx.lineTo(arc.x2, arc.y2);
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 1.8;
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(arc.x1, arc.y1);
+      ctx.lineTo(midX, midY);
+      ctx.lineTo(arc.x2, arc.y2);
+      ctx.strokeStyle = arc.color || '#00e5ff';
+      ctx.lineWidth = 3.5;
+      ctx.shadowColor = arc.color || '#00e5ff';
+      ctx.shadowBlur = 12;
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // 4. Render Player Plasma & Railgun Bolts
     for (const b of this.bolts) {
       ctx.save();
       ctx.translate(b.x, b.y);
       ctx.rotate(b.angle);
 
-      ctx.beginPath();
-      ctx.moveTo(-10, 0);
-      ctx.lineTo(10, 0);
-      ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = 3.5;
-      ctx.stroke();
+      if (b.isRailgun) {
+        // High-velocity hyper-dense golden slug
+        ctx.beginPath();
+        ctx.moveTo(-16, 0);
+        ctx.lineTo(16, 0);
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 4.0;
+        ctx.stroke();
 
-      ctx.beginPath();
-      ctx.moveTo(-14, 0);
-      ctx.lineTo(14, 0);
-      ctx.strokeStyle = b.color;
-      ctx.lineWidth = 2;
-      ctx.shadowColor = b.color;
-      ctx.shadowBlur = 12;
-      ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(-22, 0);
+        ctx.lineTo(22, 0);
+        ctx.strokeStyle = '#ffd700';
+        ctx.lineWidth = 2.5;
+        ctx.shadowColor = '#ffd700';
+        ctx.shadowBlur = 16;
+        ctx.stroke();
+      } else if (b.isTesla) {
+        // High-voltage shock bolt
+        ctx.beginPath();
+        ctx.moveTo(-11, 0);
+        ctx.lineTo(11, 0);
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 3.5;
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(-15, 0);
+        ctx.lineTo(15, 0);
+        ctx.strokeStyle = b.color || '#e040fb';
+        ctx.lineWidth = 2.5;
+        ctx.shadowColor = b.color || '#e040fb';
+        ctx.shadowBlur = 14;
+        ctx.stroke();
+      } else {
+        // Standard rapid plasma bolt
+        ctx.beginPath();
+        ctx.moveTo(-10, 0);
+        ctx.lineTo(10, 0);
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 3.5;
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(-14, 0);
+        ctx.lineTo(14, 0);
+        ctx.strokeStyle = b.color;
+        ctx.lineWidth = 2;
+        ctx.shadowColor = b.color;
+        ctx.shadowBlur = 12;
+        ctx.stroke();
+      }
 
       ctx.restore();
     }
 
-    // 3. Render Enemy Torpedoes
+    // 5. Render Enemy Torpedoes
     for (const torp of this.torpedoes) {
       ctx.save();
       ctx.translate(torp.x, torp.y);

@@ -165,6 +165,77 @@ export const ICON_SVG = {
     </svg>
   `,
 
+  // Synthwave BGM / Musical Note
+  music: (enabled = true, cls = 'w-4 h-4') => `
+    <svg class="${cls} inline-block shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M9 18V5l12-2v13" />
+      <circle cx="6" cy="18" r="3" fill="currentColor" />
+      <circle cx="18" cy="16" r="3" fill="currentColor" />
+      ${enabled ? '' : '<line x1="2" y1="2" x2="22" y2="22" stroke="currentColor" stroke-width="2.5" />'}
+    </svg>
+  `,
+
+  // Clipboard Copy
+  copy: (cls = 'w-4 h-4') => `
+    <svg class="${cls} inline-block shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+    </svg>
+  `,
+
+  // Import / Download Save Code
+  importSave: (cls = 'w-4 h-4') => `
+    <svg class="${cls} inline-block shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+      <polyline points="7 10 12 15 17 10" />
+      <line x1="12" y1="15" x2="12" y2="3" />
+    </svg>
+  `,
+
+  // Turret Chassis Diagrams
+  chassisSvg: (chassisId) => {
+    switch (chassisId) {
+      case 'striker':
+        return `
+          <svg viewBox="0 0 48 48" class="w-12 h-12 shrink-0 drop-shadow-[0_0_8px_#00e5ff]">
+            <circle cx="24" cy="24" r="8" fill="#042331" stroke="#00e5ff" stroke-width="2" />
+            <path d="M12 28 L6 18 L18 20 Z M36 28 L42 18 L30 20 Z" fill="#0284c7" stroke="#00e5ff" stroke-width="1.5" />
+            <rect x="20" y="8" width="3.5" height="14" rx="1" fill="#e2e8f0" stroke="#00e5ff" stroke-width="1.2" />
+            <rect x="24.5" y="8" width="3.5" height="14" rx="1" fill="#e2e8f0" stroke="#00e5ff" stroke-width="1.2" />
+            <circle cx="24" cy="24" r="3.5" fill="#00e5ff" />
+          </svg>
+        `;
+      case 'tesla':
+        return `
+          <svg viewBox="0 0 48 48" class="w-12 h-12 shrink-0 drop-shadow-[0_0_8px_#e040fb]">
+            <circle cx="24" cy="24" r="9" fill="#2d0538" stroke="#e040fb" stroke-width="2" />
+            <path d="M16 10 L20 18 M32 10 L28 18" stroke="#00e5ff" stroke-width="2.5" stroke-linecap="round" />
+            <circle cx="16" cy="10" r="2.5" fill="#00e5ff" />
+            <circle cx="32" cy="10" r="2.5" fill="#00e5ff" />
+            <path d="M19 14 Q24 9 29 14" stroke="#e040fb" stroke-width="2" fill="none" stroke-dasharray="2,2" />
+            <polygon points="24,19 26,24 23,25 25,29 21,25 24,24" fill="#00e5ff" />
+          </svg>
+        `;
+      case 'railgun':
+        return `
+          <svg viewBox="0 0 48 48" class="w-12 h-12 shrink-0 drop-shadow-[0_0_10px_#ffd700]">
+            <circle cx="24" cy="28" r="9" fill="#332203" stroke="#ffd700" stroke-width="2" />
+            <rect x="21" y="4" width="6" height="22" rx="1.5" fill="#1e293b" stroke="#ffd700" stroke-width="2" />
+            <line x1="18" y1="10" x2="30" y2="10" stroke="#ff3366" stroke-width="2" stroke-linecap="round" />
+            <line x1="18" y1="16" x2="30" y2="16" stroke="#ff3366" stroke-width="2" stroke-linecap="round" />
+            <circle cx="24" cy="6" r="2" fill="#ffffff" />
+            <circle cx="24" cy="28" r="4" fill="#ffd700" />
+          </svg>
+        `;
+      default:
+        return `
+          <svg viewBox="0 0 48 48" class="w-12 h-12 shrink-0">
+            <circle cx="24" cy="24" r="10" fill="#0f172a" stroke="#00e5ff" stroke-width="2" />
+          </svg>
+        `;
+    }
+  },
+
   // Distinct 48x48 Custom Ship Vector Graphics for 7 Alien Classes
   shipSvg: (classKey) => {
     switch (classKey) {

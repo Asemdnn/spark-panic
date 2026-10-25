@@ -426,6 +426,63 @@ export const ALIEN_CLASSES = {
   }
 };
 
+export const CHASSIS_CONFIG = {
+  striker: {
+    id: 'striker',
+    name: 'Pulse Striker',
+    title: 'Rapid Assault Cannon',
+    color: '#00e5ff',
+    bulletSpeed: 520,
+    fireIntervalMult: 1.0,
+    damageMult: 1.0,
+    minStars: 0,
+    reqStars: 0,
+    cost: 0,
+    costShards: 0,
+    unlockedAtStart: true,
+    desc: 'Balanced rapid-fire plasma cannon with +15% faster Spark Nova recharge rate.',
+    perk: '+15% Spark Nova passive recharge rate',
+    perkDesc: '+15% Spark Nova passive recharge rate',
+    role: 'Tactical Assault'
+  },
+  tesla: {
+    id: 'tesla',
+    name: 'Tesla Arc Cannon',
+    title: 'High-Voltage Chain Driver',
+    color: '#e040fb',
+    bulletSpeed: 480,
+    fireIntervalMult: 1.0,
+    damageMult: 1.0,
+    minStars: 15,
+    reqStars: 15,
+    cost: 350,
+    costShards: 350,
+    unlockedAtStart: false,
+    desc: 'High-voltage shock bolts that chain-arc to up to 2 (or 3 at Lv.5+) nearby invaders within 115px. -20% EMP cooldown, +1.0s EMP stun duration.',
+    perk: 'Chain-lightning arcs (100% -> 65% -> 45%) • -20% EMP cooldown • +1s EMP stun',
+    perkDesc: 'Chain-lightning arcs (100% -> 65% -> 45%) • -20% EMP cooldown • +1s EMP stun',
+    role: 'Crowd Suppression'
+  },
+  railgun: {
+    id: 'railgun',
+    name: 'Railgun Lancer',
+    title: 'Hyper-Velocity Siege Driver',
+    color: '#ffd700',
+    bulletSpeed: 880,
+    fireIntervalMult: 1.45,
+    damageMult: 2.2,
+    minStars: 30,
+    reqStars: 30,
+    cost: 600,
+    costShards: 600,
+    unlockedAtStart: false,
+    desc: 'Hyper-velocity golden rail-slugs piercing straight through up to 4 enemies in a line with 2.2x base damage. Ignores Boss Phase 2 directional shields and deals +50% bonus damage to Dreadnoughts & Mothership Bosses.',
+    perk: 'Piercing rail-slugs (4+ enemies) • Ignores Boss Phase 2 shields • +50% vs Dreadnoughts/Bosses',
+    perkDesc: 'Piercing rail-slugs (4+ enemies) • Ignores Boss Phase 2 shields • +50% vs Dreadnoughts/Bosses',
+    role: 'Heavy Anti-Capital'
+  }
+};
+
 export const ARMORY_CONFIG = {
   turretDmg: {
     id: 'turretDmg',

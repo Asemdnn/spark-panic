@@ -108,8 +108,9 @@ export class GameEngine {
   applyUpgrades() {
     const up = saveSystem.data.upgrades;
 
-    // 1. Turret Firepower & Barrels
+    // 1. Turret Firepower & Barrels & Chassis
     this.turret.setUpgradeLevel(up.turretDmg || 0);
+    this.turret.setChassis(saveSystem.getSelectedChassis());
 
     // 2. Nova Radius & Catalyst
     this.novaMultiplier = 1.0 + (up.novaRadius || 0) * 0.14;
@@ -157,6 +158,7 @@ export class GameEngine {
 
     this.state = 'PLAYING';
     audio.init();
+    audio.startBgm();
   }
 
   startEndless() {
@@ -181,6 +183,7 @@ export class GameEngine {
 
     this.state = 'PLAYING';
     audio.init();
+    audio.startBgm();
   }
 
   resetCombatState() {
@@ -202,6 +205,26 @@ export class GameEngine {
   setupWaveSpawns() {
     this.waveSpawnQueue = [];
     this.spawnTimer = 0.5;
+
+    // Endless Mode Cosmic Shift & Biome Rotation every 3 waves (Wave 1, Wave 4, Wave 7, ...)
+    if (this.isEndlessMode && (this.currentWave - 1) % 3 === 0) {
+      const hazardIndex = (Math.floor((this.currentWave - 1) / 3) % 4) + 1;
+      this.hazards.initSector(hazardIndex, this.planet.x, this.planet.y, this.planet.planetRadius);
+
+      const pCfg = PLANETS[(this.currentWave - 1) % PLANETS.length];
+      this.planet.color1 = pCfg.color1;
+      this.planet.color2 = pCfg.color2;
+      this.planet.atmo = pCfg.atmo;
+      this.planet.hasRings = !!pCfg.rings;
+      this.planet.name = pCfg.name;
+
+      if (this.currentWave > 1) {
+        const hInfo = this.hazards.getHazardInfo();
+        this.particles.addFloater(this.planet.x, this.planet.y - 120, '⚡ COSMIC SHIFT: ' + hInfo.name, '#ffd700', 26);
+        this.addScreenShake(10, 0.3);
+        audio.playSkill('W');
+      }
+    }
 
     let totalEnemies = 12;
     if (this.isEndlessMode) {
@@ -268,6 +291,14 @@ export class GameEngine {
     this.particles.spawnNova(targetX, targetY, blastRadius, color, damage, true);
     this.addScreenShake(inNebula ? 9 : 6, 0.2);
     return true;
+  }
+
+  triggerQuickNova() {
+    if (this.state !== 'PLAYING') return false;
+    const spawnDist = (this.planet.planetRadius || 75) + 130;
+    const nx = this.planet.x + Math.cos(this.turret.angle) * spawnDist;
+    const ny = this.planet.y + Math.sin(this.turret.angle) * spawnDist;
+    return this.triggerSparkNova(nx, ny);
   }
 
   addScreenShake(intensity = 6, duration = 0.2) {
@@ -366,11 +397,16 @@ export class GameEngine {
     this.maxCombo = Math.max(this.maxCombo, this.combo);
     audio.playChainChime(this.combo);
 
-    // Nova kill recharge energy (+14% per kill)
-    this.novaProgress += this.killRechargeRate;
+    // Nova kill recharge energy (+14% per kill, +15% bonus for Pulse Striker)
+    const isStriker = this.turret && this.turret.chassis === 'striker';
+    this.novaProgress += this.killRechargeRate * (isStriker ? 1.15 : 1.0);
     if (this.novaProgress >= 1.0) {
       this.novaProgress -= 1.0;
       this.novaCharges = Math.min(this.maxNovaCharges, this.novaCharges + 1);
+    }
+
+    if (alien === this.activeBoss) {
+      this.activeBoss = null;
     }
 
     // Drop magnetic Cosmic Sparks (+✦)
@@ -473,6 +509,13 @@ export class GameEngine {
     }
 
     if (this.state !== 'PLAYING') return;
+
+    // Dynamic BGM Tempo Boost during Boss battles (136 BPM vs 118 BPM)
+    if (this.activeBoss && this.activeBoss.alive) {
+      audio.setBgmTempo(136);
+    } else {
+      audio.setBgmTempo(118);
+    }
 
     // Combo timer decay
     if (this.comboTimer > 0) {
@@ -678,6 +721,7 @@ export class GameEngine {
   onMissionVictory() {
     this.state = 'VICTORY';
     audio.playVictory();
+    audio.stopBgm();
 
     // Star calculation: 3 stars if Core HP >= 80%, 2 stars if >= 40%, 1 star otherwise
     const corePct = Math.round((this.planet.coreHp / (this.planet.maxCoreHp || 100)) * 100);
@@ -726,16 +770,37 @@ export class GameEngine {
   onMissionDefeat() {
     this.state = 'DEFEAT';
     audio.playDefeat();
+    audio.stopBgm();
 
     const cfg = PLANETS.find(p => p.id === this.currentPlanetId) || PLANETS[0];
     const elTitle = document.getElementById('defeatPlanetTitle');
-    if (elTitle) elTitle.textContent = `PLANETARY DEFENSES BREACHED ON ${cfg.name.toUpperCase()}`;
+    if (elTitle) {
+      elTitle.textContent = this.isEndlessMode
+        ? 'ENDLESS SIEGE TERMINATED'
+        : `PLANETARY DEFENSES BREACHED ON ${cfg.name.toUpperCase()}`;
+    }
     const elWave = document.getElementById('defStatWave');
-    if (elWave) elWave.textContent = `Wave ${this.currentWave} / ${this.totalWaves}`;
+    if (elWave) {
+      elWave.textContent = this.isEndlessMode ? `Wave ${this.currentWave}` : `Wave ${this.currentWave} / ${this.totalWaves}`;
+    }
     const elEnemies = document.getElementById('defStatEnemies');
     if (elEnemies) elEnemies.textContent = `${this.enemiesVaporized}`;
     const elShards = document.getElementById('defStatShards');
     if (elShards) elShards.innerHTML = `<span class="flex items-center justify-end gap-1 font-bold text-cosmic-gold">+${Math.round(this.enemiesVaporized * 0.5)} ${ICON_SVG.shard('w-3.5 h-3.5 text-cosmic-gold')}</span>`;
+
+    // Record Endless score and check for new record
+    if (this.isEndlessMode) {
+      const isNewRecord = saveSystem.recordEndlessScore(this.score, this.currentWave);
+      const recordBanner = document.getElementById('defeatRecordBanner');
+      if (recordBanner) {
+        if (isNewRecord) {
+          recordBanner.classList.remove('hidden');
+          recordBanner.innerHTML = `<span class="text-cosmic-gold font-bold text-glow-gold flex items-center justify-center gap-1.5 animate-pulse">${ICON_SVG.trophy('w-4 h-4 text-cosmic-gold')} NEW ENDLESS RECORD! Wave ${this.currentWave} • ${this.score.toLocaleString()} pts</span>`;
+        } else {
+          recordBanner.classList.add('hidden');
+        }
+      }
+    }
 
     document.getElementById('modalDefeat')?.classList.remove('hidden');
   }
@@ -839,7 +904,15 @@ export class GameEngine {
     const sectorCfg = SECTORS.find(s => s.id === cfg.sector) || SECTORS[0];
     document.getElementById('hudSectorLabel').textContent = this.isEndlessMode ? 'ENDLESS SIEGE' : sectorCfg.shortName;
     document.getElementById('hudPlanetLabel').textContent = cfg.name.toUpperCase();
-    document.getElementById('hudWaveValue').textContent = `${this.currentWave} / ${this.totalWaves}`;
+
+    const waveEl = document.getElementById('hudWaveValue');
+    if (waveEl) {
+      if (this.isEndlessMode) {
+        waveEl.innerHTML = `${this.currentWave} / <span class="font-bold text-sm leading-none inline-block align-middle">&infin;</span>`;
+      } else {
+        waveEl.textContent = `${this.currentWave} / ${this.totalWaves}`;
+      }
+    }
 
     // Shield Bar & Core HP Bar
     const shieldPct = Math.max(0, Math.round((this.planet.shield / this.planet.maxShield) * 100));
@@ -891,27 +964,53 @@ export class GameEngine {
 
     // Skills Cooldown Overlays
     const cdQEl = document.getElementById('skillCdQ');
+    const cdFillQ = document.getElementById('cdFillQ');
     if (this.skills.timerQ > 0) {
-      cdQEl.classList.remove('hidden');
-      cdQEl.textContent = `${this.skills.timerQ.toFixed(1)}s`;
+      if (cdQEl) {
+        cdQEl.classList.remove('hidden');
+        cdQEl.textContent = `${this.skills.timerQ.toFixed(1)}s`;
+      }
+      if (cdFillQ) {
+        const pct = (this.skills.timerQ / (this.skills.baseCdQ * this.skills.cdMultiplier)) * 100;
+        cdFillQ.style.height = `${pct}%`;
+      }
     } else {
-      cdQEl.classList.add('hidden');
+      if (cdQEl) cdQEl.classList.add('hidden');
+      if (cdFillQ) cdFillQ.style.height = '0%';
     }
 
+    const isTesla = this.turret && this.turret.chassis === 'tesla';
     const cdWEl = document.getElementById('skillCdW');
+    const cdFillW = document.getElementById('cdFillW');
     if (this.skills.timerW > 0) {
-      cdWEl.classList.remove('hidden');
-      cdWEl.textContent = `${this.skills.timerW.toFixed(1)}s`;
+      if (cdWEl) {
+        cdWEl.classList.remove('hidden');
+        cdWEl.textContent = `${this.skills.timerW.toFixed(1)}s`;
+      }
+      if (cdFillW) {
+        const maxW = this.skills.baseCdW * this.skills.cdMultiplier * (isTesla ? 0.8 : 1.0);
+        const pct = (this.skills.timerW / maxW) * 100;
+        cdFillW.style.height = `${pct}%`;
+      }
     } else {
-      cdWEl.classList.add('hidden');
+      if (cdWEl) cdWEl.classList.add('hidden');
+      if (cdFillW) cdFillW.style.height = '0%';
     }
 
     const cdEEl = document.getElementById('skillCdE');
+    const cdFillE = document.getElementById('cdFillE');
     if (this.skills.timerE > 0) {
-      cdEEl.classList.remove('hidden');
-      cdEEl.textContent = `${this.skills.timerE.toFixed(1)}s`;
+      if (cdEEl) {
+        cdEEl.classList.remove('hidden');
+        cdEEl.textContent = `${this.skills.timerE.toFixed(1)}s`;
+      }
+      if (cdFillE) {
+        const pct = (this.skills.timerE / (this.skills.baseCdE * this.skills.cdMultiplier)) * 100;
+        cdFillE.style.height = `${pct}%`;
+      }
     } else {
-      cdEEl.classList.add('hidden');
+      if (cdEEl) cdEEl.classList.add('hidden');
+      if (cdFillE) cdFillE.style.height = '0%';
     }
 
     // Auto-Fire Toggle Label

@@ -237,6 +237,13 @@
         x1
       </div>
 
+      <button id="btnBgm" class="glass-panel w-9 h-9 rounded-xl flex items-center justify-center hover:border-cosmic-magenta text-cosmic-magenta transition cursor-pointer text-sm" title="Toggle Synthwave BGM (B)">
+        <svg id="bgmIconSvg" class="w-4 h-4 fill-none stroke-current" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 18V5l12-2v13" />
+          <circle cx="6" cy="18" r="3" fill="currentColor" />
+          <circle cx="18" cy="16" r="3" fill="currentColor" />
+        </svg>
+      </button>
       <button id="btnMute" class="glass-panel w-9 h-9 rounded-xl flex items-center justify-center hover:border-cosmic-cyan transition cursor-pointer text-sm" title="Toggle Sound (M)">
         <svg id="muteIconSvg" class="w-4 h-4 text-cosmic-cyan" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
@@ -276,36 +283,46 @@
       </div>
     </div>
 
-    <!-- Center: 3 Active Tactical Skills -->
-    <div class="flex items-center gap-2 pointer-events-auto">
+    <!-- Center: 3 Active Tactical Skills & Quick Nova -->
+    <div class="flex items-center gap-2 pointer-events-auto flex-wrap justify-center">
+      <!-- Quick Detonate Nova Tap Button (Mobile Friendly) -->
+      <button id="btnQuickNova" class="group glass-panel relative p-2 md:p-2.5 rounded-2xl flex flex-col items-center min-w-[76px] md:min-w-[88px] min-h-[48px] border-amber-500/40 hover:border-amber-400 bg-amber-500/10 cursor-pointer transition active:scale-95 touch-manipulation" title="Detonate Spark Nova Ahead (Space)">
+        <span class="text-base leading-none">💥</span>
+        <div class="text-[9px] font-orbitron font-black text-amber-300">QUICK NOVA</div>
+        <div class="text-[8px] font-orbitron font-bold text-slate-400 mt-0.5">DETONATE</div>
+      </button>
+
       <!-- Skill Q: Ion Beam -->
-      <button id="btnSkillQ" class="group glass-panel relative p-2 md:p-2.5 rounded-2xl flex flex-col items-center min-w-[76px] md:min-w-[88px] border-cosmic-cyan/40 hover:border-cosmic-cyan cursor-pointer transition active:scale-95">
-        <div id="skillCdQ" class="absolute inset-0 bg-slate-950/80 rounded-2xl flex items-center justify-center font-orbitron text-xs font-bold text-cosmic-cyan hidden">
+      <button id="btnSkillQ" class="group glass-panel relative p-2 md:p-2.5 rounded-2xl flex flex-col items-center min-w-[76px] md:min-w-[88px] min-h-[48px] border-cosmic-cyan/40 hover:border-cosmic-cyan cursor-pointer transition active:scale-95 touch-manipulation overflow-hidden">
+        <div id="cdFillQ" class="absolute bottom-0 left-0 right-0 bg-cosmic-cyan/20 pointer-events-none transition-all duration-75" style="height: 0%;"></div>
+        <div id="skillCdQ" class="absolute inset-0 bg-slate-950/80 rounded-2xl flex items-center justify-center font-orbitron text-xs font-bold text-cosmic-cyan hidden z-10">
           0.0s
         </div>
-        <div class="text-base md:text-lg mb-0.5 group-hover:scale-110 transition">⚡</div>
-        <div class="text-[9px] font-orbitron font-black text-white">ION BEAM</div>
-        <div class="text-[8px] font-orbitron font-bold text-cosmic-cyan mt-0.5">[Q / 1]</div>
+        <div class="text-base md:text-lg mb-0.5 group-hover:scale-110 transition z-10">⚡</div>
+        <div class="text-[9px] font-orbitron font-black text-white z-10">ION BEAM</div>
+        <div class="text-[8px] font-orbitron font-bold text-cosmic-cyan mt-0.5 z-10">[Q / 1]</div>
       </button>
 
       <!-- Skill W: EMP Shockwave -->
-      <button id="btnSkillW" class="group glass-panel relative p-2 md:p-2.5 rounded-2xl flex flex-col items-center min-w-[76px] md:min-w-[88px] border-cosmic-magenta/40 hover:border-cosmic-magenta cursor-pointer transition active:scale-95">
-        <div id="skillCdW" class="absolute inset-0 bg-slate-950/80 rounded-2xl flex items-center justify-center font-orbitron text-xs font-bold text-cosmic-magenta hidden">
+      <button id="btnSkillW" class="group glass-panel relative p-2 md:p-2.5 rounded-2xl flex flex-col items-center min-w-[76px] md:min-w-[88px] min-h-[48px] border-cosmic-magenta/40 hover:border-cosmic-magenta cursor-pointer transition active:scale-95 touch-manipulation overflow-hidden">
+        <div id="cdFillW" class="absolute bottom-0 left-0 right-0 bg-cosmic-magenta/20 pointer-events-none transition-all duration-75" style="height: 0%;"></div>
+        <div id="skillCdW" class="absolute inset-0 bg-slate-950/80 rounded-2xl flex items-center justify-center font-orbitron text-xs font-bold text-cosmic-magenta hidden z-10">
           0.0s
         </div>
-        <div class="text-base md:text-lg mb-0.5 group-hover:scale-110 transition">💥</div>
-        <div class="text-[9px] font-orbitron font-black text-white">EMP WAVE</div>
-        <div class="text-[8px] font-orbitron font-bold text-cosmic-magenta mt-0.5">[W / 2]</div>
+        <div class="text-base md:text-lg mb-0.5 group-hover:scale-110 transition z-10">💥</div>
+        <div class="text-[9px] font-orbitron font-black text-white z-10">EMP WAVE</div>
+        <div class="text-[8px] font-orbitron font-bold text-cosmic-magenta mt-0.5 z-10">[W / 2]</div>
       </button>
 
       <!-- Skill E: Aegis Overdrive -->
-      <button id="btnSkillE" class="group glass-panel relative p-2 md:p-2.5 rounded-2xl flex flex-col items-center min-w-[76px] md:min-w-[88px] border-cosmic-gold/40 hover:border-cosmic-gold cursor-pointer transition active:scale-95">
-        <div id="skillCdE" class="absolute inset-0 bg-slate-950/80 rounded-2xl flex items-center justify-center font-orbitron text-xs font-bold text-cosmic-gold hidden">
+      <button id="btnSkillE" class="group glass-panel relative p-2 md:p-2.5 rounded-2xl flex flex-col items-center min-w-[76px] md:min-w-[88px] min-h-[48px] border-cosmic-gold/40 hover:border-cosmic-gold cursor-pointer transition active:scale-95 touch-manipulation overflow-hidden">
+        <div id="cdFillE" class="absolute bottom-0 left-0 right-0 bg-cosmic-gold/20 pointer-events-none transition-all duration-75" style="height: 0%;"></div>
+        <div id="skillCdE" class="absolute inset-0 bg-slate-950/80 rounded-2xl flex items-center justify-center font-orbitron text-xs font-bold text-cosmic-gold hidden z-10">
           0.0s
         </div>
-        <div class="text-base md:text-lg mb-0.5 group-hover:scale-110 transition">🛡️</div>
-        <div class="text-[9px] font-orbitron font-black text-white">OVERDRIVE</div>
-        <div class="text-[8px] font-orbitron font-bold text-cosmic-gold mt-0.5">[E / 3]</div>
+        <div class="text-base md:text-lg mb-0.5 group-hover:scale-110 transition z-10">🛡️</div>
+        <div class="text-[9px] font-orbitron font-black text-white z-10">OVERDRIVE</div>
+        <div class="text-[8px] font-orbitron font-bold text-cosmic-gold mt-0.5 z-10">[E / 3]</div>
       </button>
     </div>
 
@@ -355,7 +372,7 @@
         </p>
 
         <!-- Guardian Rank & Statistics Pill -->
-        <div class="w-full glass-card p-3 rounded-2xl mb-5 flex items-center justify-between gap-3 text-xs">
+        <div class="w-full glass-card p-3 rounded-2xl mb-2.5 flex items-center justify-between gap-3 text-xs">
           <div class="flex items-center gap-2">
             <span class="text-lg">🛡️</span>
             <div>
@@ -367,6 +384,14 @@
             <div class="text-[9px] text-slate-400 font-orbitron">LIBERATED STARS</div>
             <div id="titleTotalStars" class="font-orbitron font-bold text-cosmic-gold flex items-center justify-end gap-1">0 / 60</div>
           </div>
+        </div>
+
+        <!-- Personal Best Endless Siege Record -->
+        <div id="titleEndlessRecord" class="w-full glass-panel px-3 py-1.5 rounded-xl mb-4 flex items-center justify-between border-cosmic-magenta/30 text-xs">
+          <div class="flex items-center gap-1.5 text-cosmic-magenta font-orbitron text-[10px] font-bold">
+            <span>♾️ BEST SIEGE</span>
+          </div>
+          <div id="titleRecordStats" class="font-orbitron font-bold text-[11px] text-white">Wave 0 • 0 pts</div>
         </div>
 
         <!-- Action Buttons -->
@@ -522,8 +547,19 @@
         </div>
       </div>
 
+      <!-- Guardian Turret Chassis Selector Deck -->
+      <div class="pt-3 pb-2 shrink-0">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-[10px] font-orbitron font-bold text-cosmic-cyan tracking-wider">ORBITAL TURRET CHASSIS LOADOUT</span>
+          <span class="text-[9px] text-slate-400 font-orbitron">SELECT ACTIVE WEAPON SYSTEM</span>
+        </div>
+        <div id="chassisContainer" class="grid grid-cols-1 md:grid-cols-3 gap-2.5">
+          <!-- Populated dynamically via JS -->
+        </div>
+      </div>
+
       <!-- 6-Tier Tech Tree Grid -->
-      <div class="flex-1 overflow-y-auto py-4 grid grid-cols-1 md:grid-cols-2 gap-3.5" id="armoryGrid">
+      <div class="flex-1 overflow-y-auto py-3 grid grid-cols-1 md:grid-cols-2 gap-3.5" id="armoryGrid">
         <!-- Populated dynamically via JS -->
       </div>
 
@@ -572,6 +608,27 @@
       <!-- Codex Content Tabs -->
       <div class="flex-1 overflow-y-auto space-y-3 pr-1" id="codexList">
         <!-- 7 Alien Ship Class Dossiers populated dynamically via JS -->
+      </div>
+
+      <!-- Save Backup & Restore Deck -->
+      <div id="backupRestoreDeck" class="pt-3 pb-1 border-t border-slate-800 shrink-0">
+        <div class="glass-card p-3 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-2.5 border-cosmic-cyan/20">
+          <div class="text-left w-full md:w-auto">
+            <div class="text-[10px] font-orbitron font-bold text-cosmic-cyan">QUANTUM ENCRYPTED SAVE BACKUP</div>
+            <div class="text-[9px] text-slate-400">Export your Liberated Stars, Tech Upgrades & High Scores or restore a backup code.</div>
+          </div>
+          <div class="flex items-center gap-2 w-full md:w-auto">
+            <button id="btnExportSave" class="px-3 py-1.5 rounded-xl text-[10px] font-orbitron font-bold text-cosmic-cyan border border-cosmic-cyan/40 hover:bg-cosmic-cyan/20 transition cursor-pointer flex items-center gap-1.5 shrink-0">
+              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              <span>COPY SAVE CODE</span>
+            </button>
+            <input id="inputImportSave" type="text" placeholder="Paste SP2_ backup code..." class="bg-slate-900/90 border border-slate-700 rounded-xl px-2.5 py-1 text-[10px] font-mono text-white focus:outline-none focus:border-cosmic-gold w-full md:w-44" />
+            <button id="btnImportSave" class="px-3 py-1.5 rounded-xl text-[10px] font-orbitron font-bold text-cosmic-gold border border-cosmic-gold/40 hover:bg-cosmic-gold/20 transition cursor-pointer flex items-center gap-1.5 shrink-0">
+              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              <span>IMPORT</span>
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -648,6 +705,12 @@
       <p id="defeatPlanetTitle" class="text-xs font-orbitron text-slate-400 tracking-widest mb-4">
         PLANETARY CORE DEFENSES BREACHED
       </p>
+
+      <!-- Conditional Personal Best Record Banner -->
+      <div id="defeatRecordBanner" class="w-full glass-panel px-3 py-1.5 rounded-xl mb-2 flex items-center justify-center gap-2 border-cosmic-gold/50 bg-cosmic-gold/10 hidden">
+        <span class="text-base">🏆</span>
+        <span class="font-orbitron font-black text-xs text-cosmic-gold tracking-wider">NEW ENDLESS SIEGE RECORD!</span>
+      </div>
 
       <div class="w-full glass-card p-3 rounded-2xl my-3 space-y-1.5 text-xs">
         <div class="flex justify-between">
