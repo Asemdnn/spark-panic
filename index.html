@@ -5,11 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="mobile-web-app-capable" content="yes" />
-  <meta name="theme-color" content="#050814" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Spark Panic" />
+  <meta name="theme-color" content="#00e5ff" />
+  <link rel="manifest" href="./manifest.json" />
   <title>Spark Panic: Planetary Invasion Defense — Guardian of the Universe (2.0 Planetary Invasion Edition)</title>
   
-  <link rel="icon" type="image/jpeg" href="./assets/hero-key-art.jpg" />
-  <link rel="apple-touch-icon" href="./assets/hero-key-art.jpg" />
+  <link rel="icon" type="image/jpeg" href="./assets/game-icon.jpg" />
+  <link rel="apple-touch-icon" href="./assets/game-icon.jpg" />
   <meta property="og:title" content="Spark Panic: Planetary Invasion Defense — Guardian of the Universe" />
   <meta property="og:description" content="360° Orbital Guardian Action Strategy Game. Defend 20 celestial worlds across 4 Cosmic Sectors from unrelenting alien invasion fleets." />
   <meta property="og:image" content="./assets/hero-key-art.jpg" />
@@ -237,6 +240,9 @@
         x1
       </div>
 
+      <button id="btnTutorial" class="glass-panel w-9 h-9 rounded-xl flex items-center justify-center hover:border-cosmic-cyan text-cosmic-cyan transition cursor-pointer text-sm" title="Replay Tactical Tutorial (H)">
+        <span class="text-base leading-none">🎓</span>
+      </button>
       <button id="btnBgm" class="glass-panel w-9 h-9 rounded-xl flex items-center justify-center hover:border-cosmic-magenta text-cosmic-magenta transition cursor-pointer text-sm" title="Toggle Synthwave BGM (B)">
         <svg id="bgmIconSvg" class="w-4 h-4 fill-none stroke-current" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M9 18V5l12-2v13" />
@@ -261,6 +267,37 @@
 
   <!-- ACTIVE TEMPORARY TACTICAL BUFFS PILLS -->
   <div id="hudBuffs" class="absolute top-16 md:top-20 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 pointer-events-none"></div>
+
+  <!-- Interactive 3-Step Holographic Commander Tutorial Overlay -->
+  <div id="tutorialBanner" class="fixed top-16 md:top-20 left-1/2 -translate-x-1/2 z-30 w-[92%] max-w-lg glass-panel p-3.5 md:p-4 rounded-2xl border border-cosmic-cyan/60 shadow-[0_0_30px_rgba(0,229,255,0.3)] backdrop-blur-md hidden transition-all duration-300 pointer-events-auto">
+    <div class="flex items-center justify-between pb-2 border-b border-slate-800">
+      <div class="flex items-center gap-2">
+        <span class="text-base animate-pulse">🎓</span>
+        <div>
+          <div class="flex items-center gap-2">
+            <span id="tutorialStepText" class="text-[9px] font-orbitron font-extrabold tracking-wider px-2 py-0.5 rounded-full bg-cosmic-cyan/20 text-cosmic-cyan border border-cosmic-cyan/40">STEP 1 OF 3</span>
+            <div class="flex items-center gap-1.5" id="tutorialDots">
+              <span id="tutDot1" class="w-2 h-2 rounded-full bg-cosmic-cyan shadow-[0_0_8px_#00e5ff]"></span>
+              <span id="tutDot2" class="w-2 h-2 rounded-full bg-slate-700"></span>
+              <span id="tutDot3" class="w-2 h-2 rounded-full bg-slate-700"></span>
+            </div>
+          </div>
+          <h4 id="tutorialTitleText" class="text-xs md:text-sm font-black font-orbitron text-white tracking-wide mt-0.5">360° ORBITAL TURRET AIMING</h4>
+        </div>
+      </div>
+      <button id="btnSkipTutorial" class="text-[10px] font-orbitron font-bold text-slate-400 hover:text-white px-2.5 py-1 rounded-lg border border-slate-800 hover:border-slate-600 transition cursor-pointer">
+        SKIP [ESC]
+      </button>
+    </div>
+    <p id="tutorialPromptText" class="text-[11px] md:text-xs text-slate-300 mt-2.5 leading-relaxed">
+      Move your cursor or drag your finger around the planet to rotate your Orbital Guardian Turret. Your cannon auto-fires at invading alien ships and red torpedoes.
+    </p>
+    <div class="mt-3 flex justify-end">
+      <button id="btnTutorialComplete" class="py-1.5 px-4 rounded-xl font-orbitron font-black text-xs tracking-wider bg-gradient-to-r from-cosmic-mint to-teal-500 hover:from-emerald-300 hover:to-teal-400 text-slate-950 shadow-md transition cursor-pointer hidden">
+        ✓ GOT IT, COMMANDER (+50 ✦)
+      </button>
+    </div>
+  </div>
 
   <!-- IN-GAME BOTTOM TACTICAL DECK -->
   <div id="hudBottom" class="absolute bottom-3 left-0 right-0 z-20 px-3 md:px-6 flex flex-col md:flex-row items-center justify-between gap-3 pointer-events-none transition-opacity duration-300">
@@ -406,6 +443,11 @@
             <span>ENDLESS COSMIC SIEGE</span>
           </button>
 
+          <button id="btnTitleDailyAnomaly" class="w-full py-3 px-6 rounded-2xl font-orbitron font-black text-xs tracking-wider bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-slate-950 shadow-[0_0_15px_rgba(245,158,11,0.35)] transition cursor-pointer flex items-center justify-center gap-2">
+            <svg class="w-4 h-4 shrink-0 fill-current" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            <span>⚡ DAILY COSMIC ANOMALY</span>
+          </button>
+
           <div class="grid grid-cols-2 gap-2 mt-1">
             <button id="btnOpenArmory" class="py-2.5 px-4 rounded-xl font-orbitron font-bold text-xs tracking-wider glass-panel border-cosmic-gold/40 hover:border-cosmic-gold text-cosmic-gold transition cursor-pointer flex items-center justify-center gap-2">
               <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
@@ -439,7 +481,11 @@
           </div>
         </div>
 
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-2.5">
+          <button id="btnStarMapDailyAnomaly" class="glass-panel px-3 py-1.5 rounded-xl font-orbitron font-bold text-xs text-amber-300 border-amber-400/40 hover:border-amber-300 transition cursor-pointer flex items-center gap-1.5 shadow-[0_0_10px_rgba(245,158,11,0.2)]">
+            <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            <span>DAILY ANOMALY</span>
+          </button>
           <div class="glass-panel px-3 py-1.5 rounded-xl font-orbitron text-xs text-cosmic-gold flex items-center gap-1.5">
             <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M12 2L14.8 9.2L22 12L14.8 14.8L12 22L9.2 14.8L2 12L9.2 9.2L12 2Z"/></svg>
             <span id="starMapShards">0</span>
@@ -768,6 +814,74 @@
           <span>GALAXY STAR MAP</span>
         </button>
       </div>
+    </div>
+  </div>
+
+  <!-- 8. DAILY COSMIC ANOMALY BRIEFING MODAL (#modalDailyAnomaly) -->
+  <div id="modalDailyAnomaly" class="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-6 bg-cosmic-950/90 backdrop-blur-md hidden">
+    <div class="glass-panel w-full max-w-xl max-h-[92vh] rounded-3xl p-5 md:p-7 flex flex-col border border-amber-500/40 shadow-[0_0_45px_rgba(245,158,11,0.25)] relative overflow-y-auto">
+      <!-- Header -->
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+        <div class="flex items-center gap-2.5">
+          <span class="text-2xl animate-pulse">⚡</span>
+          <div>
+            <div class="flex items-center gap-2">
+              <h2 class="text-base md:text-lg font-black font-orbitron text-white tracking-wide">DAILY COSMIC ANOMALY</h2>
+              <span id="dailyDateBadge" class="text-[9px] font-orbitron font-extrabold px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/40">2026-10-26</span>
+            </div>
+            <p class="text-[10px] text-slate-400">Deterministic worldwide daily mission with 2 tactical mutators & 3-wave invasion.</p>
+          </div>
+        </div>
+        <button id="btnDailyAnomalyClose" class="w-8 h-8 rounded-xl glass-panel flex items-center justify-center hover:border-amber-400 transition cursor-pointer text-sm font-bold text-slate-300">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+
+      <!-- Anomaly Target Planet & Sector Hazard Deck -->
+      <div class="glass-card p-3.5 rounded-2xl my-3 flex items-center justify-between gap-3 border border-slate-700/60">
+        <div class="flex items-center gap-3">
+          <canvas id="dailyPlanetCanvas" width="56" height="56" class="rounded-full shadow-lg border border-white/20 shrink-0"></canvas>
+          <div>
+            <div class="text-[9px] font-orbitron font-bold text-cosmic-cyan" id="dailySectorTag">SECTOR I</div>
+            <h3 id="dailyPlanetName" class="font-orbitron font-black text-sm text-white">PLANET NAME</h3>
+            <div class="text-[10px] text-slate-300" id="dailyPlanetTitle">Planet Description</div>
+          </div>
+        </div>
+        <div class="text-right shrink-0">
+          <div class="text-[9px] font-orbitron text-slate-400">ACTIVE HAZARD</div>
+          <div id="dailyHazardLabel" class="font-orbitron font-bold text-xs text-amber-300 flex items-center justify-end gap-1">☄️ ASTEROID DRIFT</div>
+          <div class="text-[9px] text-slate-400 mt-0.5">3 INVASION WAVES</div>
+        </div>
+      </div>
+
+      <!-- 2 Daily Mutator Cards -->
+      <div class="my-1">
+        <div class="text-[10px] font-orbitron font-bold text-slate-400 mb-2">ACTIVE DAILY TACTICAL MUTATORS</div>
+        <div id="dailyMutatorsContainer" class="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+          <!-- Populated dynamically via JS -->
+        </div>
+      </div>
+
+      <!-- Player Today's Best & Bonus Reward Status -->
+      <div class="glass-card p-3.5 rounded-2xl my-3 flex items-center justify-between text-xs border border-amber-500/30">
+        <div>
+          <div class="text-[9px] font-orbitron text-slate-400">TODAY'S PERSONAL BEST</div>
+          <div id="dailyBestScore" class="font-orbitron font-black text-white text-sm">0 pts</div>
+        </div>
+        <div class="text-right">
+          <div class="text-[9px] font-orbitron text-slate-400">DAILY COMPLETION BONUS</div>
+          <div id="dailyBonusStatus" class="font-orbitron font-bold text-cosmic-gold flex items-center justify-end gap-1">
+            <span>+150</span>
+            <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M12 2L14.8 9.2L22 12L14.8 14.8L12 22L9.2 14.8L2 12L9.2 9.2L12 2Z"/></svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- Launch Button -->
+      <button id="btnLaunchDailyAnomaly" class="w-full py-3.5 rounded-2xl font-orbitron font-black text-xs md:text-sm tracking-wider bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-slate-950 shadow-[0_0_20px_rgba(245,158,11,0.4)] transition cursor-pointer flex items-center justify-center gap-2 mt-1">
+        <svg class="w-4 h-4 fill-current shrink-0" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        <span>LAUNCH DAILY ANOMALY DEFENSE</span>
+      </button>
     </div>
   </div>
 

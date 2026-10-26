@@ -1,122 +1,155 @@
-# Spark Panic: Planetary Invasion Defense — Guardian of the Universe (2.0 Planetary Invasion Edition)
+# Spark Panic: Planetary Invasion Defense — Guardian of the Universe (v2.3 Galactic Operations Edition)
 
 [![Deploy to GitHub Pages](https://github.com/Asemdnn/spark-panic/actions/workflows/deploy.yml/badge.svg)](https://github.com/Asemdnn/spark-panic/actions/workflows/deploy.yml)
 [![Live Demo](https://img.shields.io/badge/Play_Live-GitHub_Pages-00e5ff?style=flat&logo=github)](https://asemdnn.github.io/spark-panic/)
+[![PWA Ready](https://img.shields.io/badge/PWA-Ready-00e676?style=flat&logo=pwa)](https://asemdnn.github.io/spark-panic/)
 
-**Spark Panic 2.0** is a massively upgraded, self-contained HTML5 Canvas + Tailwind CSS arcade strategy/action planetary defense game. You are the **Orbital Guardian**, defending living celestial worlds at the center of the screen against 360° incoming waves of relentless alien invasion fleets.
+**Spark Panic 2.3** is a high-octane, self-contained HTML5 Canvas + Tailwind CSS arcade strategy and action planetary defense game. You are the **Orbital Guardian**, defending living celestial worlds and their cyber-cities against 360° incoming waves of relentless alien invasion fleets.
 
 - 🎮 **Play Online**: [https://asemdnn.github.io/spark-panic/](https://asemdnn.github.io/spark-panic/)
 - 📦 **GitHub Repository**: [https://github.com/Asemdnn/spark-panic](https://github.com/Asemdnn/spark-panic)
 
 ---
 
-## 🌌 Key Features & Mechanics
+## 🌟 What's New in v2.3: Galactic Operations & Polish
+
+1. **Interactive 3-Step Holographic Commander Tutorial**:
+   - First-time commanders on Planet 1 (Aerilon) receive instant tactical guidance.
+   - Step 1: 360° Orbital Turret Aiming.
+   - Step 2: Cascading Spark Nova Detonation & Alien Target Reticle.
+   - Step 3: Tactical Planetary Abilities & Orbital Supply Pods.
+   - Grants a **`+50 ✦`** Star Shards bonus on completion.
+   - Replay anytime using the **`🎓 Tutorial`** HUD pill or by pressing **`[H]`**.
+
+2. **Living Planetary Surface Cyber-Cities & Victory Fireworks**:
+   - Four procedural surface settlements anchored at 0°, 90°, 180°, and 270° with spires, energy cupolas, and dynamic window grids.
+   - **Dynamic City States**:
+     - *Normal (>70% Core HP)*: Cyan/gold rooftop beacons with gentle breathing pulses.
+     - *Damaged (35–70% Core HP)*: Warning amber flickers and billows of black smoke.
+     - *Critical (<35% Core HP)*: Rapid crimson emergency strobes, blackened structures, and crackling electrical arcs.
+   - **Celebratory Fireworks**: Conquering a planet launches orbital fireworks from surviving surface cities in celebratory bursts.
+
+3. **⚡ Daily Cosmic Anomaly Mode**:
+   - Deterministic worldwide daily challenge generated via seeded PRNG (`mulberry32` from `YYYY-MM-DD`).
+   - Pairs a unique celestial world and sector hazard with **2 Tactical Mutators** (e.g. *Hyper-Capacitor, Swarm Blitz, Supernova Chain, Glass Aegis, Meteor Storm, Boss Rush*).
+   - High score tracking and a **`+150 ✦`** Star Shards first-clear bonus each calendar day.
+
+4. **Progressive Web App (PWA) Offline & Mobile Support**:
+   - Installable on Android, iOS, Windows, and macOS via `manifest.json`.
+   - Lightweight Service Worker (`sw.js`) with a network-first strategy ensuring instantaneous updates from GitHub Pages while caching full offline playability.
+
+---
+
+## 🌌 Core Gameplay Systems
 
 ### 1. 360° Living Central Planet & Aegis Shield
-- **Living Planet**: Multi-stop radial atmospheric halo, clipped rotating biome continents, night-side terminator shadow, optional celestial rings, and dynamic surface impact craters upon hull damage.
+- **Living Planet**: Multi-stop radial atmospheric halo, clipped rotating biome continents, night-side terminator shadow, optional celestial rings, and surface impact craters upon hull damage.
 - **Aegis Energy Shield**: Absorbs all incoming damage first, displaying directional ripples upon impact. Automatically regenerates after a 3.5s delay out of combat.
-- **Core Planetary HP**: If the Aegis shield falls, impacts damage the planetary core. If core HP reaches 0%, planetary defenses fail.
+- **Surface Cyber-Cities**: Visual representation of the planet's vitality with dynamic beacons, warning smoke, and critical emergency arcs.
 
-### 2. 360° Orbital Guardian Turret
-- Orbits the planetary perimeter and smoothly rotates toward pointer/cursor position.
-- Features a dotted cyan laser targeting sight and fires high-velocity plasma bolts (`520 px/s`).
-- Supports **Auto-Fire Toggle (`[T]`)** and manual fire, capable of shooting down both alien ships and enemy siege torpedoes.
-- Upgrades to **Twin Barrels** at Level 3 and **Triple Barrels** at Level 5.
+### 2. 3 Unlockable Guardian Turret Chassis (Armory Loadouts)
+- **Pulse Striker (Default)**: Rapid-fire dual/triple spread cannon (`520 px/s`) with `+15%` faster passive Spark Nova recharge.
+- **Tesla Arc Cannon (Unlock: 15 ★ or ✦ 350)**: High-voltage electric shock bolts that chain lightning arcs to up to 2 additional nearby invaders within 115px.
+- **Quantum Railgun (Unlock: 35 ★ or ✦ 500)**: Armor-piercing hyper-velocity kinetic slugs (`880 px/s`) penetrating up to 3 alien ships with +65% boss damage.
 
 ### 3. Cascading Spark Nova Chain Reactions
-- Tapping/clicking in orbital space or pressing `[Space]` triggers a high-yield **Spark Nova**, vaporizing enemy missiles and damaging aliens.
-- **Chain Reactions**: When an alien ship is destroyed, it detonates in its own class-specific secondary Nova shockwave, triggering harmonic ascending pentatonic chimes, magnetic Cosmic Sparks, combo multipliers (`x2` ... `x20+`), and +14% Spark Nova energy recharge.
+- Detonating a Spark Nova vaporizes enemy torpedoes and damages alien ships.
+- Destroyed aliens detonate their own class-specific secondary Novas, triggering harmonic ascending pentatonic chimes, magnetic Cosmic Sparks, combo multipliers (`x2` ... `x20+`), and Nova recharge energy.
 
-### 4. Autonomous Orbital Defense Satellites
-- Up to 4 autonomous laser defense satellites orbit outside the planetary shield, prioritizing incoming torpedoes and nearest alien threats.
+### 4. Dynamic Sector Environmental Hazards
+- **Sector I**: ☄️ *Asteroid Drift* — shoot asteroids for +15 Shards and kinetic shockwaves.
+- **Sector II**: ⚡ *Ion Nebula* — Novas inside Ion Clouds gain +35% radius & +25% damage.
+- **Sector III**: 🌀 *Gravitational Anomaly* — Singularity clusters invaders into high-value combo targets.
+- **Sector IV**: ☀️ *Solar Corona* — Periodic Solar Flares scorch point-blank invaders and grant +15% Nova energy.
 
-### 5. Three Active Tactical Planetary Skills
-- **`[Q]` or `[1]` Orbital Ion Beam** (`9s` cooldown): Fires a piercing laser beam along the turret aim vector, dealing continuous piercing damage to all ships and torpedoes in its path.
-- **`[W]` or `[2]` Planetary EMP Shockwave** (`12s` cooldown): Unleashes a 360° expanding EMP ring that vaporizes all active enemy missiles, pushes non-boss aliens outward by 75px, stuns all aliens for 3.0s, and deals damage.
-- **`[E]` or `[3]` Aegis Overdrive** (`14s` cooldown): Restores 55% planetary shield, grants +1 Spark Nova charge, and overclocks turret & satellite fire rates (~1.8x speed, +50% golden plasma damage) for 6.0s.
+### 5. Mid-Battle Orbital Supply Pods
+- Glowing tactical pods drift across the battlefield with pulsating parachutes.
+- Shoot pods to trigger 1 of 4 instant combat buffs:
+  - ⚡ *Overdrive Rapid-Fire (8s)*
+  - 🛡️ *Instant Aegis Shield Surge (+65%)*
+  - 💥 *Free Mega-Nova (+2 Charges)*
+  - ❄️ *Cryo Time-Warp (alien speed reduced by 60% for 6s)*
+
+### 6. Three Active Tactical Planetary Skills
+- **`[Q]` or `[1]` Tactical Ion Beam** (`9s` cd): Piercing laser beam along turret aim vector dealing continuous damage.
+- **`[W]` or `[2]` Planetary EMP Shockwave** (`12s` cd): Vaporizes all missiles, pushes enemies outward 75px, and stuns for 3.0s.
+- **`[E]` or `[3]` Aegis Overdrive** (`14s` cd): Restores 55% shield, grants +1 Nova charge, and overclocks weapon fire rates for 6.0s.
 
 ---
 
-## 🗺️ Universe Campaign: 4 Sectors & 20 Unique Planets
+## 🗺️ Campaign: 4 Sectors, 20 Planets & Endless Mode
 
 1. **Sector I: Inner Sanctuaries** (Cyan)
-   - Aerilon *(Terran Haven)*
-   - Aquatis *(Pelagic Sphere)*
-   - Solaria *(Helios Dunes)*
-   - Verdantia *(Bio-Jungle)*
-   - Cryon *(Glacial Bastion)* — **BOSS: Dreadnought Vexor**
+   - Aerilon, Aquatis, Solaria, Verdantia, Cryon — **BOSS: Dreadnought Vexor**
 2. **Sector II: Nebula Frontier** (Magenta)
-   - Pyros *(Magma Core)*
-   - Zephyria *(Aether Giant)*
-   - Obsidian *(Null Crystal)*
-   - Lumina *(Prism Star-World)*
-   - Vortexia *(Gravity Well)* — **BOSS: Mothership Kaelen**
+   - Pyros, Zephyria, Obsidian, Lumina, Vortexia — **BOSS: Mothership Kaelen**
 3. **Sector III: Dark Rift** (Gold)
-   - Aethelgard *(Relic Citadel)*
-   - Chronos *(Temporal Sphere)*
-   - Mycelia *(Spore Nebula)*
-   - Ferrum *(Forge Mech-World)*
-   - Eclipse *(Shadow Corona)* — **BOSS: Void Harbinger**
+   - Aethelgard, Chronos, Mycelia, Ferrum, Eclipse — **BOSS: Void Harbinger**
 4. **Sector IV: Sol Genesis** (Crimson)
-   - Hyperion *(Helios Core)*
-   - Astralis *(Starlight Sanctum)*
-   - Voidreach *(Outer Bastion)*
-   - Omega Prime *(Dyson Citadel)*
-   - Genesis Core *(Origin World)* — **BOSS: The Apex Leviathan**
-5. **Endless Cosmic Siege**: Infinitely scaling survival mode featuring a Sector Mothership boss every 5th wave.
+   - Hyperion, Astralis, Voidreach, Omega Prime, Genesis Core — **BOSS: The Apex Leviathan**
+5. **Endless Cosmic Siege (`WAVE X / ∞`)**:
+   - Infinitely scaling survival siege with 3-wave dynamic biome and sector hazard rotation and personal best wave tracking.
 
 ---
 
-## 👾 Invading Alien Armada Classes & Death Payloads
+## 👾 Invading Alien Armada Classes
 
 | Class | Color | HP | Speed | Role | Death Payload |
 |---|---|---|---|---|---|
-| **Alien Scout** | Cyan | 22 | 62 | Inward Spiral Ramming | Standard Plasma Chain Nova |
-| **Trident Interceptor** | Magenta | 40 | 48 | Mid-Range Torpedo Skirmisher | **Quad Plasma Burst** (45°/135°/225°/315°) |
-| **Cryo-Cruiser** | Mint | 48 | 42 | Stasis Warship | **Cryo Stasis Field** (slows aliens by 75% for 4.5s) |
-| **Phase-Shifter** | Purple | 38 | 55 | Quantum Warp Infiltrator | **Echo Warp Nova** (delayed second blast) |
-| **Invasion Dropship** | Crimson | 75 | 34 | Heavy Siege Lander | Heavy Shrapnel Cascade + spawns Scouts |
-| **Solar Dreadnought** | Gold | 135 | 26 | Capital Battleship | **Solar Super-Nova** (massive 135px blast) |
-| **Sector Mothership** | Red | 950 | 20 | Armada Command Flagship | **Galaxy Super-Nova** (210px screen blast) |
+| **Alien Scout** | Cyan | 22 | 62 px/s | Inward Spiral Ramming | Standard Plasma Chain Nova |
+| **Trident Interceptor** | Magenta | 40 | 48 px/s | Mid-Range Torpedo Skirmisher | **Quad Plasma Burst** (4-way cross) |
+| **Cryo-Cruiser** | Mint | 48 | 42 px/s | Stasis Warship | **Cryo Stasis Field** (75% slow for 4.5s) |
+| **Phase-Shifter** | Purple | 38 | 55 px/s | Quantum Warp Infiltrator | **Echo Warp Nova** (delayed second blast) |
+| **Invasion Dropship** | Crimson | 75 | 34 px/s | Heavy Siege Lander | Heavy Shrapnel Cascade + spawns Scouts |
+| **Solar Dreadnought** | Gold | 135 | 26 px/s | Capital Battleship | **Solar Super-Nova** (135px blast) |
+| **Sector Mothership** | Red | 950 | 20 px/s | Armada Command Flagship | **Galaxy Super-Nova** (210px screen blast) |
 
 ---
 
-## 🛠️ Guardian Armory (Tech Tree)
+## 🎹 Procedural Web Audio Synthwave BGM
 
-- **Pulse Cannon Firepower**: +4.5 dmg/lvl, unlocks Twin Barrels (Lv.3) & Triple Barrels (Lv.5).
-- **Spark Nova Catalyst**: +14% blast radius and damage per level.
-- **Nova Capacitor Core**: +1 max Nova charge per level (up to 7 max charges) & faster kill recharge.
-- **Planetary Aegis Shield**: +22% shield and Core HP per level + faster shield regen.
-- **Orbital Defense Satellites**: Deploys up to 4 autonomous interceptor laser satellites.
-- **Tactical Core Reactor**: Reduces Q, W, E skill cooldowns by 12% per level.
-- **100% Refund**: Reset tech tree anytime and recover 100% of invested Star Shards (`✦`).
+- Dynamic multi-track procedural synth engine using Web Audio API (`OscillatorNode`, `BiquadFilterNode`, and `GainNode`).
+- Features driving 80s synth basslines, atmospheric neon chord pads, four-on-the-floor kick and hi-hat percussion.
+- Automatically boosts tempo (`+25 BPM`) and adds high-tempo arpeggiator sixteenth notes during Sector Boss encounters.
+- Toggle anytime via top HUD button or **`[B]`** hotkey.
 
 ---
 
-## ⌨️ Controls
+## ⌨️ Tactical Controls & Hotkeys
 
-- **Mouse / Pointer**: Aim 360° Orbital Guardian Turret
-- **Left Click (Space)**: Detonate Spark Nova Shockwave at cursor
-- **[Q] or [1]**: Tactical Skill: Orbital Ion Beam
-- **[W] or [2]**: Tactical Skill: Planetary EMP Shockwave
-- **[E] or [3]**: Tactical Skill: Aegis Overdrive
-- **[T]**: Toggle Turret Auto-Fire (ON / OFF)
-- **[P] or [Esc]**: Tactical Pause / Resume
-- **[R]**: Restart Mission
-- **[M]**: Sound Mute Toggle
+| Action | Control / Hotkey |
+|---|---|
+| **Aim Orbital Turret** | Move Mouse / Touch Drag |
+| **Detonate Spark Nova** | Left Click / Tap Deep Space / `[Space]` |
+| **Orbital Ion Beam** | `[Q]` or `[1]` |
+| **Planetary EMP Shockwave** | `[W]` or `[2]` |
+| **Aegis Overdrive** | `[E]` or `[3]` |
+| **Toggle Auto-Fire** | `[T]` |
+| **Toggle Synthwave BGM** | `[B]` |
+| **Toggle Sound Effects Mute** | `[M]` |
+| **Replay Tactical Tutorial** | `[H]` |
+| **Tactical Pause / Resume** | `[P]` or `[Escape]` |
+| **Quick Restart Mission** | `[R]` |
 
 ---
 
-## 🏗️ Development & Verification
+## 💾 Quantum Encrypted Save Backup
+
+- Automatic persistence across browser sessions in `localStorage`.
+- Base64 quantum save export & import in the **Guardian Archives & Alien Codex (`#modalCodex`)** modal for cross-device migration.
+
+---
+
+## 🏗️ Development & Automated Testing
 
 ```bash
 # Install dependencies
 npm install
 
-# Run automated tests (Vitest)
+# Run automated test suite (Vitest)
 npm run test
 
-# Run local Vite development server
+# Start local Vite development server
 npm run dev
 
 # Build production bundle for GitHub Pages

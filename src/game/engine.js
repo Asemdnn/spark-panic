@@ -1,6 +1,6 @@
 // Spark Panic: Planetary Invasion Defense 2.0 - Core Game Engine Coordinator
 
-import { PLANETS, SECTORS, ALIEN_CLASSES, ARMORY_CONFIG, TROPHIES, GUARDIAN_RANKS } from '../config.js';
+import { PLANETS, SECTORS, ALIEN_CLASSES, ARMORY_CONFIG, TROPHIES, GUARDIAN_RANKS, getDailyAnomalyConfig, DAILY_MUTATORS } from '../config.js';
 import { audio } from '../engine/audio.js';
 import { saveSystem } from '../engine/storage.js';
 import { Planet } from './planet.js';
@@ -40,11 +40,20 @@ export class GameEngine {
     // Active Mission State
     this.currentPlanetId = 1;
     this.isEndlessMode = false;
+    this.isDailyAnomalyMode = false;
+    this.dailyAnomalyConfig = null;
     this.currentWave = 1;
     this.totalWaves = 2;
     this.waveSpawnQueue = [];
     this.spawnTimer = 0;
     this.aliens = [];
+
+    // Interactive 3-Step Tutorial State
+    this.isTutorialActive = false;
+    this.tutorialStep = 1;
+    this.tutorialAimAccum = 0;
+    this.tutorialTimer = 0;
+    this.lastTurretAngle = -Math.PI / 2;
 
     // Player Combat Stats
     this.score = 0;
@@ -114,11 +123,17 @@ export class GameEngine {
 
     // 2. Nova Radius & Catalyst
     this.novaMultiplier = 1.0 + (up.novaRadius || 0) * 0.14;
+    if (this.hasDailyMutator('supernovaChain')) {
+      this.novaMultiplier *= 1.35;
+    }
 
     // 3. Nova Charges & Kill Recharge
     this.maxNovaCharges = 3 + (up.novaCharges || 0);
     this.novaCharges = this.maxNovaCharges;
     this.killRechargeRate = 0.14 + (up.novaCharges || 0) * 0.02;
+    if (this.hasDailyMutator('hyperCapacitor')) {
+      this.killRechargeRate *= 1.6;
+    }
 
     // 4. Shield Grid
     this.planet.setPlanet(this.planet.data || PLANETS[0], up.shieldGrid || 0);
@@ -145,6 +160,8 @@ export class GameEngine {
   startCampaignPlanet(planetId) {
     this.currentPlanetId = planetId;
     this.isEndlessMode = false;
+    this.isDailyAnomalyMode = false;
+    this.dailyAnomalyConfig = null;
     const cfg = PLANETS.find(p => p.id === planetId) || PLANETS[0];
     this.totalWaves = cfg.waves;
     this.currentWave = 1;
@@ -159,10 +176,56 @@ export class GameEngine {
     this.state = 'PLAYING';
     audio.init();
     audio.startBgm();
+
+    // Trigger onboarding tutorial if on Planet 1 and not yet completed
+    if (planetId === 1 && !saveSystem.isTutorialCompleted()) {
+      this.startTutorial();
+    }
+  }
+
+  startDailyAnomaly(dateStr) {
+    this.isDailyAnomalyMode = true;
+    this.isEndlessMode = false;
+    const cfg = getDailyAnomalyConfig(dateStr);
+    this.dailyAnomalyConfig = cfg;
+    this.currentPlanetId = cfg.planet.id;
+    this.totalWaves = 3; // 3 intense anomaly waves
+    this.currentWave = 1;
+
+    this.resetCombatState();
+    this.planet.setPlanet(cfg.planet, saveSystem.data.upgrades.shieldGrid || 0);
+    this.applyUpgrades();
+
+    // Mutator: Glass Aegis
+    if (this.hasDailyMutator('glassAegis')) {
+      this.planet.maxCoreHp = Math.round(this.planet.maxCoreHp * 0.6);
+      this.planet.coreHp = this.planet.maxCoreHp;
+      this.planet.maxShield = Math.round(this.planet.maxShield * 2.0);
+      this.planet.shield = this.planet.maxShield;
+      this.planet.shieldRegenRate *= 2.0;
+    }
+
+    this.hazards.initSector(cfg.hazardSector, this.planet.x, this.planet.y, this.planet.planetRadius);
+    this.supplyPods.reset();
+    this.setupWaveSpawns();
+
+    this.state = 'PLAYING';
+    audio.init();
+    audio.startBgm();
+
+    this.particles.addFloater(this.planet.x, this.planet.y - 120, '⚡ DAILY ANOMALY: ' + cfg.dateKey, '#ffd700', 26);
+    this.addScreenShake(8, 0.3);
+  }
+
+  hasDailyMutator(mutatorId) {
+    if (!this.isDailyAnomalyMode || !this.dailyAnomalyConfig || !this.dailyAnomalyConfig.mutators) return false;
+    return this.dailyAnomalyConfig.mutators.some(m => m.id === mutatorId);
   }
 
   startEndless() {
     this.isEndlessMode = true;
+    this.isDailyAnomalyMode = false;
+    this.dailyAnomalyConfig = null;
     this.currentPlanetId = 1;
     this.currentWave = 1;
     this.totalWaves = 999;
@@ -227,7 +290,12 @@ export class GameEngine {
     }
 
     let totalEnemies = 12;
-    if (this.isEndlessMode) {
+    if (this.isDailyAnomalyMode) {
+      totalEnemies = 16 + this.currentWave * 6;
+      if (this.hasDailyMutator('swarmBlitz')) {
+        totalEnemies = Math.round(totalEnemies * 1.5);
+      }
+    } else if (this.isEndlessMode) {
       totalEnemies = 16 + this.currentWave * 4;
     } else {
       const cfg = PLANETS.find(p => p.id === this.currentPlanetId) || PLANETS[0];
@@ -238,7 +306,9 @@ export class GameEngine {
 
     // Check if wave is boss wave
     let isBossWave = false;
-    if (this.isEndlessMode) {
+    if (this.isDailyAnomalyMode) {
+      isBossWave = (this.currentWave === this.totalWaves);
+    } else if (this.isEndlessMode) {
       isBossWave = (this.currentWave % 5 === 0);
     } else {
       const cfg = PLANETS.find(p => p.id === this.currentPlanetId) || PLANETS[0];
@@ -267,6 +337,12 @@ export class GameEngine {
         delay: totalEnemies * 0.4,
         bossCustomName: cfg ? cfg.bossName : `Mothership Core W${this.currentWave}`
       });
+    } else if (this.hasDailyMutator('bossRush')) {
+      this.waveSpawnQueue.push({
+        classKey: 'DREADNOUGHT',
+        delay: totalEnemies * 0.35,
+        bossCustomName: 'Elite Anomaly Escort'
+      });
     }
   }
 
@@ -286,6 +362,14 @@ export class GameEngine {
       color = '#e040fb';
       this.particles.addFloater(targetX, targetY - 24, '⚡ ION SUPERCHARGE!', '#e040fb', 18);
       this.particles.spawnDebris(targetX, targetY, '#e040fb', 16);
+    }
+
+    if (this.hasDailyMutator('supernovaChain')) {
+      blastRadius *= 1.35;
+    }
+
+    if (this.isTutorialActive && this.tutorialStep === 2) {
+      this.advanceTutorial(3);
     }
 
     this.particles.spawnNova(targetX, targetY, blastRadius, color, damage, true);
@@ -388,7 +472,10 @@ export class GameEngine {
 
   onAlienDestroyed(alien, killerNova = null) {
     this.enemiesVaporized++;
-    const pts = (alien.score || 25) * Math.max(1, this.combo);
+    let pts = (alien.score || 25) * Math.max(1, this.combo);
+    if (this.hasDailyMutator('swarmBlitz')) {
+      pts = Math.round(pts * 1.35);
+    }
     this.score += pts;
 
     // Ascending harmonic pentatonic chime with combo
@@ -427,6 +514,9 @@ export class GameEngine {
       nRadius *= 1.35;
       nDmg *= 1.25;
       this.particles.addFloater(alien.x, alien.y - 36, '⚡ ION RESONANCE!', '#00e5ff', 16);
+    }
+    if (this.hasDailyMutator('supernovaChain')) {
+      nRadius *= 1.35;
     }
 
     this.particles.spawnNova(alien.x, alien.y, nRadius, alien.color, nDmg, false);
@@ -529,6 +619,29 @@ export class GameEngine {
 
     // 1. Update Central Planet & Aegis Shield
     this.planet.update(dt, isOverdrive);
+
+    // Tutorial progression check
+    if (this.isTutorialActive) {
+      if (this.tutorialStep === 1) {
+        let diff = Math.abs(this.turret.angle - this.lastTurretAngle);
+        while (diff > Math.PI) diff = Math.abs(diff - Math.PI * 2);
+        this.tutorialAimAccum += diff;
+        this.lastTurretAngle = this.turret.angle;
+        this.tutorialTimer += dt;
+        if (this.tutorialAimAccum >= 0.78 || this.tutorialTimer >= 4.0) {
+          this.advanceTutorial(2);
+        }
+      } else if (this.tutorialStep === 3) {
+        this.tutorialTimer += dt;
+        if (this.tutorialTimer >= 6.0) {
+          this.completeTutorial();
+        }
+      }
+    }
+
+    if (this.hasDailyMutator('meteorStorm')) {
+      this.supplyPods.spawnTimer += dt * 1.5;
+    }
 
     // Defeat Check: Planet Core HP Depleted
     if (this.planet.coreHp <= 0) {
@@ -637,6 +750,9 @@ export class GameEngine {
       const ay = this.planet.y + Math.sin(spawnAngle) * spawnDist;
 
       const alien = new Alien(ax, ay, item.classKey, item.bossCustomName);
+      if (this.hasDailyMutator('swarmBlitz') && (item.classKey === 'SCOUT' || item.classKey === 'INTERCEPTOR')) {
+        alien.speed *= 1.20;
+      }
       if (item.classKey === 'BOSS') {
         this.activeBoss = alien;
       }
@@ -735,12 +851,30 @@ export class GameEngine {
       this.checkTrophy('SECTOR_ONE_GUARDIAN');
     }
 
-    saveSystem.recordPlanetClear(this.currentPlanetId, this.score, stars);
+    // Launch celebratory fireworks from surface cyber-cities
+    this.planet.triggerVictoryFireworks();
 
-    // Update Victory Modal
-    const cfg = PLANETS.find(p => p.id === this.currentPlanetId) || PLANETS[0];
-    const elTitle = document.getElementById('victoryPlanetTitle');
-    if (elTitle) elTitle.textContent = `${cfg.name.toUpperCase()} PRIME SAVED`;
+    if (this.isDailyAnomalyMode && this.dailyAnomalyConfig) {
+      const res = saveSystem.recordDailyScore(this.dailyAnomalyConfig.dateKey, this.score);
+      const elTitle = document.getElementById('victoryPlanetTitle');
+      if (elTitle) elTitle.textContent = `DAILY ANOMALY CONQUERED (${this.dailyAnomalyConfig.dateKey})`;
+      const elShards = document.getElementById('vicStatShards');
+      if (elShards) {
+        elShards.innerHTML = `<span class="flex items-center justify-end gap-1 font-bold text-cosmic-gold">+${res.bonusAwarded} ${ICON_SVG.shard('w-3.5 h-3.5 text-cosmic-gold')}</span>`;
+      }
+      if (res.isFirstClearToday) {
+        this.showToast('⚡ DAILY ANOMALY LIBERATED! +150 ✦ SHARDS', '#ffd700');
+      } else {
+        this.showToast('⚡ DAILY CHALLENGE COMPLETE!', '#00e5ff');
+      }
+    } else {
+      saveSystem.recordPlanetClear(this.currentPlanetId, this.score, stars);
+      const cfg = PLANETS.find(p => p.id === this.currentPlanetId) || PLANETS[0];
+      const elTitle = document.getElementById('victoryPlanetTitle');
+      if (elTitle) elTitle.textContent = `${cfg.name.toUpperCase()} PRIME SAVED`;
+      const elShards = document.getElementById('vicStatShards');
+      if (elShards) elShards.innerHTML = `<span class="flex items-center justify-end gap-1 font-bold text-cosmic-gold">+${stars * 45} ${ICON_SVG.shard('w-3.5 h-3.5 text-cosmic-gold')}</span>`;
+    }
     const elEnemies = document.getElementById('vicStatEnemies');
     if (elEnemies) elEnemies.textContent = `${this.enemiesVaporized}`;
     const elCombo = document.getElementById('vicStatCombo');
@@ -873,6 +1007,40 @@ export class GameEngine {
       alien.render(ctx);
     }
 
+    // Tutorial Step 2: Draw pulsing golden target reticle ring on nearest alien
+    if (this.isTutorialActive && this.tutorialStep === 2 && this.state === 'PLAYING') {
+      let closestAlien = null;
+      let minDist = Infinity;
+      for (const a of this.aliens) {
+        if (!a.alive) continue;
+        const d = Math.hypot(a.x - this.planet.x, a.y - this.planet.y);
+        if (d < minDist) {
+          minDist = d;
+          closestAlien = a;
+        }
+      }
+      if (closestAlien) {
+        const pulse = Math.sin(performance.now() * 0.008) * 4;
+        const r = closestAlien.radius + 14 + pulse;
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(closestAlien.x, closestAlien.y, r, 0, Math.PI * 2);
+        ctx.strokeStyle = '#ffd700';
+        ctx.lineWidth = 2.5;
+        ctx.shadowColor = '#ffd700';
+        ctx.shadowBlur = 14;
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(closestAlien.x - r - 6, closestAlien.y); ctx.lineTo(closestAlien.x - r + 4, closestAlien.y);
+        ctx.moveTo(closestAlien.x + r - 4, closestAlien.y); ctx.lineTo(closestAlien.x + r + 6, closestAlien.y);
+        ctx.moveTo(closestAlien.x, closestAlien.y - r - 6); ctx.lineTo(closestAlien.x, closestAlien.y - r + 4);
+        ctx.moveTo(closestAlien.x, closestAlien.y + r - 4); ctx.lineTo(closestAlien.x, closestAlien.y + r + 6);
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
+
     // 9. Render Projectiles (Plasma Bolts, Torpedoes, Lasers)
     this.projectiles.render(ctx);
 
@@ -902,8 +1070,16 @@ export class GameEngine {
     // Sector & Planet
     const cfg = PLANETS.find(p => p.id === this.currentPlanetId) || PLANETS[0];
     const sectorCfg = SECTORS.find(s => s.id === cfg.sector) || SECTORS[0];
-    document.getElementById('hudSectorLabel').textContent = this.isEndlessMode ? 'ENDLESS SIEGE' : sectorCfg.shortName;
-    document.getElementById('hudPlanetLabel').textContent = cfg.name.toUpperCase();
+    if (this.isDailyAnomalyMode) {
+      document.getElementById('hudSectorLabel').textContent = 'DAILY ANOMALY';
+      document.getElementById('hudPlanetLabel').textContent = this.dailyAnomalyConfig ? this.dailyAnomalyConfig.planet.name.toUpperCase() : cfg.name.toUpperCase();
+    } else if (this.isEndlessMode) {
+      document.getElementById('hudSectorLabel').textContent = 'ENDLESS SIEGE';
+      document.getElementById('hudPlanetLabel').textContent = cfg.name.toUpperCase();
+    } else {
+      document.getElementById('hudSectorLabel').textContent = sectorCfg.shortName;
+      document.getElementById('hudPlanetLabel').textContent = cfg.name.toUpperCase();
+    }
 
     const waveEl = document.getElementById('hudWaveValue');
     if (waveEl) {
@@ -1046,6 +1222,81 @@ export class GameEngine {
         pill.innerHTML = `<span>❄️ TIME-WARP</span> <span>${this.supplyPods.cryoTimeWarpTimer.toFixed(1)}s</span>`;
         buffsContainer.appendChild(pill);
       }
+    }
+  }
+
+  // Interactive 3-Step Tactical Tutorial Overlay Methods
+  startTutorial() {
+    this.isTutorialActive = true;
+    this.tutorialStep = 1;
+    this.tutorialAimAccum = 0;
+    this.tutorialTimer = 0;
+    this.lastTurretAngle = this.turret.angle;
+    this.updateTutorialUI();
+  }
+
+  advanceTutorial(step) {
+    this.tutorialStep = step;
+    this.tutorialTimer = 0;
+    this.updateTutorialUI();
+  }
+
+  completeTutorial() {
+    if (!this.isTutorialActive) return;
+    this.isTutorialActive = false;
+    const rewarded = saveSystem.completeTutorial();
+    this.updateTutorialUI();
+    if (rewarded) {
+      this.showToast('🎓 Tactical Training Complete! +50 ✦ Shards', '#00e676');
+    }
+  }
+
+  skipTutorial() {
+    this.isTutorialActive = false;
+    saveSystem.data.tutorialCompleted = true;
+    saveSystem.save();
+    this.updateTutorialUI();
+    this.showToast('Tutorial Skipped', '#94a3b8');
+  }
+
+  updateTutorialUI() {
+    const banner = document.getElementById('tutorialBanner');
+    if (!banner) return;
+    if (!this.isTutorialActive) {
+      banner.classList.add('hidden');
+      return;
+    }
+    banner.classList.remove('hidden');
+
+    const stepText = document.getElementById('tutorialStepText');
+    const titleText = document.getElementById('tutorialTitleText');
+    const promptText = document.getElementById('tutorialPromptText');
+    const btnComplete = document.getElementById('btnTutorialComplete');
+    const dot1 = document.getElementById('tutDot1');
+    const dot2 = document.getElementById('tutDot2');
+    const dot3 = document.getElementById('tutDot3');
+
+    if (dot1 && dot2 && dot3) {
+      dot1.className = this.tutorialStep >= 1 ? 'w-2 h-2 rounded-full bg-cosmic-cyan shadow-[0_0_8px_#00e5ff]' : 'w-2 h-2 rounded-full bg-slate-700';
+      dot2.className = this.tutorialStep >= 2 ? 'w-2 h-2 rounded-full bg-cosmic-gold shadow-[0_0_8px_#ffd700]' : 'w-2 h-2 rounded-full bg-slate-700';
+      dot3.className = this.tutorialStep >= 3 ? 'w-2 h-2 rounded-full bg-cosmic-mint shadow-[0_0_8px_#00e676]' : 'w-2 h-2 rounded-full bg-slate-700';
+    }
+
+    if (this.tutorialStep === 1) {
+      if (stepText) stepText.textContent = 'STEP 1 OF 3';
+      if (titleText) titleText.textContent = '🎯 360° ORBITAL TURRET AIMING';
+      if (promptText) promptText.textContent = 'Move your cursor or drag your finger around the planet to rotate your Orbital Guardian Turret. Your cannon auto-fires at invading alien ships and red torpedoes.';
+      if (btnComplete) btnComplete.classList.add('hidden');
+    } else if (this.tutorialStep === 2) {
+      if (stepText) stepText.textContent = 'STEP 2 OF 3';
+      if (titleText) titleText.textContent = '💥 DETONATE A SPARK NOVA';
+      if (promptText) promptText.textContent = 'Click or tap anywhere in deep space (or press [SPACE]) to launch a Chain-Reaction Spark Nova! Destroyed aliens detonate and trigger cascading combos.';
+      if (btnComplete) btnComplete.classList.add('hidden');
+    } else if (this.tutorialStep === 3) {
+      if (stepText) stepText.textContent = 'STEP 3 OF 3';
+      if (titleText) titleText.textContent = '⚡ TACTICAL PLANETARY ABILITIES';
+      if (promptText) promptText.textContent = 'Use [Q] Ion Beam, [W] EMP Shockwave, and [E] Aegis Overdrive at the bottom deck when swarmed—and shoot glowing cyan Supply Pods for instant buffs!';
+      if (btnComplete) btnComplete.classList.remove('hidden');
     }
   }
 }

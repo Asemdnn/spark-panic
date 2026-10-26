@@ -1,10 +1,19 @@
 // Spark Panic 2.0 - Application Bootstrap & Event Controller
 
-import { PLANETS, SECTORS, ALIEN_CLASSES, ARMORY_CONFIG, TROPHIES, GUARDIAN_RANKS, CHASSIS_CONFIG } from './config.js';
+import { PLANETS, SECTORS, ALIEN_CLASSES, ARMORY_CONFIG, TROPHIES, GUARDIAN_RANKS, CHASSIS_CONFIG, getDailyAnomalyConfig } from './config.js';
 import { audio } from './engine/audio.js';
 import { saveSystem } from './engine/storage.js';
 import { GameEngine } from './game/engine.js';
 import { ICON_SVG } from './ui/icons.js';
+
+// Register PWA Service Worker for Offline Play & Fast Launch
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(err => {
+      console.debug('Service Worker registration notice:', err);
+    });
+  });
+}
 
 window.addEventListener('DOMContentLoaded', () => {
   const canvas = document.getElementById('gameCanvas');
@@ -67,7 +76,17 @@ window.addEventListener('DOMContentLoaded', () => {
     } else if (key === 'T') {
       engine.turret.autoFire = !engine.turret.autoFire;
     } else if (key === 'P' || key === 'ESCAPE') {
-      togglePause();
+      if (engine.isTutorialActive) {
+        engine.skipTutorial();
+      } else {
+        togglePause();
+      }
+    } else if (key === 'H') {
+      if (engine.state !== 'PLAYING') {
+        hideAllModals();
+        engine.startCampaignPlanet(1);
+      }
+      engine.startTutorial();
     } else if (key === 'M') {
       const isMuted = audio.toggleMute();
       const muteBtn = document.getElementById('btnMute');
@@ -120,6 +139,21 @@ window.addEventListener('DOMContentLoaded', () => {
   });
 
   // Top HUD Controls
+  document.getElementById('btnTutorial')?.addEventListener('click', () => {
+    audio.init();
+    if (engine.state !== 'PLAYING') {
+      hideAllModals();
+      engine.startCampaignPlanet(1);
+    }
+    engine.startTutorial();
+  });
+  document.getElementById('btnSkipTutorial')?.addEventListener('click', () => {
+    engine.skipTutorial();
+  });
+  document.getElementById('btnTutorialComplete')?.addEventListener('click', () => {
+    engine.completeTutorial();
+  });
+
   document.getElementById('btnBgm')?.addEventListener('click', () => {
     audio.init();
     const isBgm = audio.toggleBgm();
@@ -140,6 +174,10 @@ window.addEventListener('DOMContentLoaded', () => {
     audio.init();
     openStarMap();
   });
+  document.getElementById('btnTitleDailyAnomaly')?.addEventListener('click', () => {
+    audio.init();
+    openDailyAnomalyModal();
+  });
   document.getElementById('btnStartEndless')?.addEventListener('click', () => {
     audio.init();
     hideAllModals();
@@ -155,6 +193,10 @@ window.addEventListener('DOMContentLoaded', () => {
   });
 
   // Star Map Navigation & Launch
+  document.getElementById('btnStarMapDailyAnomaly')?.addEventListener('click', () => {
+    audio.init();
+    openDailyAnomalyModal();
+  });
   document.getElementById('btnStarMapBack')?.addEventListener('click', () => {
     openTitle();
   });
@@ -162,6 +204,16 @@ window.addEventListener('DOMContentLoaded', () => {
     audio.init();
     hideAllModals();
     engine.startCampaignPlanet(selectedPlanetId);
+  });
+
+  // Daily Cosmic Anomaly Modal Controls
+  document.getElementById('btnDailyAnomalyClose')?.addEventListener('click', () => {
+    document.getElementById('modalDailyAnomaly')?.classList.add('hidden');
+  });
+  document.getElementById('btnLaunchDailyAnomaly')?.addEventListener('click', () => {
+    audio.init();
+    hideAllModals();
+    engine.startDailyAnomaly();
   });
 
   // Sector Tab Filtering
@@ -238,13 +290,21 @@ window.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btnVictoryNext')?.addEventListener('click', () => {
     audio.init();
     hideAllModals();
-    const nextPlanet = Math.min(20, engine.currentPlanetId + 1);
-    engine.startCampaignPlanet(nextPlanet);
+    if (engine.isDailyAnomalyMode) {
+      openStarMap();
+    } else {
+      const nextPlanet = Math.min(20, engine.currentPlanetId + 1);
+      engine.startCampaignPlanet(nextPlanet);
+    }
   });
   document.getElementById('btnVictoryRetry')?.addEventListener('click', () => {
     audio.init();
     hideAllModals();
-    engine.startCampaignPlanet(engine.currentPlanetId);
+    if (engine.isDailyAnomalyMode) {
+      engine.startDailyAnomaly();
+    } else {
+      engine.startCampaignPlanet(engine.currentPlanetId);
+    }
   });
   document.getElementById('btnVictoryMap')?.addEventListener('click', () => {
     audio.init();
@@ -255,7 +315,8 @@ window.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btnDefeatRetry')?.addEventListener('click', () => {
     audio.init();
     hideAllModals();
-    if (engine.isEndlessMode) engine.startEndless();
+    if (engine.isDailyAnomalyMode) engine.startDailyAnomaly();
+    else if (engine.isEndlessMode) engine.startEndless();
     else engine.startCampaignPlanet(engine.currentPlanetId);
   });
   document.getElementById('btnDefeatArmory')?.addEventListener('click', () => {
@@ -290,19 +351,109 @@ window.addEventListener('DOMContentLoaded', () => {
 
   function restartCurrent() {
     hideAllModals();
-    if (engine.isEndlessMode) engine.startEndless();
+    if (engine.isDailyAnomalyMode) engine.startDailyAnomaly();
+    else if (engine.isEndlessMode) engine.startEndless();
     else engine.startCampaignPlanet(engine.currentPlanetId);
   }
 
   function hideAllModals() {
     const modals = [
       'modalTitle', 'modalStarMap', 'modalArmory', 'modalCodex',
-      'modalVictory', 'modalDefeat', 'modalPause'
+      'modalVictory', 'modalDefeat', 'modalPause', 'modalDailyAnomaly'
     ];
     modals.forEach(id => {
       const el = document.getElementById(id);
       if (el) el.classList.add('hidden');
     });
+  }
+
+  function openDailyAnomalyModal() {
+    const modal = document.getElementById('modalDailyAnomaly');
+    if (!modal) return;
+    modal.classList.remove('hidden');
+
+    const dateKey = new Date().toISOString().slice(0, 10);
+    const cfg = getDailyAnomalyConfig(dateKey);
+
+    // Date badge
+    const dateBadge = document.getElementById('dailyDateBadge');
+    if (dateBadge) dateBadge.textContent = cfg.dateKey;
+
+    // Target planet
+    const p = cfg.planet;
+    const sectorTag = document.getElementById('dailySectorTag');
+    if (sectorTag) sectorTag.textContent = `SECTOR ${'I'.repeat(p.sector)}`;
+    const pName = document.getElementById('dailyPlanetName');
+    if (pName) pName.textContent = p.name.toUpperCase();
+    const pTitle = document.getElementById('dailyPlanetTitle');
+    if (pTitle) pTitle.textContent = p.title;
+
+    // Target planet preview canvas
+    const pCanvas = document.getElementById('dailyPlanetCanvas');
+    if (pCanvas) {
+      const pCtx = pCanvas.getContext('2d');
+      pCtx.clearRect(0, 0, 56, 56);
+
+      const grad = pCtx.createRadialGradient(20, 20, 4, 28, 28, 26);
+      grad.addColorStop(0, p.color2);
+      grad.addColorStop(0.7, p.color1);
+      grad.addColorStop(1, '#050814');
+
+      pCtx.beginPath();
+      pCtx.arc(28, 28, 22, 0, Math.PI * 2);
+      pCtx.fillStyle = grad;
+      pCtx.fill();
+
+      pCtx.strokeStyle = p.atmo;
+      pCtx.lineWidth = 2;
+      pCtx.shadowColor = p.atmo;
+      pCtx.shadowBlur = 6;
+      pCtx.stroke();
+      pCtx.shadowBlur = 0;
+    }
+
+    // Active Hazard
+    const hazardEl = document.getElementById('dailyHazardLabel');
+    if (hazardEl) {
+      hazardEl.textContent = `${cfg.hazard.icon} ${cfg.hazard.name}`;
+      hazardEl.title = cfg.hazard.desc;
+    }
+
+    // 2 Mutator Cards
+    const container = document.getElementById('dailyMutatorsContainer');
+    if (container) {
+      container.innerHTML = '';
+      cfg.mutators.forEach(m => {
+        const card = document.createElement('div');
+        card.className = 'glass-card p-3 rounded-2xl flex items-start gap-2.5 border border-slate-700/60';
+        card.innerHTML = `
+          <span class="text-xl p-1.5 rounded-xl bg-slate-950/80 border border-slate-800 shrink-0">${m.icon}</span>
+          <div>
+            <div class="font-orbitron font-bold text-xs" style="color: ${m.color}">${m.name}</div>
+            <div class="text-[10px] text-slate-300 mt-0.5 leading-snug">${m.desc}</div>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    // Today's Best Score
+    const bestScore = saveSystem.getDailyBest(cfg.dateKey);
+    const bestEl = document.getElementById('dailyBestScore');
+    if (bestEl) {
+      bestEl.textContent = `${bestScore.toLocaleString()} pts`;
+    }
+
+    // Daily Bonus Claimed status
+    const claimed = saveSystem.isDailyClaimed(cfg.dateKey);
+    const bonusEl = document.getElementById('dailyBonusStatus');
+    if (bonusEl) {
+      if (claimed) {
+        bonusEl.innerHTML = `<span class="text-cosmic-mint font-orbitron font-extrabold text-[11px]">✓ CLAIMED TODAY</span>`;
+      } else {
+        bonusEl.innerHTML = `<span class="flex items-center justify-end gap-1 font-orbitron font-extrabold text-cosmic-gold">+150 ${ICON_SVG.shard('w-3.5 h-3.5 text-cosmic-gold')}</span>`;
+      }
+    }
   }
 
   function openTitle() {

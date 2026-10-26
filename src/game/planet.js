@@ -3,10 +3,19 @@
 import { audio } from '../engine/audio.js';
 
 export class Planet {
-  constructor(canvas) {
-    this.canvas = canvas;
-    this.x = canvas.width * 0.5;
-    this.y = canvas.height * 0.53;
+  constructor(canvasOrWidth, maybeHeight, maybeConfig) {
+    if (typeof canvasOrWidth === 'number') {
+      this.canvas = { width: canvasOrWidth, height: maybeHeight || 600 };
+      this.x = canvasOrWidth * 0.5;
+      this.y = (maybeHeight || 600) * 0.53;
+      if (maybeConfig) this.data = maybeConfig;
+    } else {
+      this.canvas = canvasOrWidth;
+      const w = canvasOrWidth && canvasOrWidth.width ? canvasOrWidth.width : 800;
+      const h = canvasOrWidth && canvasOrWidth.height ? canvasOrWidth.height : 600;
+      this.x = w * 0.5;
+      this.y = h * 0.53;
+    }
     this.planetRadius = 75;
     this.shieldRadius = 97;
 
@@ -24,7 +33,32 @@ export class Planet {
     this.shieldRipples = [];
     this.craters = [];
     this.continents = [];
+    this.surfaceCities = [];
+    this.cityDistressTimer = 0;
+    this.cityParticles = [];
+    this.fireworks = [];
+    this.initCities();
     this.initContinents();
+  }
+
+  initCities() {
+    this.surfaceCities = [];
+    for (let i = 0; i < 4; i++) {
+      this.surfaceCities.push({
+        index: i,
+        angle: i * Math.PI * 0.5,
+        spires: [
+          { width: 5, height: 3, offset: -6 },
+          { width: 8, height: 4, offset: -2 },
+          { width: 3, height: 1.2, offset: -0.6 },
+          { width: 5, height: 3, offset: 3 }
+        ]
+      });
+    }
+  }
+
+  get fireworkParticles() {
+    return this.fireworks.filter(f => f.type === 'spark');
   }
 
   initContinents() {
@@ -59,6 +93,10 @@ export class Planet {
     this.shieldRegenRate = 18 * (1 + shieldGridLvl * 0.2);
     this.shieldRipples = [];
     this.craters = [];
+    this.cityParticles = [];
+    this.fireworks = [];
+    this.cityDistressTimer = 0;
+    this.initCities();
     this.initContinents();
   }
 
@@ -126,6 +164,127 @@ export class Planet {
       rip.alpha = Math.max(0, 1 - (rip.radius / rip.maxRadius));
       if (rip.radius >= rip.maxRadius || rip.alpha <= 0.01) {
         this.shieldRipples.splice(i, 1);
+      }
+    }
+
+    // Update Surface City Distress Signals & Particles
+    const hpRatio = this.coreHp / (this.maxCoreHp || 100);
+    this.cityDistressTimer += dt;
+    if (hpRatio < 0.70 && this.cityDistressTimer >= (hpRatio < 0.35 ? 0.08 : 0.20)) {
+      this.cityDistressTimer = 0;
+      const r = this.planetRadius;
+      const cityIdx = Math.floor(Math.random() * 4);
+      const cityAngle = (cityIdx * Math.PI * 0.5) + this.rotation;
+      const cx = this.x + Math.cos(cityAngle) * r;
+      const cy = this.y + Math.sin(cityAngle) * r;
+
+      if (hpRatio < 0.35) {
+        // Critical: Red emergency strobes & electrical distress arcs
+        this.cityParticles.push({
+          x: cx,
+          y: cy,
+          vx: Math.cos(cityAngle) * (25 + Math.random() * 35) + (Math.random() - 0.5) * 20,
+          vy: Math.sin(cityAngle) * (25 + Math.random() * 35) + (Math.random() - 0.5) * 20,
+          color: Math.random() > 0.5 ? '#ff3366' : '#ffd700',
+          size: 1.8 + Math.random() * 1.5,
+          alpha: 1.0,
+          life: 0.3 + Math.random() * 0.3,
+          maxLife: 0.6,
+          isArc: Math.random() > 0.35
+        });
+      } else {
+        // Warning: Orange warning beacons and tiny smoke/sparks
+        this.cityParticles.push({
+          x: cx,
+          y: cy,
+          vx: Math.cos(cityAngle) * (12 + Math.random() * 18) + (Math.random() - 0.5) * 12,
+          vy: Math.sin(cityAngle) * (12 + Math.random() * 18) + (Math.random() - 0.5) * 12,
+          color: Math.random() > 0.4 ? '#f97316' : '#94a3b8',
+          size: 2.0 + Math.random() * 2.0,
+          alpha: 0.8,
+          life: 0.4 + Math.random() * 0.4,
+          maxLife: 0.8,
+          isArc: false
+        });
+      }
+    }
+
+    // Update City Particles
+    for (let i = this.cityParticles.length - 1; i >= 0; i--) {
+      const p = this.cityParticles[i];
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.life -= dt;
+      p.alpha = Math.max(0, p.life / p.maxLife);
+      if (p.life <= 0) {
+        this.cityParticles.splice(i, 1);
+      }
+    }
+
+    // Update Fireworks (Shells & Exploding Sparks)
+    const colors = ['#00e5ff', '#ffd700', '#e040fb', '#00e676', '#ff3366', '#ffffff'];
+    for (let i = this.fireworks.length - 1; i >= 0; i--) {
+      const fw = this.fireworks[i];
+      if (fw.type === 'shell') {
+        fw.x += fw.vx * dt;
+        fw.y += fw.vy * dt;
+        fw.vx *= 0.98;
+        fw.vy *= 0.98;
+        fw.fuse -= dt;
+
+        if (fw.fuse <= 0) {
+          this.fireworks.splice(i, 1);
+          const sparkCount = 16 + Math.floor(Math.random() * 8);
+          for (let s = 0; s < sparkCount; s++) {
+            const sAng = (s / sparkCount) * Math.PI * 2 + (Math.random() - 0.5) * 0.3;
+            const sSpeed = 50 + Math.random() * 110;
+            this.fireworks.push({
+              type: 'spark',
+              x: fw.x,
+              y: fw.y,
+              vx: Math.cos(sAng) * sSpeed,
+              vy: Math.sin(sAng) * sSpeed,
+              color: colors[Math.floor(Math.random() * colors.length)],
+              size: 2.2 + Math.random() * 1.6,
+              alpha: 1.0,
+              life: 0.65 + Math.random() * 0.55,
+              maxLife: 1.2
+            });
+          }
+        }
+      } else if (fw.type === 'spark') {
+        fw.x += fw.vx * dt;
+        fw.y += fw.vy * dt;
+        fw.vx *= 0.94;
+        fw.vy *= 0.94;
+        fw.life -= dt;
+        fw.alpha = Math.max(0, fw.life / fw.maxLife);
+        if (fw.life <= 0) {
+          this.fireworks.splice(i, 1);
+        }
+      }
+    }
+  }
+
+  triggerVictoryFireworks() {
+    const colors = ['#00e5ff', '#ffd700', '#e040fb', '#00e676', '#ff3366', '#ffffff'];
+    const r = this.planetRadius;
+
+    for (let i = 0; i < 4; i++) {
+      const cityAngle = (i * Math.PI * 0.5) + this.rotation;
+      for (let s = 0; s < 2; s++) {
+        const spread = (Math.random() - 0.5) * 0.45;
+        const ang = cityAngle + spread;
+        const speed = 120 + Math.random() * 85;
+        this.fireworks.push({
+          type: 'shell',
+          x: this.x + Math.cos(cityAngle) * (r + 4),
+          y: this.y + Math.sin(cityAngle) * (r + 4),
+          vx: Math.cos(ang) * speed,
+          vy: Math.sin(ang) * speed,
+          color: colors[(i * 2 + s) % colors.length],
+          fuse: 0.35 + Math.random() * 0.45
+        });
       }
     }
   }
@@ -252,6 +411,105 @@ export class Planet {
       ctx.restore();
     }
 
+    // 3.5. Living Planetary Surface Cyber-Cities on Horizon (4 Cities at 0, 90, 180, 270 deg)
+    const hpRatio = this.coreHp / (this.maxCoreHp || 100);
+    const isCritical = hpRatio < 0.35;
+    const isWarning = hpRatio >= 0.35 && hpRatio <= 0.70;
+
+    for (let i = 0; i < 4; i++) {
+      const cityAngle = (i * Math.PI * 0.5) + this.rotation;
+      const cx = this.x + Math.cos(cityAngle) * r;
+      const cy = this.y + Math.sin(cityAngle) * r;
+
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(cityAngle); // +X radially outward, Y tangent to circumference
+
+      // Miniature skyline silhouette
+      ctx.fillStyle = '#080d1a';
+      // Left building
+      ctx.fillRect(0, -6, 5, 3);
+      // Center skyscraper spire
+      ctx.fillRect(0, -2, 8, 4);
+      // Antenna spire
+      ctx.fillRect(8, -0.6, 3, 1.2);
+      // Right building
+      ctx.fillRect(0, 3, 5, 3);
+
+      // Window lights
+      let windowColor = '#00e5ff';
+      if (isCritical) {
+        windowColor = '#ff3366';
+      } else if (isWarning) {
+        windowColor = (Math.sin(this.pulsePhase * 3 + i) > 0) ? '#f97316' : '#ffd700';
+      } else {
+        windowColor = (i % 2 === 0) ? '#00e5ff' : '#ffd700';
+      }
+      ctx.fillStyle = windowColor;
+      ctx.fillRect(2, -4.5, 1.2, 1.2);
+      ctx.fillRect(4, -1, 1.2, 1.2);
+      ctx.fillRect(6, -1, 1.2, 1.2);
+      ctx.fillRect(2, 4, 1.2, 1.2);
+
+      // Energy cupola / dome over the city
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 11, 7, 0, -Math.PI * 0.5, Math.PI * 0.5);
+      if (isCritical) {
+        const strobe = Math.sin(this.pulsePhase * 9 + i * 2) > 0;
+        ctx.fillStyle = strobe ? 'rgba(255, 51, 102, 0.35)' : 'rgba(255, 51, 102, 0.08)';
+        ctx.strokeStyle = '#ff3366';
+        ctx.lineWidth = 1.4;
+      } else if (isWarning) {
+        ctx.fillStyle = 'rgba(249, 115, 22, 0.16)';
+        ctx.strokeStyle = '#f97316';
+        ctx.lineWidth = 1.2;
+      } else {
+        ctx.fillStyle = 'rgba(0, 229, 255, 0.14)';
+        ctx.strokeStyle = (i % 2 === 0) ? '#00e5ff' : '#ffd700';
+        ctx.lineWidth = 1.2;
+      }
+      ctx.fill();
+      ctx.stroke();
+
+      // Cyber Beacon Light at Spire Apex
+      const beaconX = 11.5;
+      ctx.beginPath();
+      ctx.arc(beaconX, 0, 1.8, 0, Math.PI * 2);
+      if (isCritical) {
+        ctx.fillStyle = (Math.sin(this.pulsePhase * 10 + i * 3) > 0) ? '#ff3366' : 'transparent';
+      } else if (isWarning) {
+        ctx.fillStyle = (Math.sin(this.pulsePhase * 4 + i) > 0) ? '#f97316' : '#ffd700';
+      } else {
+        const beaconPulse = Math.sin(this.pulsePhase * 2.5 + i);
+        ctx.fillStyle = beaconPulse > 0 ? '#00e5ff' : '#ffffff';
+      }
+      ctx.fill();
+
+      ctx.restore();
+    }
+
+    // City Distress Particles & Electrical Arcs
+    for (const p of this.cityParticles) {
+      ctx.save();
+      ctx.globalAlpha = p.alpha;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.fillStyle = p.color;
+      ctx.shadowColor = p.color;
+      ctx.shadowBlur = 6;
+      ctx.fill();
+
+      if (p.isArc) {
+        ctx.beginPath();
+        ctx.moveTo(p.x, p.y);
+        ctx.lineTo(p.x + (Math.random() - 0.5) * 12, p.y + (Math.random() - 0.5) * 12);
+        ctx.strokeStyle = p.color;
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
     // 4. Aegis Energy Shield
     if (this.shield > 0) {
       const shieldPct = this.shield / this.maxShield;
@@ -304,6 +562,19 @@ export class Planet {
         ctx.stroke();
         ctx.globalAlpha = 1.0;
       }
+    }
+
+    // 5. Celebratory Orbital Fireworks
+    for (const fw of this.fireworks) {
+      ctx.save();
+      ctx.globalAlpha = fw.alpha !== undefined ? fw.alpha : 1.0;
+      ctx.beginPath();
+      ctx.arc(fw.x, fw.y, fw.size || 2.4, 0, Math.PI * 2);
+      ctx.fillStyle = fw.color;
+      ctx.shadowColor = fw.color;
+      ctx.shadowBlur = 10;
+      ctx.fill();
+      ctx.restore();
     }
   }
 }

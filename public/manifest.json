@@ -1,0 +1,29 @@
+{
+  "name": "Spark Panic: Planetary Invasion Defense",
+  "short_name": "Spark Panic",
+  "description": "360° Orbital Guardian Action Strategy Game. Defend 20 celestial worlds across 4 Cosmic Sectors from invading alien fleets.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#050814",
+  "theme_color": "#00e5ff",
+  "categories": [
+    "games",
+    "action",
+    "arcade"
+  ],
+  "icons": [
+    {
+      "src": "./assets/game-icon.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./assets/hero-key-art.jpg",
+      "sizes": "1024x1024",
+      "type": "image/jpeg"
+    }
+  ]
+}

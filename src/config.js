@@ -597,3 +597,101 @@ export const GUARDIAN_RANKS = [
 export const PENTATONIC_FREQS = [
   261.63, 293.66, 329.63, 392.00, 440.00, 523.25, 587.33, 659.25, 783.99, 880.00, 1046.50, 1174.66
 ];
+
+export const SECTOR_HAZARDS = {
+  1: { name: 'ASTEROID DRIFT', icon: '☄️', desc: 'Shoot drifting asteroids for +15 Shards & kinetic shockwaves' },
+  2: { name: 'ION NEBULA', icon: '⚡', desc: 'Novas inside Ion Clouds gain +35% radius & +25% damage' },
+  3: { name: 'GRAVITY ANOMALY', icon: '🌀', desc: 'Singularity clusters invaders into high-value combo targets' },
+  4: { name: 'SOLAR CORONA', icon: '☀️', desc: 'Periodic Solar Flares scorch point-blank invaders & grant +15% Nova energy' }
+};
+
+export const DAILY_MUTATORS = [
+  {
+    id: 'hyperCapacitor',
+    name: 'Hyper-Capacitor',
+    icon: '⚡',
+    color: '#00e5ff',
+    desc: 'Spark Nova charges regenerate +60% faster, but turret laser damage is -25%.',
+    novaRechargeMult: 1.6,
+    turretDmgMult: 0.75
+  },
+  {
+    id: 'swarmBlitz',
+    name: 'Swarm Blitz',
+    icon: '🛸',
+    color: '#e040fb',
+    desc: '+50% more Alien Scouts & Interceptors with +20% speed, but every kill grants +35% chain score.',
+    swarmCountMult: 1.5,
+    swarmSpeedMult: 1.2,
+    scoreMult: 1.35
+  },
+  {
+    id: 'supernovaChain',
+    name: 'Supernova Chain',
+    icon: '💥',
+    color: '#ffd700',
+    desc: 'All secondary alien death explosions have +35% blast radius.',
+    novaRadiusMult: 1.35
+  },
+  {
+    id: 'glassAegis',
+    name: 'Glass Aegis',
+    icon: '🛡️',
+    color: '#00e676',
+    desc: 'Planetary Shield is +100% stronger and regenerates 2x faster, but Max Core HP is reduced by 40%.',
+    shieldStrengthMult: 2.0,
+    shieldRegenMult: 2.0,
+    coreHpMult: 0.6
+  },
+  {
+    id: 'meteorStorm',
+    name: 'Meteor Storm',
+    icon: '☄️',
+    color: '#f97316',
+    desc: 'Asteroid Clusters & Orbital Supply Pods spawn 2.5x more frequently.',
+    spawnFreqMult: 2.5
+  },
+  {
+    id: 'bossRush',
+    name: 'Boss Rush',
+    icon: '👑',
+    color: '#ff3366',
+    desc: 'Every wave includes a mini Dreadnought or Mothership escort, and all Turret Chassis deal +30% damage.',
+    bossEscort: true,
+    turretDmgMult: 1.30
+  }
+];
+
+export function getDailyAnomalyConfig(dateStr) {
+  const dateKey = dateStr || new Date().toISOString().slice(0, 10);
+  let hash = 0;
+  for (let i = 0; i < dateKey.length; i++) {
+    hash = ((hash << 5) - hash) + dateKey.charCodeAt(i);
+    hash |= 0;
+  }
+  const seed = Math.abs(hash) || 123456789;
+
+  let a = seed;
+  const rng = () => {
+    let t = a += 0x6D2B79F5;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+
+  const planetIndex = Math.floor(rng() * PLANETS.length);
+  const planet = PLANETS[planetIndex] || PLANETS[0];
+  const hazardSector = 1 + Math.floor(rng() * 4);
+
+  const m1 = Math.floor(rng() * DAILY_MUTATORS.length);
+  let m2 = Math.floor(rng() * (DAILY_MUTATORS.length - 1));
+  if (m2 >= m1) m2++;
+
+  return {
+    dateKey,
+    planet,
+    hazardSector,
+    hazard: SECTOR_HAZARDS[hazardSector],
+    mutators: [DAILY_MUTATORS[m1], DAILY_MUTATORS[m2]]
+  };
+}

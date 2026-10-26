@@ -30,7 +30,10 @@ export class SaveSystem {
       endlessBestWave: 0,
       endlessMaxWave: 0,
       isMuted: false,
-      isBgmEnabled: true
+      isBgmEnabled: true,
+      tutorialCompleted: false,
+      dailyBest: {},
+      dailyClaimed: {}
     };
 
     if (typeof localStorage === 'undefined') return defaults;
@@ -51,7 +54,10 @@ export class SaveSystem {
         selectedChassis: parsed.selectedChassis || defaults.selectedChassis,
         endlessBestWave,
         endlessMaxWave: endlessBestWave,
-        isBgmEnabled: parsed.isBgmEnabled !== undefined ? parsed.isBgmEnabled : defaults.isBgmEnabled
+        isBgmEnabled: parsed.isBgmEnabled !== undefined ? parsed.isBgmEnabled : defaults.isBgmEnabled,
+        tutorialCompleted: !!parsed.tutorialCompleted,
+        dailyBest: { ...(parsed.dailyBest || {}) },
+        dailyClaimed: { ...(parsed.dailyClaimed || {}) }
       };
     } catch (e) {
       console.warn('Failed to parse saved game data, using defaults', e);
@@ -253,6 +259,52 @@ export class SaveSystem {
     return isNewScore || isNewWave;
   }
 
+  isTutorialCompleted() {
+    return !!this.data.tutorialCompleted;
+  }
+
+  completeTutorial() {
+    if (this.data.tutorialCompleted) return false;
+    this.data.tutorialCompleted = true;
+    this.addShards(50);
+    this.save();
+    return true;
+  }
+
+  getDailyBest(dateKey) {
+    return (this.data.dailyBest && this.data.dailyBest[dateKey]) || 0;
+  }
+
+  isDailyClaimed(dateKey) {
+    return !!(this.data.dailyClaimed && this.data.dailyClaimed[dateKey]);
+  }
+
+  recordDailyScore(dateKey, score) {
+    if (!this.data.dailyBest) this.data.dailyBest = {};
+    if (!this.data.dailyClaimed) this.data.dailyClaimed = {};
+
+    const prevBest = this.data.dailyBest[dateKey] || 0;
+    const isNewHigh = score > prevBest;
+    if (isNewHigh) {
+      this.data.dailyBest[dateKey] = score;
+    }
+
+    let isFirstClearToday = false;
+    if (!this.data.dailyClaimed[dateKey]) {
+      this.data.dailyClaimed[dateKey] = true;
+      this.addShards(150);
+      isFirstClearToday = true;
+    }
+
+    this.save();
+    return {
+      isNewHigh,
+      isFirstClearToday,
+      bonusAwarded: isFirstClearToday ? 150 : 0,
+      bestScore: this.data.dailyBest[dateKey]
+    };
+  }
+
   exportSaveCode() {
     try {
       const jsonStr = JSON.stringify(this.data);
@@ -301,7 +353,10 @@ export class SaveSystem {
         endlessBestWave,
         endlessMaxWave: endlessBestWave,
         isMuted: parsed.isMuted !== undefined ? parsed.isMuted : this.data.isMuted,
-        isBgmEnabled: parsed.isBgmEnabled !== undefined ? parsed.isBgmEnabled : this.data.isBgmEnabled
+        isBgmEnabled: parsed.isBgmEnabled !== undefined ? parsed.isBgmEnabled : this.data.isBgmEnabled,
+        tutorialCompleted: parsed.tutorialCompleted !== undefined ? !!parsed.tutorialCompleted : !!this.data.tutorialCompleted,
+        dailyBest: { ...(this.data.dailyBest || {}), ...(parsed.dailyBest || {}) },
+        dailyClaimed: { ...(this.data.dailyClaimed || {}), ...(parsed.dailyClaimed || {}) }
       };
       this.save();
       return true;
@@ -332,7 +387,10 @@ export class SaveSystem {
       endlessBestWave: 0,
       endlessMaxWave: 0,
       isMuted: false,
-      isBgmEnabled: true
+      isBgmEnabled: true,
+      tutorialCompleted: false,
+      dailyBest: {},
+      dailyClaimed: {}
     };
     this.save();
   }
