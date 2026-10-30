@@ -312,31 +312,32 @@ describe('v2.5 Commander\'s Ultimate Edition Suite', () => {
 
         BattleCardGenerator.renderCard(mockEngine, save);
 
-        // 1. Header subtitle is right-aligned at x = 1150
-        const headerSub = fillTextCalls.find(c => c.text.includes("v2.5 COMMANDER'S ULTIMATE EDITION"));
-        expect(headerSub).toBeDefined();
-        expect(headerSub.x).toBe(1150);
-        expect(headerSub.y).toBe(105);
-        expect(headerSub.textAlign).toBe('right');
+        // 1. Header main title and subtitle stacked vertically
+        const mainTitle = fillTextCalls.find(c => c.text === 'SPARK PANIC: PLANETARY INVASION DEFENSE');
+        expect(mainTitle).toBeDefined();
+        expect(mainTitle.x).toBe(48);
+        expect(mainTitle.y).toBe(52);
+        expect(mainTitle.textAlign).toBe('left');
 
-        // 2. Telemetry Sparkline title is left-aligned at x = 421 (boxX + 16)
-        const sparklineTitle = fillTextCalls.find(c => c.text === 'POST-BATTLE TACTICAL TELEMETRY SPARKLINE');
+        const goldBadge = fillTextCalls.find(c => c.text === "⚡ v2.5 COMMANDER'S ULTIMATE EDITION");
+        expect(goldBadge).toBeDefined();
+        expect(goldBadge.x).toBe(48);
+        expect(goldBadge.y).toBe(76);
+        expect(goldBadge.textAlign).toBe('left');
+
+        // 2. Telemetry Sparkline title is shortened and left-aligned at x = boxX + 16
+        const sparklineTitle = fillTextCalls.find(c => c.text === 'TACTICAL TELEMETRY');
         expect(sparklineTitle).toBeDefined();
         expect(sparklineTitle.x).toBe(405 + 16);
-        expect(sparklineTitle.y).toBe(232 + 22);
+        expect(sparklineTitle.y).toBe(244 + 22);
         expect(sparklineTitle.textAlign).toBe('left');
 
-        // 3. Legend labels right-aligned at x = 1124 (boxX + boxW - 16)
-        const comboLegend = fillTextCalls.find(c => c.text === '● Combo Surge Peak');
-        expect(comboLegend).toBeDefined();
-        expect(comboLegend.x).toBe(405 + 735 - 16);
-        expect(comboLegend.y).toBe(232 + 22);
-        expect(comboLegend.textAlign).toBe('right');
-
-        const integrityLegend = fillTextCalls.find(c => c.text === '● Planetary Integrity');
-        expect(integrityLegend).toBeDefined();
-        expect(integrityLegend.y).toBe(232 + 22);
-        expect(integrityLegend.textAlign).toBe('right');
+        // 3. Legend labels right-aligned at x = boxX + boxW - 16
+        const legend = fillTextCalls.find(c => c.text === '● Integrity   ● Combo Peak');
+        expect(legend).toBeDefined();
+        expect(legend.x).toBe(405 + 735 - 16);
+        expect(legend.y).toBe(244 + 22);
+        expect(legend.textAlign).toBe('right');
       } finally {
         document.createElement = originalCreateElement;
       }

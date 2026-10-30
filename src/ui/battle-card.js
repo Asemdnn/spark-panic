@@ -76,28 +76,27 @@ export class BattleCardGenerator {
     ctx.stroke();
 
     // 3. Header Banner
-    ctx.font = '900 13px Orbitron, Inter, sans-serif';
+    ctx.font = '900 11px Orbitron, Inter, sans-serif';
     ctx.fillStyle = '#00e5ff';
-    ctx.letterSpacing = '3px';
-    ctx.fillText('GUARDIAN COMMAND TELEMETRY • OFFICIAL BATTLE RECORD', 60, 68);
+    ctx.textAlign = 'right';
+    ctx.fillText('GUARDIAN COMMAND TELEMETRY • OFFICIAL BATTLE RECORD', 1152, 52);
 
-    ctx.font = '900 26px Orbitron, Inter, sans-serif';
+    ctx.font = '900 22px Orbitron, sans-serif';
     ctx.fillStyle = '#ffffff';
     ctx.textAlign = 'left';
-    ctx.fillText('SPARK PANIC: PLANETARY INVASION DEFENSE', 60, 105);
+    ctx.fillText('SPARK PANIC: PLANETARY INVASION DEFENSE', 48, 52);
 
-    ctx.font = '700 13px Orbitron, Inter, sans-serif';
+    ctx.font = '700 12px Orbitron, sans-serif';
     ctx.fillStyle = '#ffd700';
-    ctx.textAlign = 'right';
-    ctx.fillText("v2.5 COMMANDER'S ULTIMATE EDITION", 1150, 105);
     ctx.textAlign = 'left';
+    ctx.fillText("⚡ v2.5 COMMANDER'S ULTIMATE EDITION", 48, 76);
 
     // Top Divider
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.moveTo(60, 122);
-    ctx.lineTo(1140, 122);
+    ctx.moveTo(48, 98);
+    ctx.lineTo(1152, 98);
     ctx.stroke();
 
     // 4. Left Column: Commander Profile & Target Planet
@@ -218,34 +217,25 @@ export class BattleCardGenerator {
 
     // Sparkline Graph Title & Legend
     const boxX = 405;
-    const boxY = 232;
+    const boxY = 244;
     const boxW = 735;
 
     ctx.font = '700 11px Orbitron, sans-serif';
     ctx.fillStyle = '#ffffff';
     ctx.textAlign = 'left';
-    ctx.fillText('POST-BATTLE TACTICAL TELEMETRY SPARKLINE', boxX + 16, boxY + 22);
+    ctx.fillText('TACTICAL TELEMETRY', boxX + 16, boxY + 22);
 
-    ctx.font = '600 10px Orbitron, sans-serif';
+    ctx.font = '600 11px Inter, sans-serif';
+    ctx.fillStyle = '#cbd5e1';
     ctx.textAlign = 'right';
-    const comboLabel = '● Combo Surge Peak';
-    const integrityLabel = '● Planetary Integrity';
-    const legendSpace = '   ';
-    const comboW = (ctx.measureText && ctx.measureText(comboLabel)?.width) || 120;
-    const spaceW = (ctx.measureText && ctx.measureText(legendSpace)?.width) || 12;
-
-    ctx.fillStyle = '#e040fb';
-    ctx.fillText(comboLabel, boxX + boxW - 16, boxY + 22);
-
-    ctx.fillStyle = '#00e676';
-    ctx.fillText(integrityLabel, boxX + boxW - 16 - comboW - spaceW, boxY + 22);
+    ctx.fillText('● Integrity   ● Combo Peak', boxX + boxW - 16, boxY + 22);
     ctx.textAlign = 'left';
 
-    // Sparkline Chart Box (695 x 110)
+    // Sparkline Chart Box (695 x 100) - starts 10px lower at boxY + 34
     const chartX = 425;
-    const chartY = 268;
+    const chartY = boxY + 34;
     const chartW = 695;
-    const chartH = 110;
+    const chartH = 100;
 
     ctx.fillStyle = 'rgba(3, 5, 12, 0.9)';
     ctx.fillRect(chartX, chartY, chartW, chartH);
