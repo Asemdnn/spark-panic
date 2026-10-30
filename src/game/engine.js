@@ -1,6 +1,6 @@
-// Spark Panic: Planetary Invasion Defense 2.4 - Core Game Engine Coordinator
+// Spark Panic: Planetary Invasion Defense 2.5 - Core Game Engine Coordinator
 
-import { PLANETS, SECTORS, ALIEN_CLASSES, ARMORY_CONFIG, TROPHIES, GUARDIAN_RANKS, getDailyAnomalyConfig, DAILY_MUTATORS, TITAN_PROTOCOL_CONFIG, WINGMAN_CONFIG, ASCENSION_CONFIG, TURRET_SKINS } from '../config.js';
+import { PLANETS, SECTORS, ALIEN_CLASSES, ARMORY_CONFIG, TROPHIES, GUARDIAN_RANKS, getDailyAnomalyConfig, DAILY_MUTATORS, TITAN_PROTOCOL_CONFIG, WINGMAN_CONFIG, ASCENSION_CONFIG, TURRET_SKINS, COSMIC_RELICS, STRUCTURE_CONFIG, DEFAULT_SETTINGS } from '../config.js';
 import { audio } from '../engine/audio.js';
 import { saveSystem } from '../engine/storage.js';
 import { Planet } from './planet.js';
@@ -13,6 +13,7 @@ import { ParticleEngine } from './particles.js';
 import { HazardManager } from './hazards.js';
 import { SupplyPodManager } from './supply-pods.js';
 import { WingmanFighter } from './wingman.js';
+import { StructureManager } from './structures.js';
 import { ICON_SVG } from '../ui/icons.js';
 
 export class GameEngine {
@@ -34,11 +35,24 @@ export class GameEngine {
     this.satellites = [];
     this.wingman = new WingmanFighter(this);
     this.wingmanActive = false;
+    this.wingman2 = null;
+    this.structures = new StructureManager(this);
     this.skills = new TacticalSkills();
     this.projectiles = new ProjectileManager();
     this.particles = new ParticleEngine();
     this.hazards = new HazardManager();
     this.supplyPods = new SupplyPodManager();
+
+    // Relic & Structure combat states
+    this.relicChronoStasisCooldown = 0;
+    this.turretShotCount = 0;
+    this.solarEmberZones = [];
+
+    // Gamepad controller state
+    this.gamepadConnected = false;
+    this.gamepadReticleX = this.width * 0.5;
+    this.gamepadReticleY = this.height * 0.3;
+    this.gamepadPrevButtons = {};
 
     // Active Mission State
     this.currentPlanetId = 1;
@@ -166,8 +180,139 @@ export class GameEngine {
       this.wingman.setDoctrine(saveSystem.getSelectedWingmanDoctrine());
     }
 
+    // WING-02 Fighter via Ancient Cosmic Relic (twinWingman)
+    if (this.wingmanActive && this.hasRelic('twinWingman')) {
+      if (!this.wingman2) {
+        this.wingman2 = new WingmanFighter(this, 'WING-02', Math.PI);
+      }
+      this.wingman2.setDoctrine(saveSystem.getSelectedWingmanDoctrine());
+    } else {
+      this.wingman2 = null;
+    }
+
     // 7. Tactical Core Cooldowns
     this.skills.setCooldownReduction(up.tacticalCd || 0);
+  }
+
+  hasRelic(id) {
+    if (!saveSystem || !saveSystem.isRelicEquipped) return false;
+    return saveSystem.isRelicEquipped(id);
+  }
+
+  getSettings() {
+    if (!saveSystem || !saveSystem.getSettings) return DEFAULT_SETTINGS;
+    return saveSystem.getSettings();
+  }
+
+  deployStructure() {
+    if (this.state !== 'PLAYING') return false;
+    const structure = this.structures.deploy(this.turret.angle);
+    return !!structure;
+  }
+
+  onShieldBroken() {
+    if (this.hasRelic('chronoStasis') && this.relicChronoStasisCooldown <= 0) {
+      this.relicChronoStasisCooldown = 18;
+      for (const alien of this.aliens) {
+        if (!alien.alive) continue;
+        alien.speedMultiplier = 0.35;
+        alien.slowTimer = 4.0;
+      }
+      this.particles.spawnNovaRing(this.planet.x, this.planet.y, '#00e5ff', 240);
+      this.particles.addFloater(this.planet.x, this.planet.y - 30, '⏱️ CHRONO STASIS TRIGGERED!', '#00e5ff', 16);
+      audio.playTimeWarp();
+    }
+  }
+
+  pollGamepad() {
+    if (typeof navigator === 'undefined' || !navigator.getGamepads) return;
+    const gamepads = navigator.getGamepads();
+    let gp = null;
+    for (const g of gamepads) {
+      if (g && g.connected) { gp = g; break; }
+    }
+    if (!gp) {
+      this.gamepadConnected = false;
+      return;
+    }
+    this.gamepadConnected = true;
+
+    // Left stick aims turret
+    const lx = gp.axes[0] || 0;
+    const ly = gp.axes[1] || 0;
+    if (Math.hypot(lx, ly) > 0.22) {
+      this.pointerX = this.planet.x + lx * 240;
+      this.pointerY = this.planet.y + ly * 240;
+    }
+
+    // Right stick moves reticle
+    const rx = gp.axes[2] || 0;
+    const ry = gp.axes[3] || 0;
+    if (Math.hypot(rx, ry) > 0.2) {
+      const speed = 650;
+      this.gamepadReticleX = Math.max(40, Math.min(this.width - 40, this.gamepadReticleX + rx * speed * 0.016));
+      this.gamepadReticleY = Math.max(40, Math.min(this.height - 40, this.gamepadReticleY + ry * speed * 0.016));
+    }
+
+    const isPressed = (idx) => gp.buttons[idx] && (gp.buttons[idx].pressed || gp.buttons[idx].value > 0.5);
+    const wasJustPressed = (idx) => isPressed(idx) && !this.gamepadPrevButtons[idx];
+
+    // RT (button 7) or A (button 0): Spark Nova
+    if (wasJustPressed(7) || wasJustPressed(0)) {
+      this.triggerSparkNova(this.gamepadReticleX, this.gamepadReticleY);
+    }
+    // X (button 2): Skill Q (Ion Beam)
+    if (wasJustPressed(2)) {
+      this.triggerSkill('Q');
+    }
+    // Y (button 3): Skill W (EMP Wave)
+    if (wasJustPressed(3)) {
+      this.triggerSkill('W');
+    }
+    // B (button 1): Skill E (Aegis Overdrive)
+    if (wasJustPressed(1)) {
+      this.triggerSkill('E');
+    }
+    // RB (button 5): Skill R (Deploy Structure)
+    if (wasJustPressed(5)) {
+      this.deployStructure();
+    }
+    // Start (button 9): Pause
+    if (wasJustPressed(9)) {
+      this.togglePause();
+    }
+
+    for (let i = 0; i < gp.buttons.length; i++) {
+      this.gamepadPrevButtons[i] = isPressed(i);
+    }
+  }
+
+  renderGamepadReticle(ctx) {
+    if (!this.gamepadConnected || this.state !== 'PLAYING') return;
+    const rx = this.gamepadReticleX;
+    const ry = this.gamepadReticleY;
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(rx, ry, 14, 0, Math.PI * 2);
+    ctx.strokeStyle = '#00e5ff';
+    ctx.lineWidth = 2;
+    ctx.shadowColor = '#00e5ff';
+    ctx.shadowBlur = 10;
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(rx - 20, ry);
+    ctx.lineTo(rx - 8, ry);
+    ctx.moveTo(rx + 8, ry);
+    ctx.lineTo(rx + 20, ry);
+    ctx.moveTo(rx, ry - 20);
+    ctx.lineTo(rx, ry - 8);
+    ctx.moveTo(rx, ry + 8);
+    ctx.lineTo(rx, ry + 20);
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.restore();
   }
 
   startMission(planetId = 1, isEndless = false) {
@@ -324,6 +469,15 @@ export class GameEngine {
     if (this.wingman) {
       this.wingman.mines = [];
     }
+    if (this.wingman2) {
+      this.wingman2.mines = [];
+    }
+    if (this.structures) {
+      this.structures.reset();
+    }
+    this.solarEmberZones = [];
+    this.turretShotCount = 0;
+    this.relicChronoStasisCooldown = 0;
   }
 
   setupWaveSpawns() {
@@ -464,6 +618,37 @@ export class GameEngine {
       blastRadius *= 1.35;
     }
 
+    // Singularity Lens Relic: Inward Gravitational Pull (135px)
+    if (this.hasRelic('singularityLens')) {
+      for (const alien of this.aliens) {
+        if (!alien.alive) continue;
+        const dist = Math.hypot(alien.x - targetX, alien.y - targetY);
+        if (dist > 0 && dist <= 320) {
+          const pullAngle = Math.atan2(targetY - alien.y, targetX - alien.x);
+          const pullDist = Math.min(dist - 10, 135);
+          if (pullDist > 0) {
+            alien.x += Math.cos(pullAngle) * pullDist;
+            alien.y += Math.sin(pullAngle) * pullDist;
+          }
+        }
+      }
+      this.particles.spawnNovaRing(targetX, targetY, '#e040fb', blastRadius * 1.3);
+      this.particles.addFloater(targetX, targetY - 32, '🌀 SINGULARITY PULL!', '#e040fb', 15);
+    }
+
+    // Supernova Echo Relic: 2.5s Solar Ember Burning Zone (35 dmg/s DoT)
+    if (this.hasRelic('supernovaEcho')) {
+      this.solarEmberZones.push({
+        x: targetX,
+        y: targetY,
+        radius: blastRadius * 0.95,
+        life: 2.5,
+        maxLife: 2.5,
+        dps: 35
+      });
+      this.particles.addFloater(targetX, targetY + 22, '🔥 SOLAR EMBER ZONE', '#ff9800', 13);
+    }
+
     if (this.isTutorialActive && this.tutorialStep === 2) {
       this.advanceTutorial(3);
     }
@@ -482,7 +667,10 @@ export class GameEngine {
   }
 
   addScreenShake(intensity = 6, duration = 0.2) {
-    this.shakeIntensity = Math.max(this.shakeIntensity, intensity);
+    const settings = this.getSettings();
+    const scale = (settings.screenShake ?? 100) / 100;
+    if (scale <= 0) return;
+    this.shakeIntensity = Math.max(this.shakeIntensity, intensity * scale);
     this.shakeTimer = duration;
   }
 
@@ -531,14 +719,23 @@ export class GameEngine {
       this.particles.addFloater(x, y, `⚡ +2 NOVAS & +${shieldRestored} SHIELD!`, '#00e5ff', 18);
       this.showToast('⚡ NOVA & SHIELD SURGE! +2 NOVAS & +35% SHIELD', '#00e5ff');
     }
+
+    if (this.hasRelic('starlightSynth')) {
+      this.novaCharges = Math.min(this.maxNovaCharges, this.novaCharges + 1);
+      this.particles.addFloater(x, y - 24, '+1 NOVA (STARLIGHT SYNTH)', '#ffd700', 14);
+    }
   }
 
   onAsteroidShattered(x, y) {
-    saveSystem.addShards(15);
+    let shardReward = 15;
+    if (this.hasRelic('starlightSynth')) {
+      shardReward = Math.round(shardReward * 1.35);
+    }
+    saveSystem.addShards(shardReward);
     audio.playShardPickup();
     this.particles.spawnDebris(x, y, '#94a3b8', 14);
     this.particles.spawnCosmicSpark(x, y, 3);
-    this.particles.addFloater(x, y, '+15 SHARDS! ASTEROID SHATTER!', '#ffd700', 16);
+    this.particles.addFloater(x, y, `+${shardReward} SHARDS! ASTEROID SHATTER!`, '#ffd700', 16);
     this.addScreenShake(6, 0.2);
 
     // Kinetic shockwave (65px, damages nearby aliens for 40 dmg)
@@ -580,6 +777,14 @@ export class GameEngine {
     this.maxCombo = Math.max(this.maxCombo, this.combo);
     audio.playChainChime(this.combo);
 
+    // Vampiric Core Relic: Heal Core HP + Shield on x8+ Combo
+    if (this.hasRelic('vampiricCore') && this.combo >= 8) {
+      this.planet.coreHp = Math.min(this.planet.maxCoreHp, this.planet.coreHp + 15);
+      this.planet.restoreShield(25);
+      this.particles.spawnNovaRing(this.planet.x, this.planet.y, '#00e676', 60);
+      this.particles.addFloater(this.planet.x, this.planet.y - 25, 'VAMPIRIC DRAIN +HP/SHIELD!', '#00e676', 13);
+    }
+
     // Nova kill recharge energy (+14% per kill, +15% bonus for Pulse Striker)
     const isStriker = this.turret && this.turret.chassis === 'striker';
     this.novaProgress += this.killRechargeRate * (isStriker ? 1.15 : 1.0);
@@ -590,6 +795,15 @@ export class GameEngine {
 
     if (alien === this.activeBoss) {
       this.activeBoss = null;
+    }
+
+    // Defeating any Sector Boss drops a guaranteed Ancient Cosmic Relic
+    if (alien.classKey === 'BOSS') {
+      const drop = saveSystem.unlockRandomRelic();
+      if (drop.unlocked) {
+        this.showToast(`🏺 ANCIENT RELIC DISCOVERED: ${drop.relic.name.toUpperCase()}!`, '#ffd700');
+        this.particles.addFloater(alien.x, alien.y - 60, `🏺 ${drop.relic.name}!`, '#ffd700', 18);
+      }
     }
 
     // Drop magnetic Cosmic Sparks (+✦)
@@ -747,6 +961,9 @@ export class GameEngine {
       }
     }
 
+    // Poll connected Gamepad
+    this.pollGamepad();
+
     // 1. Update Central Planet & Aegis Shield
     this.planet.update(dt, isOverdrive);
 
@@ -789,6 +1006,16 @@ export class GameEngine {
       this.planet.y,
       isOverdrive,
       (bolts, angle) => {
+        if (this.hasRelic('overchargedCoil')) {
+          this.turretShotCount++;
+          if (this.turretShotCount % 4 === 0) {
+            for (const b of bolts) {
+              b.isOvercharged = true;
+              b.damage = Math.round(b.damage * 2.2);
+              b.color = '#ffd700';
+            }
+          }
+        }
         this.projectiles.spawnTurretBolts(this.planet.x, this.planet.y, this.planet.planetRadius, bolts);
       },
       isOverclock
@@ -828,9 +1055,39 @@ export class GameEngine {
       );
     }
 
-    // 3.5. Update Autonomous AI Wingman Fighter (WING-01)
+    // 3.5. Update Autonomous AI Wingman Fighters (WING-01 & WING-02)
     if (this.wingmanActive && this.wingman) {
       this.wingman.update(dt, this);
+    }
+    if (this.wingmanActive && this.wingman2 && this.hasRelic('twinWingman')) {
+      this.wingman2.update(dt, this);
+    }
+
+    // Deployable Orbital Structures Update
+    this.structures.update(dt);
+
+    // Solar Ember Burning Zones Update
+    for (let i = this.solarEmberZones.length - 1; i >= 0; i--) {
+      const zone = this.solarEmberZones[i];
+      zone.life -= dt;
+      const dps = zone.dps || 35;
+      for (const alien of this.aliens) {
+        if (!alien.alive) continue;
+        const dist = Math.hypot(alien.x - zone.x, alien.y - zone.y);
+        if (dist <= zone.radius) {
+          const dmg = dps * dt;
+          const destroyed = alien.takeDamage(dmg);
+          this.damageSources.nova += dmg;
+          if (destroyed) this.onAlienDestroyed(alien, { x: zone.x, y: zone.y });
+        }
+      }
+      if (zone.life <= 0) {
+        this.solarEmberZones.splice(i, 1);
+      }
+    }
+
+    if (this.relicChronoStasisCooldown > 0) {
+      this.relicChronoStasisCooldown = Math.max(0, this.relicChronoStasisCooldown - dt);
     }
 
     // 4. Update Tactical Skills
@@ -893,7 +1150,8 @@ export class GameEngine {
       this.supplyPods,
       enemySpeedScale,
       (ax, ay) => this.onAsteroidShattered(ax, ay),
-      (px, py, bType) => this.onSupplyPodDestroyed(px, py, bType)
+      (px, py, bType) => this.onSupplyPodDestroyed(px, py, bType),
+      this.structures
     );
 
     // 6. Spawn Alien Wave Incursions
@@ -984,7 +1242,8 @@ export class GameEngine {
       this.hazards,
       this.supplyPods,
       (ax, ay) => this.onAsteroidShattered(ax, ay),
-      (px, py, bType) => this.onSupplyPodDestroyed(px, py, bType)
+      (px, py, bType) => this.onSupplyPodDestroyed(px, py, bType),
+      this.structures
     );
 
     // 9. Wave Progression / Victory Check
@@ -1042,6 +1301,14 @@ export class GameEngine {
 
     // Launch celebratory fireworks from surface cyber-cities
     this.planet.triggerVictoryFireworks();
+
+    // Guaranteed Ancient Relic drop for clearing Titan Protocol or Daily Anomaly
+    if (this.isTitanProtocolMode || this.isDailyAnomalyMode) {
+      const drop = saveSystem.unlockRandomRelic();
+      if (drop.unlocked) {
+        this.showToast(`🏺 ANCIENT RELIC DISCOVERED: ${drop.relic.name.toUpperCase()}!`, '#ffd700');
+      }
+    }
 
     let earnedShards = 0;
     if (this.isTitanProtocolMode) {
@@ -1333,6 +1600,33 @@ export class GameEngine {
       sat.render(ctx);
     }
 
+    // Render Autonomous AI Wingman Fighters (WING-01 & WING-02)
+    if (this.wingmanActive && this.wingman) {
+      this.wingman.render(ctx);
+    }
+    if (this.wingmanActive && this.wingman2 && this.hasRelic('twinWingman')) {
+      this.wingman2.render(ctx);
+    }
+
+    // Render Deployable Orbital Structures
+    this.structures.render(ctx);
+
+    // Render Solar Ember Burning Zones (Supernova Echo Relic)
+    for (const zone of this.solarEmberZones) {
+      const alpha = Math.max(0, zone.life / zone.maxLife);
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(zone.x, zone.y, zone.radius, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(255, 152, 0, ${alpha * 0.22})`;
+      ctx.fill();
+      ctx.strokeStyle = `rgba(255, 215, 0, ${alpha * 0.75})`;
+      ctx.lineWidth = 2.0;
+      ctx.setLineDash([5, 5]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.restore();
+    }
+
     // 7. Render Active Tactical Skills (Ion Beam & EMP)
     this.skills.render(ctx, this.planet.x, this.planet.y);
 
@@ -1345,6 +1639,24 @@ export class GameEngine {
     // 8. Render Aliens
     for (const alien of this.aliens) {
       alien.render(ctx);
+    }
+
+    // High-Contrast Threat Rings (Settings Toggle)
+    if (this.getSettings().threatRings) {
+      for (const alien of this.aliens) {
+        if (!alien.alive) continue;
+        if (alien.isBoss || alien.classKey === 'DREADNOUGHT' || (alien.speed && alien.speed > 80)) {
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(alien.x, alien.y, alien.radius + 10, 0, Math.PI * 2);
+          ctx.strokeStyle = alien.isBoss ? 'rgba(255, 23, 68, 0.75)' : 'rgba(245, 158, 11, 0.6)';
+          ctx.lineWidth = 1.5;
+          ctx.setLineDash([3, 4]);
+          ctx.stroke();
+          ctx.setLineDash([]);
+          ctx.restore();
+        }
+      }
     }
 
     // Tutorial Step 2: Draw pulsing golden target reticle ring on nearest alien
@@ -1386,6 +1698,9 @@ export class GameEngine {
 
     // 10. Render Particles, Chain Novas, Sparks, and Floating Combat Callouts
     this.particles.render(ctx);
+
+    // 11. Render Gamepad Tactical Reticle
+    this.renderGamepadReticle(ctx);
 
     ctx.restore();
 
@@ -1527,6 +1842,32 @@ export class GameEngine {
     } else {
       if (cdEEl) cdEEl.classList.add('hidden');
       if (cdFillE) cdFillE.style.height = '0%';
+    }
+
+    // Skill R: Deployable Orbital Structure Cooldown
+    const cdREl = document.getElementById('skillCdR');
+    const cdFillR = document.getElementById('cdFillR');
+    const labelR = document.getElementById('skillRLabel');
+    if (this.structures) {
+      if (labelR) {
+        const chassis = this.turret?.chassisId || 'striker';
+        if (chassis === 'tesla') labelR.textContent = 'GRAV-WELL';
+        else if (chassis === 'railgun') labelR.textContent = 'FLAK BATT';
+        else labelR.textContent = 'PRISM PYLON';
+      }
+      if (this.structures.cooldownTimer > 0) {
+        if (cdREl) {
+          cdREl.classList.remove('hidden');
+          cdREl.textContent = `${this.structures.cooldownTimer.toFixed(1)}s`;
+        }
+        if (cdFillR) {
+          const pct = this.structures.getCooldownRatio() * 100;
+          cdFillR.style.height = `${pct}%`;
+        }
+      } else {
+        if (cdREl) cdREl.classList.add('hidden');
+        if (cdFillR) cdFillR.style.height = '0%';
+      }
     }
 
     // Auto-Fire Toggle Label

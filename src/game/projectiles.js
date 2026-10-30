@@ -34,6 +34,8 @@ export class ProjectileManager {
         turretLevel: b.turretLevel || 0,
         isRailgun: !!b.isRailgun,
         isDirectPierce: !!b.isDirectPierce,
+        isOvercharged: !!b.isOvercharged,
+        speed: b.speed || 520,
         chassis: b.chassis || 'striker',
         source: 'turret',
         alive: true
@@ -53,6 +55,8 @@ export class ProjectileManager {
       pierce: config.pierce || 1,
       isRocket: !!config.isRocket,
       splashRadius: config.splashRadius || 0,
+      isOvercharged: !!config.isOvercharged,
+      speed: config.speed || 520,
       source: config.source || 'turret',
       alive: true
     });
@@ -108,12 +112,17 @@ export class ProjectileManager {
     }
   }
 
-  update(dt, canvasWidth, canvasHeight, aliens, planet, onAlienHitCallback, onTorpedoDestroyedCallback, onBossPhase2Callback = null, hazardManager = null, supplyPodManager = null, speedScale = 1.0, onAsteroidShatterCallback = null, onPodDestroyedCallback = null) {
+  update(dt, canvasWidth, canvasHeight, aliens, planet, onAlienHitCallback, onTorpedoDestroyedCallback, onBossPhase2Callback = null, hazardManager = null, supplyPodManager = null, speedScale = 1.0, onAsteroidShatterCallback = null, onPodDestroyedCallback = null, structureManager = null) {
     // 1. Update Player Plasma Bolts
     for (let i = this.bolts.length - 1; i >= 0; i--) {
       const b = this.bolts[i];
       b.x += b.vx * dt;
       b.y += b.vy * dt;
+
+      // Check laser refraction through Solar Prism Pylons
+      if (b.alive && structureManager) {
+        structureManager.checkRefractPylons(b);
+      }
 
       // Check collision with Torpedoes (shoot down torpedoes!)
       for (const torp of this.torpedoes) {
@@ -158,7 +167,52 @@ export class ProjectileManager {
           if (!alien.alive) continue;
           const d = Math.hypot(alien.x - b.x, alien.y - b.y);
           if (d <= alien.radius + 6) {
-            if (b.isRailgun) {
+            if (b.isOvercharged) {
+              // Overcharged Coil: 2.2x primary damage + 2 golden chain arcs
+              const destroyed = alien.takeDamage(b.damage, b.x, b.y, false, onBossPhase2Callback);
+              if (onAlienHitCallback) onAlienHitCallback(alien, destroyed, b.x, b.y, b.damage, b.source || 'turret');
+
+              const candidates = [];
+              for (const other of aliens) {
+                if (other === alien || !other.alive) continue;
+                const cDist = Math.hypot(other.x - alien.x, other.y - alien.y);
+                if (cDist <= 115) {
+                  candidates.push({ alien: other, dist: cDist });
+                }
+              }
+              candidates.sort((a, b) => a.dist - b.dist);
+
+              if (candidates[0]) {
+                const target1 = candidates[0].alien;
+                const k1 = target1.takeDamage(b.damage * 0.65, target1.x, target1.y, false, onBossPhase2Callback);
+                if (onAlienHitCallback) onAlienHitCallback(target1, k1, target1.x, target1.y, b.damage * 0.65, b.source || 'turret');
+                this.teslaArcs.push({
+                  x1: alien.x,
+                  y1: alien.y,
+                  x2: target1.x,
+                  y2: target1.y,
+                  timer: 0.15,
+                  maxTimer: 0.15,
+                  color: '#ffd700'
+                });
+              }
+
+              if (candidates[1]) {
+                const target2 = candidates[1].alien;
+                const origin = candidates[0] ? candidates[0].alien : alien;
+                const k2 = target2.takeDamage(b.damage * 0.45, target2.x, target2.y, false, onBossPhase2Callback);
+                if (onAlienHitCallback) onAlienHitCallback(target2, k2, target2.x, target2.y, b.damage * 0.45, b.source || 'turret');
+                this.teslaArcs.push({
+                  x1: origin.x,
+                  y1: origin.y,
+                  x2: target2.x,
+                  y2: target2.y,
+                  timer: 0.15,
+                  maxTimer: 0.15,
+                  color: '#00e5ff'
+                });
+              }
+            } else if (b.isRailgun) {
               // Railgun Lancer: +50% bonus dmg against Solar Dreadnoughts & Mothership Bosses, ignores shields
               let hitDmg = b.damage;
               if (alien.classKey === 'DREADNOUGHT' || alien.classKey === 'BOSS') {
@@ -298,8 +352,38 @@ export class ProjectileManager {
         const d = Math.hypot(planet.x - torp.x, planet.y - torp.y);
         const hitRadius = planet.shield > 0 ? planet.shieldRadius : planet.planetRadius;
         if (d <= hitRadius) {
-          planet.damage(torp.damage, torp.x, torp.y);
-          torp.alive = false;
+          // Check aegisMirror relic: When shield > 50%, 40% chance to ricochet torpedoes back as homing missiles
+          const hasAegisMirror = (planet.engine && planet.engine.hasRelic && planet.engine.hasRelic('aegisMirror'));
+          const shieldPct = planet.maxShield > 0 ? (planet.shield / planet.maxShield) : 0;
+          if (hasAegisMirror && shieldPct > 0.5 && Math.random() < 0.40) {
+            torp.alive = false;
+            let targetAlien = null;
+            let minDist = 99999;
+            for (const a of aliens) {
+              if (!a.alive) continue;
+              const da = Math.hypot(a.x - torp.x, a.y - torp.y);
+              if (da < minDist) { minDist = da; targetAlien = a; }
+            }
+            const ricochetAngle = targetAlien ? Math.atan2(targetAlien.y - torp.y, targetAlien.x - torp.x) : (torp.angle + Math.PI);
+            this.addPlasmaBolt({
+              x: torp.x,
+              y: torp.y,
+              angle: ricochetAngle,
+              speed: 560,
+              damage: torp.damage * 1.5,
+              color: '#00e5ff',
+              isRocket: true,
+              splashRadius: 35,
+              source: 'turret'
+            });
+            if (planet.engine?.particles) {
+              planet.engine.particles.spawnNovaRing(torp.x, torp.y, '#00e5ff', 30);
+              planet.engine.particles.addFloater(torp.x, torp.y - 12, 'AEGIS RICOCHET!', '#00e5ff', 12);
+            }
+          } else {
+            planet.damage(torp.damage, torp.x, torp.y);
+            torp.alive = false;
+          }
         }
       }
 
@@ -392,7 +476,24 @@ export class ProjectileManager {
       ctx.translate(b.x, b.y);
       ctx.rotate(b.angle);
 
-      if (b.isRailgun) {
+      if (b.isOvercharged) {
+        // High-energy overcharged golden plasma bolt
+        ctx.beginPath();
+        ctx.moveTo(-16, 0);
+        ctx.lineTo(16, 0);
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 4.5;
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(-20, 0);
+        ctx.lineTo(20, 0);
+        ctx.strokeStyle = '#ffd700';
+        ctx.lineWidth = 3.0;
+        ctx.shadowColor = '#ffd700';
+        ctx.shadowBlur = 18;
+        ctx.stroke();
+      } else if (b.isRailgun) {
         // High-velocity hyper-dense golden slug
         ctx.beginPath();
         ctx.moveTo(-16, 0);

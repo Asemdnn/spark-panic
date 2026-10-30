@@ -1,48 +1,58 @@
-# Spark Panic: Planetary Invasion Defense — Guardian of the Universe (v2.4 Titan Protocol & Wingman AI Edition)
+# Spark Panic: Planetary Invasion Defense — Guardian of the Universe (v2.5 Commander's Ultimate Edition)
 
 [![Deploy to GitHub Pages](https://github.com/Asemdnn/spark-panic/actions/workflows/deploy.yml/badge.svg)](https://github.com/Asemdnn/spark-panic/actions/workflows/deploy.yml)
 [![Live Demo](https://img.shields.io/badge/Play_Live-GitHub_Pages-00e5ff?style=flat&logo=github)](https://asemdnn.github.io/spark-panic/)
 [![PWA Ready](https://img.shields.io/badge/PWA-Ready-00e676?style=flat&logo=pwa)](https://asemdnn.github.io/spark-panic/)
 
-**Spark Panic 2.4** is a high-octane, self-contained HTML5 Canvas + Tailwind CSS arcade strategy and action planetary defense game. You are the **Orbital Guardian**, defending living celestial worlds and their cyber-cities against 360° incoming waves of relentless alien invasion fleets.
+**Spark Panic 2.5 ("Commander's Ultimate Edition")** is a high-octane, self-contained HTML5 Canvas + Tailwind CSS arcade strategy and action planetary defense game. You are the **Orbital Guardian**, defending living celestial worlds and their cyber-cities against 360° incoming waves of relentless alien invasion fleets.
 
 - 🎮 **Play Online**: [https://asemdnn.github.io/spark-panic/](https://asemdnn.github.io/spark-panic/)
 - 📦 **GitHub Repository**: [https://github.com/Asemdnn/spark-panic](https://github.com/Asemdnn/spark-panic)
 
 ---
 
-## 🌟 What's New in v2.4: Titan Protocol, Wingman AI & Prestige System
+## 🌟 What's New in v2.5: Commander's Ultimate Edition
 
-1. **👑 Titan Protocol (4-Boss Rush Gauntlet Mode)**:
-   - Accessible directly from the **Title Screen** and **Star Map** header.
-   - 4 back-to-back supreme flagship encounters:
-     - **Wave 1**: *Dreadnought Vexor* (Sector I Flagship) + Scout/Interceptor escort + `Asteroid Drift`.
-     - **Wave 2**: *Mothership Kaelen* (Sector II Flagship) + Cryo-Cruiser/Phaser escort + `Ion Nebula`.
-     - **Wave 3**: *Void Harbinger* (Sector III Flagship) + Dropship/Dreadnought escort + `Gravity Anomaly`.
-     - **Wave 4**: *The Apex Leviathan* (Sector IV Supreme Flagship) + Elite Armada escort + `Solar Corona`.
-   - **4-Second Orbital Pit-Stop**: Defeating each boss triggers a tactical intermission restoring **`+35% Planetary Shield`**, **`+15% Core HP`**, and **`+2 Spark Nova Charges`** with repair nanite visuals.
-   - **Rewards & Records**: Fast-time completion tracking (`bestBossRushTime`), **`+300 ✦`** first-clear bonus, **`+100 ✦`** repeat clear, and the 7th Guardian Trophy **`👑 Titan Protocol Conqueror`**.
+1. **🏺 Ancient Cosmic Relics (8 Artifacts & 3-Slot Passive Loadout)**:
+   - Deep RPG theorycrafting layer equipped in the **Guardian Armory (`#modalArmory`)**.
+   - Equip up to **3 active Relics** simultaneously:
+     - ⏳ **Chrono-Stasis Prism**: Triggers a 4.0s 65% Time-Dilation Slow Field across all aliens when Aegis Shield breaks.
+     - 🩸 **Vampiric Core Matrix**: Restores +15 Core HP and +25 Shield whenever a combo reaches x8 or higher.
+     - 🌀 **Singularity Gravity Lens**: Spark Novas pull aliens within 320px inward toward the blast center by 135px.
+     - ✈️ **Twin-Wingman Transponder**: Deploys a second autonomous fighter (**`WING-02`**) in opposite orbital formation.
+     - ⚡ **Overcharged Capacitor Coil**: Every 4th turret shot fires an Overcharged Plasma Bolt (2.2x dmg + 2 chain arcs).
+     - 🛡️ **Aegis Mirror Plating**: When Shield > 50%, 40% chance to ricochet torpedoes back as friendly homing missiles!
+     - 💎 **Starlight Synthesizer**: +35% Star Shard drops and Supply Pods grant +1 bonus Spark Nova charge.
+     - ☀️ **Supernova Echo Core**: Novas leave a 2.5s burning Solar Ember Zone dealing 35 dmg/s DoT.
+   - **Guaranteed Relic Drops**: Defeating any Sector Boss, completing Daily Anomaly, or clearing Titan Protocol awards a guaranteed unowned Relic!
 
-2. **🤖 Autonomous AI Wingman Fighter (`WING-01`) & 3 Tactical Doctrines**:
-   - Free-flying delta-wing starfighter patrolling deep orbital space outside the satellite perimeter.
-   - Automatically unlocks when **Autonomous Satellites reach Lv.2** or can be unlocked early in the Armory for **`✦ 200`** Star Shards.
-   - **3 Selectable Combat Doctrines**:
-     - `🛡️ AEGIS INTERCEPTOR`: High-speed patrol (`190 px/s`), prioritizes red alien siege torpedoes and fast Scouts with rapid twin cyan pulse lasers (`520 px/s`, dmg 14).
-     - `⚔️ VANGUARD STRIKER`: Seeks out highest-HP capital targets (Bosses, Dreadnoughts), firing heavy golden plasma rockets every 1.6s (`+40%` armor damage + mini-splash).
-     - `🧲 NOVA HARVESTER`: Sweeps for Sparks & Supply Pods, boosts passive Nova recharge by `+20%`, and drops floating **Plasma Proximity Mines** every 5.0s (70px chain detonation).
+2. **🛰️ Deployable Orbital Defense Structures (`[R]` / `[4]` / HUD Button)**:
+   - Deploy tactical defensive stations into mid-orbit (`shieldRadius + 75px`) for 14.0s (16s base cooldown, scales with reactor upgrades, max 2 active).
+   - Adapts to equipped Turret Chassis:
+     - **Solar Prism Pylon** (Pulse Striker): Refracts incoming turret lasers into 3 superheated fan beams (+30% dmg) and point-defense zaps torpedoes.
+     - **Grav-Well Anchor** (Tesla Cannon): Generates a continuous 110px 50% slow aura and emits chain lightning every 1.2s.
+     - **Aegis Flak Battery** (Railgun Lancer): Rotary dual-flak turret firing rapid kinetic intercept bursts at torpedoes and capital ships.
 
-3. **🌌 Galactic Prestige ("Hyperdrive Ascension") & Turret Hull Skins**:
-   - **Hyperdrive Ascension (Prestige)**: Unlocked after earning 45+ Campaign Stars or clearing Planet 20. Ascend up to **Tier V** to earn permanent **`+25% Star Shards`** and **`+20% Score`** per tier while aliens gain `+20%` HP and speed. All chassis loadouts, upgrades, wingman doctrines, shards, trophies, and skins are 100% preserved.
-   - **Turret Hull Skins & Plasma Trails**:
-     - *Cyan Sentinel*: Standard cyber-cyan titanium chassis (Default, 0 ★).
-     - *Solar Sovereign*: Golden star-metal hull radiating solar warmth (20 ★).
-     - *Crimson Valkyrie*: Aggressive crimson nano-alloy hull (40 ★).
-     - *Void Prismatic*: Polychromatic quantum-woven hull (60 ★ or Ascension Tier I+).
+3. **📸 Shareable Holographic "Commander Battle Card" Generator**:
+   - High-resolution **1200×630 offscreen canvas** export in Victory, Defeat, and Codex modals.
+   - Renders deep-space starfield, cybernetic frame, Commander rank, star badges, telemetry sparkline, and active loadout (Chassis, Wingman, Skin, and 3 Relics).
+   - Instant **`💾 Download PNG Card`** and **`📋 Copy Image / Stats to Clipboard`** with Discord/social text fallback.
 
-4. **📊 Post-Battle Tactical Telemetry Sparkline & Self-Contained PWA**:
-   - High-fidelity **280x56px HTML5 Canvas Sparkline Graph** in Victory and Defeat modals plotting the real-time Planetary Integrity curve (`#00e676`) alongside Combo Peak spikes (`#e040fb`).
-   - **Damage Attribution Breakdown Bar**: Computes percentage contributions from Turret Cannons vs Spark Novas vs AI Wingman/Satellites.
-   - **Zero-404 Data-URI Manifest**: Embedded data-URI `<link rel="manifest">` with inline SVG icons guaranteeing clean launches across all GitHub Pages subpaths.
+4. **🎮 Full HTML5 Gamepad / Controller Support & ⚙️ Tactical Settings**:
+   - **Twin-Stick Gamepad Loop**: Left stick aims turret, Right stick moves glowing tactical reticle, RT/A detonates Spark Nova, LT fires cannon, X/Y/B/RB trigger Q/W/E/R skills, Start pauses.
+   - **Tactical Settings Modal (`[O]` / ⚙️)**: Screen Shake (100% / 50% / Off), Particle Density (High / Low), High-Contrast Threat Rings (On / Off), Damage Numbers & Floating Text (All / Combos Only / Off).
+   - **Title UI Polish**: Fixed duplicate crown glyph on `👑 TITAN PROTOCOL GAUNTLET` button.
+
+---
+
+## 🌟 Previous Update Highlights
+
+- **👑 Titan Protocol (4-Boss Rush Gauntlet Mode)**: Back-to-back mothership encounters with 4-second orbital repair pit-stops.
+- **🤖 Autonomous AI Wingman Fighter (`WING-01`) & 3 Doctrines**: Interceptor, Vanguard, and Harvester doctrines.
+- **🌌 Galactic Prestige ("Hyperdrive Ascension")**: Ascend up to Tier V for permanent shard & score multipliers with custom turret skins.
+- **📊 Post-Battle Tactical Telemetry**: Real-time integrity curve and damage attribution breakdown.
+- **⚡ Daily Cosmic Anomaly**: Deterministic daily invasion challenges with unique tactical mutators.
+- **🎵 Procedural Synthwave Web Audio BGM**: Dynamic chord progressions, basslines, and boss wave tempo boosts.
 
 ---
 

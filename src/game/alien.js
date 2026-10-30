@@ -21,6 +21,8 @@ export class Alien {
 
     this.alive = true;
     this.frozenTimer = 0;
+    this.slowTimer = 0;
+    this.speedMultiplier = 1.0;
     this.pulsePhase = Math.random() * Math.PI * 2;
     this.heading = 0;
 
@@ -90,6 +92,10 @@ export class Alien {
     if (this.frozenTimer > 0) {
       this.frozenTimer -= dt;
       speedMult = 0.25; // 75% slowed
+    }
+    if (this.slowTimer > 0) {
+      this.slowTimer -= dt;
+      speedMult = Math.min(speedMult, this.speedMultiplier || 0.5);
     }
 
     const distToPlanet = Math.hypot(planetX - this.x, planetY - this.y);

@@ -1,6 +1,6 @@
-// Spark Panic 2.4 - Persistence & Upgrade Armory Save Engine
+// Spark Panic 2.5 - Persistence & Upgrade Armory Save Engine
 
-import { ARMORY_CONFIG, GUARDIAN_RANKS, TROPHIES, CHASSIS_CONFIG, TURRET_SKINS, WINGMAN_CONFIG, ASCENSION_CONFIG, TITAN_PROTOCOL_CONFIG } from '../config.js';
+import { ARMORY_CONFIG, GUARDIAN_RANKS, TROPHIES, CHASSIS_CONFIG, TURRET_SKINS, WINGMAN_CONFIG, ASCENSION_CONFIG, TITAN_PROTOCOL_CONFIG, COSMIC_RELICS, DEFAULT_SETTINGS } from '../config.js';
 
 const STORAGE_KEY = 'spark_panic_v2_save';
 
@@ -39,7 +39,10 @@ export class SaveSystem {
       selectedWingmanDoctrine: 'aegis',
       wingmanUnlocked: false,
       selectedTurretSkin: 'sentinel',
-      ascensionTier: 0
+      ascensionTier: 0,
+      equippedRelics: [],
+      unlockedRelics: {},
+      settings: { ...DEFAULT_SETTINGS }
     };
 
     if (typeof localStorage === 'undefined') return defaults;
@@ -69,7 +72,10 @@ export class SaveSystem {
         selectedWingmanDoctrine: parsed.selectedWingmanDoctrine || defaults.selectedWingmanDoctrine,
         wingmanUnlocked: !!parsed.wingmanUnlocked,
         selectedTurretSkin: parsed.selectedTurretSkin || defaults.selectedTurretSkin,
-        ascensionTier: typeof parsed.ascensionTier === 'number' ? parsed.ascensionTier : defaults.ascensionTier
+        ascensionTier: typeof parsed.ascensionTier === 'number' ? parsed.ascensionTier : defaults.ascensionTier,
+        equippedRelics: Array.isArray(parsed.equippedRelics) ? parsed.equippedRelics.slice(0, 3) : defaults.equippedRelics,
+        unlockedRelics: { ...(parsed.unlockedRelics || {}) },
+        settings: { ...DEFAULT_SETTINGS, ...(parsed.settings || {}) }
       };
     } catch (e) {
       console.warn('Failed to parse saved game data, using defaults', e);
@@ -374,7 +380,10 @@ export class SaveSystem {
         selectedWingmanDoctrine: parsed.selectedWingmanDoctrine || this.data.selectedWingmanDoctrine || 'aegis',
         wingmanUnlocked: parsed.wingmanUnlocked !== undefined ? !!parsed.wingmanUnlocked : this.data.wingmanUnlocked,
         selectedTurretSkin: parsed.selectedTurretSkin || this.data.selectedTurretSkin || 'sentinel',
-        ascensionTier: typeof parsed.ascensionTier === 'number' ? parsed.ascensionTier : (this.data.ascensionTier || 0)
+        ascensionTier: typeof parsed.ascensionTier === 'number' ? parsed.ascensionTier : (this.data.ascensionTier || 0),
+        equippedRelics: Array.isArray(parsed.equippedRelics) ? parsed.equippedRelics.slice(0, 3) : (this.data.equippedRelics || []),
+        unlockedRelics: { ...(this.data.unlockedRelics || {}), ...(parsed.unlockedRelics || {}) },
+        settings: { ...DEFAULT_SETTINGS, ...(this.data.settings || {}), ...(parsed.settings || {}) }
       };
       this.save();
       return true;
@@ -414,9 +423,95 @@ export class SaveSystem {
       selectedWingmanDoctrine: 'aegis',
       wingmanUnlocked: false,
       selectedTurretSkin: 'sentinel',
-      ascensionTier: 0
+      ascensionTier: 0,
+      equippedRelics: [],
+      unlockedRelics: {},
+      settings: { ...DEFAULT_SETTINGS }
     };
     this.save();
+  }
+
+  // Ancient Cosmic Relics System (v2.5)
+  isRelicUnlocked(id) {
+    if (!COSMIC_RELICS[id]) return false;
+    if (this.data.unlockedRelics && this.data.unlockedRelics[id]) return true;
+    const r = COSMIC_RELICS[id];
+    const totalStars = this.getTotalStars();
+    if (r.reqStars && totalStars >= r.reqStars) return true;
+    if (r.reqSector) {
+      const highestUnlocked = this.data.unlockedPlanet || 1;
+      const targetPlanet = r.reqSector * 5;
+      if (highestUnlocked > targetPlanet) return true;
+    }
+    return false;
+  }
+
+  unlockRelic(id, forceFree = false) {
+    if (!COSMIC_RELICS[id]) return false;
+    if (this.isRelicUnlocked(id)) return true;
+    const cost = COSMIC_RELICS[id].costShards || 0;
+    if (forceFree || this.data.shards >= cost) {
+      if (!forceFree && cost > 0) {
+        this.data.shards -= cost;
+      }
+      if (!this.data.unlockedRelics) this.data.unlockedRelics = {};
+      this.data.unlockedRelics[id] = true;
+      this.save();
+      return true;
+    }
+    return false;
+  }
+
+  unlockRandomRelic() {
+    const unowned = Object.keys(COSMIC_RELICS).filter(id => !this.isRelicUnlocked(id));
+    if (unowned.length === 0) return { unlocked: false, allUnlocked: true };
+    const chosen = unowned[Math.floor(Math.random() * unowned.length)];
+    if (!this.data.unlockedRelics) this.data.unlockedRelics = {};
+    this.data.unlockedRelics[chosen] = true;
+    this.save();
+    return { unlocked: true, relic: COSMIC_RELICS[chosen] };
+  }
+
+  isRelicEquipped(id) {
+    return Array.isArray(this.data.equippedRelics) && this.data.equippedRelics.includes(id);
+  }
+
+  equipRelic(id) {
+    if (!this.isRelicUnlocked(id)) return false;
+    if (!Array.isArray(this.data.equippedRelics)) this.data.equippedRelics = [];
+    if (this.data.equippedRelics.includes(id)) return true;
+    if (this.data.equippedRelics.length >= 3) {
+      return false; // slots full
+    }
+    this.data.equippedRelics.push(id);
+    this.save();
+    return true;
+  }
+
+  unequipRelic(id) {
+    if (!Array.isArray(this.data.equippedRelics)) return false;
+    const idx = this.data.equippedRelics.indexOf(id);
+    if (idx !== -1) {
+      this.data.equippedRelics.splice(idx, 1);
+      this.save();
+      return true;
+    }
+    return false;
+  }
+
+  getEquippedRelics() {
+    return (this.data.equippedRelics || []).map(id => COSMIC_RELICS[id]).filter(Boolean);
+  }
+
+  // Tactical Settings (v2.5)
+  getSettings() {
+    return { ...DEFAULT_SETTINGS, ...(this.data.settings || {}) };
+  }
+
+  updateSettings(newSettings) {
+    this.data.settings = { ...this.getSettings(), ...newSettings };
+    this.save();
+    return this.data.settings;
   }
 
   // Wingman System

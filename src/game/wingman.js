@@ -79,28 +79,29 @@ export class PlasmaProximityMine {
 }
 
 export class WingmanFighter {
-  constructor(engine) {
+  constructor(engine, callsign = 'WING-01', angleOffset = 0) {
     this.engine = engine;
+    this.callsign = callsign;
+    this.angleOffset = angleOffset;
     this.x = 0;
     this.y = 0;
     this.vx = 0;
     this.vy = 0;
-    this.angle = -Math.PI / 2;
+    this.angle = -Math.PI / 2 + angleOffset;
     this.doctrine = 'aegis'; // 'aegis' | 'vanguard' | 'harvester'
 
-    this.patrolAngle = 0;
+    this.patrolAngle = angleOffset;
     this.patrolRadius = 145;
     this.fireTimer = 0;
     this.mineTimer = 2.0;
     this.mines = [];
     this.trail = [];
     this.target = null;
-    this.callsign = 'WING-01';
 
     // Spawn near planet
     if (engine && engine.planet) {
-      this.x = engine.planet.x;
-      this.y = engine.planet.y - (engine.planet.planetRadius + 140);
+      this.x = engine.planet.x + Math.cos(-Math.PI / 2 + angleOffset) * (engine.planet.planetRadius + 140);
+      this.y = engine.planet.y + Math.sin(-Math.PI / 2 + angleOffset) * (engine.planet.planetRadius + 140);
     }
   }
 

@@ -1,9 +1,10 @@
-// Spark Panic 2.0 - Application Bootstrap & Event Controller
+// Spark Panic 2.5 - Application Bootstrap & Event Controller
 
-import { PLANETS, SECTORS, ALIEN_CLASSES, ARMORY_CONFIG, TROPHIES, GUARDIAN_RANKS, CHASSIS_CONFIG, getDailyAnomalyConfig, TITAN_PROTOCOL_CONFIG, WINGMAN_CONFIG, TURRET_SKINS, ASCENSION_CONFIG } from './config.js';
+import { PLANETS, SECTORS, ALIEN_CLASSES, ARMORY_CONFIG, TROPHIES, GUARDIAN_RANKS, CHASSIS_CONFIG, getDailyAnomalyConfig, TITAN_PROTOCOL_CONFIG, WINGMAN_CONFIG, TURRET_SKINS, ASCENSION_CONFIG, COSMIC_RELICS, STRUCTURE_CONFIG, DEFAULT_SETTINGS } from './config.js';
 import { audio } from './engine/audio.js';
 import { saveSystem } from './engine/storage.js';
 import { GameEngine } from './game/engine.js';
+import { BattleCardGenerator } from './ui/battle-card.js';
 import { ICON_SVG } from './ui/icons.js';
 
 // Register PWA Service Worker for Offline Play & Fast Launch
@@ -94,10 +95,14 @@ window.addEventListener('DOMContentLoaded', () => {
     } else if (key === 'B') {
       const isBgm = audio.toggleBgm();
       updateBgmButton(isBgm);
-    } else if (key === 'R') {
-      if (engine.state === 'PLAYING' || engine.state === 'DEFEAT' || engine.state === 'PAUSED') {
+    } else if (key === 'R' || key === '4') {
+      if (engine.state === 'PLAYING') {
+        engine.deployStructure();
+      } else if (engine.state === 'DEFEAT' || engine.state === 'PAUSED') {
         restartCurrent();
       }
+    } else if (key === 'O') {
+      openSettingsModal();
     }
   });
 
@@ -134,11 +139,19 @@ window.addEventListener('DOMContentLoaded', () => {
       });
     }
   });
+  document.getElementById('btnSkillR')?.addEventListener('click', () => {
+    if (engine.state === 'PLAYING') {
+      engine.deployStructure();
+    }
+  });
   document.getElementById('btnAutoFire')?.addEventListener('click', () => {
     engine.turret.autoFire = !engine.turret.autoFire;
   });
 
   // Top HUD Controls
+  document.getElementById('btnSettings')?.addEventListener('click', () => {
+    openSettingsModal();
+  });
   document.getElementById('btnTutorial')?.addEventListener('click', () => {
     audio.init();
     if (engine.state !== 'PLAYING') {
@@ -261,6 +274,7 @@ window.addEventListener('DOMContentLoaded', () => {
     renderChassisDeck();
     renderWingmanDeck();
     renderTurretSkinDeck();
+    renderRelicsDeck();
     engine.applyUpgrades();
     engine.showToast(`REFUNDED ${refunded} STAR SHARDS!`, '#00e676');
   });
@@ -381,7 +395,8 @@ window.addEventListener('DOMContentLoaded', () => {
   function hideAllModals() {
     const modals = [
       'modalTitle', 'modalStarMap', 'modalArmory', 'modalCodex',
-      'modalVictory', 'modalDefeat', 'modalPause', 'modalDailyAnomaly'
+      'modalVictory', 'modalDefeat', 'modalPause', 'modalDailyAnomaly',
+      'modalSettings', 'modalBattleCard'
     ];
     modals.forEach(id => {
       const el = document.getElementById(id);
@@ -699,6 +714,7 @@ window.addEventListener('DOMContentLoaded', () => {
     renderChassisDeck();
     renderWingmanDeck();
     renderTurretSkinDeck();
+    renderRelicsDeck();
     renderArmoryGrid();
     updateArmoryAscensionBtn();
   }
@@ -972,6 +988,112 @@ window.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  function renderRelicsDeck() {
+    const slotsContainer = document.getElementById('activeRelicSlots');
+    const gridContainer = document.getElementById('relicsGrid');
+    const countEl = document.getElementById('relicsEquippedCount');
+    if (!slotsContainer || !gridContainer) return;
+
+    const equipped = saveSystem.getEquippedRelics();
+    if (countEl) {
+      countEl.textContent = `${equipped.length} / 3 EQUIPPED`;
+    }
+
+    // 1. Render 3 Active Slots
+    slotsContainer.innerHTML = '';
+    for (let i = 0; i < 3; i++) {
+      const relicId = equipped[i];
+      const relic = relicId ? COSMIC_RELICS[relicId] : null;
+      const slotEl = document.createElement('div');
+      slotEl.className = `p-2 rounded-xl flex items-center gap-2 border transition ${
+        relic ? 'glass-card border-amber-500/60 bg-amber-500/10 cursor-pointer hover:border-amber-400' : 'border-dashed border-slate-800 bg-slate-950/40'
+      }`;
+
+      if (relic) {
+        slotEl.innerHTML = `
+          <div class="text-lg shrink-0">${relic.icon}</div>
+          <div class="flex-1 min-w-0">
+            <div class="text-[10px] font-orbitron font-black text-amber-300 truncate">${relic.name}</div>
+            <div class="text-[8px] text-slate-400 truncate">CLICK TO UNEQUIP</div>
+          </div>
+        `;
+        slotEl.addEventListener('click', () => {
+          audio.init();
+          saveSystem.unequipRelic(relicId);
+          engine.applyUpgrades();
+          renderRelicsDeck();
+        });
+      } else {
+        slotEl.innerHTML = `
+          <div class="w-full text-center py-1">
+            <div class="text-[9px] font-orbitron text-slate-600 font-bold">SLOT ${i + 1}</div>
+            <div class="text-[8px] text-slate-600">EMPTY</div>
+          </div>
+        `;
+      }
+      slotsContainer.appendChild(slotEl);
+    }
+
+    // 2. Render 8 Collectible Relics Grid
+    gridContainer.innerHTML = '';
+    for (const [id, relic] of Object.entries(COSMIC_RELICS)) {
+      const isUnlocked = saveSystem.isRelicUnlocked(id);
+      const isEquipped = saveSystem.isRelicEquipped(id);
+
+      const card = document.createElement('div');
+      card.className = `glass-card p-2.5 rounded-xl flex flex-col justify-between border transition ${
+        isEquipped
+          ? 'border-amber-400 ring-2 ring-amber-400/40 bg-amber-400/15 cursor-pointer'
+          : (isUnlocked
+            ? 'border-slate-700/60 hover:border-amber-500/60 bg-slate-900/40 cursor-pointer'
+            : 'border-slate-800/80 bg-slate-950/60 opacity-60')
+      }`;
+
+      card.innerHTML = `
+        <div>
+          <div class="flex items-center justify-between mb-1.5">
+            <div class="flex items-center gap-1.5">
+              <span class="text-base">${isUnlocked ? relic.icon : '🔒'}</span>
+              <span class="text-[10px] font-orbitron font-black ${isUnlocked ? 'text-white' : 'text-slate-500'} truncate">${relic.name}</span>
+            </div>
+            <span class="text-[8px] font-orbitron font-bold px-1.5 py-0.5 rounded ${
+              isEquipped ? 'bg-amber-400/20 text-amber-300 border border-amber-400/50' : (isUnlocked ? 'bg-cosmic-mint/20 text-cosmic-mint' : 'bg-slate-800 text-slate-500')
+            }">
+              ${isEquipped ? 'EQUIPPED' : (isUnlocked ? 'READY' : 'LOCKED')}
+            </span>
+          </div>
+          <p class="text-[9px] text-slate-300 leading-tight mb-2">${isUnlocked ? relic.desc : 'Defeat Sector Bosses or Anomaly to unlock'}</p>
+        </div>
+        <div class="text-[8px] font-orbitron font-bold text-center py-1 rounded-lg ${
+          isEquipped ? 'bg-amber-500/20 text-amber-300' : (isUnlocked ? 'bg-slate-800 hover:bg-amber-500 hover:text-slate-950 text-slate-300' : 'bg-slate-900 text-slate-600')
+        }">
+          ${isEquipped ? '✕ CLICK TO UNEQUIP' : (isUnlocked ? '✓ EQUIP (MAX 3)' : 'DEFEAT BOSS')}
+        </div>
+      `;
+
+      if (isUnlocked) {
+        card.addEventListener('click', () => {
+          audio.init();
+          if (isEquipped) {
+            saveSystem.unequipRelic(id);
+            engine.showToast(`UNEQUIPPED ${relic.name.toUpperCase()}`, '#ffd700');
+          } else {
+            const success = saveSystem.equipRelic(id);
+            if (success) {
+              engine.showToast(`EQUIPPED ${relic.name.toUpperCase()}!`, '#00e676');
+            } else {
+              engine.showToast('MAX 3 RELICS EQUIPPED! Unequip one first.', '#ff3366');
+            }
+          }
+          engine.applyUpgrades();
+          renderRelicsDeck();
+        });
+      }
+
+      gridContainer.appendChild(card);
+    }
+  }
+
   function updateArmoryAscensionBtn() {
     const btn = document.getElementById('btnArmoryAscension');
     const label = document.getElementById('armoryAscensionText');
@@ -1130,6 +1252,166 @@ window.addEventListener('DOMContentLoaded', () => {
       list.appendChild(card);
     }
   }
+
+  // ==================== TACTICAL SETTINGS MODAL ====================
+  function openSettingsModal() {
+    audio.init();
+    syncSettingsUI();
+    document.getElementById('modalSettings')?.classList.remove('hidden');
+  }
+
+  function syncSettingsUI() {
+    const s = saveSystem.getSettings();
+
+    // Screen shake
+    document.querySelectorAll('.btn-setting-shake').forEach(btn => {
+      const val = parseInt(btn.getAttribute('data-val'), 10);
+      const active = (s.screenShake === val);
+      btn.className = `btn-setting-shake px-2.5 py-1 rounded-lg text-[10px] font-orbitron font-bold border transition cursor-pointer ${
+        active ? 'bg-cosmic-cyan text-slate-950 border-cosmic-cyan shadow-[0_0_10px_rgba(0,229,255,0.4)]' : 'bg-slate-900 text-slate-400 border-slate-700 hover:border-slate-500'
+      }`;
+    });
+
+    // Particle density
+    document.querySelectorAll('.btn-setting-part').forEach(btn => {
+      const val = btn.getAttribute('data-val');
+      const active = (s.particleDensity === val);
+      btn.className = `btn-setting-part px-3 py-1 rounded-lg text-[10px] font-orbitron font-bold border transition cursor-pointer ${
+        active ? 'bg-cosmic-cyan text-slate-950 border-cosmic-cyan shadow-[0_0_10px_rgba(0,229,255,0.4)]' : 'bg-slate-900 text-slate-400 border-slate-700 hover:border-slate-500'
+      }`;
+    });
+
+    // Threat rings
+    document.querySelectorAll('.btn-setting-threat').forEach(btn => {
+      const val = (btn.getAttribute('data-val') === 'true');
+      const active = (s.threatRings === val);
+      btn.className = `btn-setting-threat px-3 py-1 rounded-lg text-[10px] font-orbitron font-bold border transition cursor-pointer ${
+        active ? 'bg-cosmic-cyan text-slate-950 border-cosmic-cyan shadow-[0_0_10px_rgba(0,229,255,0.4)]' : 'bg-slate-900 text-slate-400 border-slate-700 hover:border-slate-500'
+      }`;
+    });
+
+    // Floating text
+    document.querySelectorAll('.btn-setting-text').forEach(btn => {
+      const val = btn.getAttribute('data-val');
+      const active = (s.floatingText === val);
+      btn.className = `btn-setting-text px-2.5 py-1 rounded-lg text-[10px] font-orbitron font-bold border transition cursor-pointer ${
+        active ? 'bg-cosmic-cyan text-slate-950 border-cosmic-cyan shadow-[0_0_10px_rgba(0,229,255,0.4)]' : 'bg-slate-900 text-slate-400 border-slate-700 hover:border-slate-500'
+      }`;
+    });
+
+    updateGamepadBadge();
+  }
+
+  function updateGamepadBadge() {
+    const badge = document.getElementById('gamepadStatusBadge');
+    if (!badge) return;
+    const gamepads = (typeof navigator !== 'undefined' && navigator.getGamepads) ? navigator.getGamepads() : [];
+    let connected = false;
+    let name = '';
+    for (const gp of gamepads) {
+      if (gp && gp.connected) {
+        connected = true;
+        name = gp.id || 'GAMEPAD';
+        break;
+      }
+    }
+    if (connected) {
+      badge.textContent = `CONNECTED: ${name.slice(0, 16).toUpperCase()}`;
+      badge.className = 'text-[9px] font-orbitron font-bold px-2 py-0.5 rounded-full bg-cosmic-mint/20 text-cosmic-mint border border-cosmic-mint/40 animate-pulse';
+    } else {
+      badge.textContent = 'DISCONNECTED';
+      badge.className = 'text-[9px] font-orbitron font-bold px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700';
+    }
+  }
+
+  document.getElementById('btnSettingsClose')?.addEventListener('click', () => {
+    document.getElementById('modalSettings')?.classList.add('hidden');
+  });
+
+  document.querySelectorAll('.btn-setting-shake').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      audio.init();
+      const val = parseInt(e.currentTarget.getAttribute('data-val'), 10);
+      saveSystem.updateSettings({ screenShake: val });
+      syncSettingsUI();
+    });
+  });
+
+  document.querySelectorAll('.btn-setting-part').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      audio.init();
+      const val = e.currentTarget.getAttribute('data-val');
+      saveSystem.updateSettings({ particleDensity: val });
+      syncSettingsUI();
+    });
+  });
+
+  document.querySelectorAll('.btn-setting-threat').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      audio.init();
+      const val = (e.currentTarget.getAttribute('data-val') === 'true');
+      saveSystem.updateSettings({ threatRings: val });
+      syncSettingsUI();
+    });
+  });
+
+  document.querySelectorAll('.btn-setting-text').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      audio.init();
+      const val = e.currentTarget.getAttribute('data-val');
+      saveSystem.updateSettings({ floatingText: val });
+      syncSettingsUI();
+    });
+  });
+
+  window.addEventListener('gamepadconnected', () => {
+    updateGamepadBadge();
+    engine.showToast('🎮 GAMEPAD CONTROLLER DETECTED!', '#00e5ff');
+  });
+  window.addEventListener('gamepaddisconnected', () => {
+    updateGamepadBadge();
+    engine.showToast('GAMEPAD DISCONNECTED', '#ff3366');
+  });
+
+  // ==================== BATTLE CARD MODAL ====================
+  function openBattleCardModal() {
+    audio.init();
+    const canvas = document.getElementById('battleCardCanvas');
+    if (canvas) {
+      BattleCardGenerator.renderInto(canvas, engine, saveSystem);
+    }
+    document.getElementById('modalBattleCard')?.classList.remove('hidden');
+  }
+
+  document.getElementById('btnVictoryBattleCard')?.addEventListener('click', openBattleCardModal);
+  document.getElementById('btnDefeatBattleCard')?.addEventListener('click', openBattleCardModal);
+  document.getElementById('btnCodexBattleCard')?.addEventListener('click', openBattleCardModal);
+  document.getElementById('btnBattleCardClose')?.addEventListener('click', () => {
+    document.getElementById('modalBattleCard')?.classList.add('hidden');
+  });
+
+  document.getElementById('btnDownloadCard')?.addEventListener('click', () => {
+    audio.init();
+    const canvas = document.getElementById('battleCardCanvas');
+    if (canvas) {
+      BattleCardGenerator.downloadCard(canvas);
+      engine.showToast('BATTLE CARD PNG DOWNLOADED!', '#ffd700');
+    }
+  });
+
+  document.getElementById('btnCopyCard')?.addEventListener('click', async () => {
+    audio.init();
+    const canvas = document.getElementById('battleCardCanvas');
+    const label = document.getElementById('copyCardLabel');
+    if (canvas) {
+      const res = await BattleCardGenerator.copyCardToClipboard(canvas, engine);
+      if (label) {
+        label.textContent = res === 'IMAGE_COPIED' ? '✓ IMAGE COPIED!' : '✓ STATS COPIED!';
+        setTimeout(() => { if (label) label.textContent = 'COPY IMAGE / STATS'; }, 2200);
+      }
+      engine.showToast(res === 'IMAGE_COPIED' ? 'BATTLE CARD COPIED TO CLIPBOARD!' : 'TACTICAL STATS COPIED!', '#00e676');
+    }
+  });
 
   // Start in Title Command Deck view
   openTitle();

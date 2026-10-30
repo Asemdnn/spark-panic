@@ -892,3 +892,151 @@ export const ASCENSION_CONFIG = {
   enemyHpScalingPerTier: 0.20,
   enemySpeedScalingPerTier: 0.20
 };
+
+// ==========================================
+// v2.5 COMMANDER'S ULTIMATE EDITION CONFIG
+// ==========================================
+
+export const COSMIC_RELICS = {
+  chronoStasis: {
+    id: 'chronoStasis',
+    name: 'Chrono-Stasis Prism',
+    icon: '⏳',
+    color: '#00e5ff',
+    costShards: 250,
+    reqSector: 1,
+    unlockDesc: 'Clear Sector I or ✦ 250',
+    desc: 'Whenever Planetary Shield breaks (0%), automatically triggers a 3.5s 60% Time-Dilation Slow Field across all aliens and missiles on screen (30s cooldown).',
+    perkSummary: '3.5s 60% Time-Dilation Slow Field on Shield Break'
+  },
+  vampiricCore: {
+    id: 'vampiricCore',
+    name: 'Vampiric Core Matrix',
+    icon: '🩸',
+    color: '#ff3366',
+    costShards: 300,
+    reqCombo: 12,
+    unlockDesc: 'Reach a x12+ Chain Combo or ✦ 300',
+    desc: 'Every time a Chain-Reaction combo reaches x8 or higher, restores +3% Planetary Core HP and +6% Aegis Shield.',
+    perkSummary: 'Restores +3% Core HP & +6% Shield on x8+ Combos'
+  },
+  singularityLens: {
+    id: 'singularityLens',
+    name: 'Singularity Gravity Lens',
+    icon: '🌀',
+    color: '#a855f7',
+    costShards: 350,
+    reqSector: 2,
+    unlockDesc: 'Clear Sector II or ✦ 350',
+    desc: 'Player-launched Spark Novas create a micro-vortex that pulls nearby aliens within 135px inward toward the blast center for 0.6s.',
+    perkSummary: 'Novas pull aliens within 135px inward toward blast center'
+  },
+  twinWingman: {
+    id: 'twinWingman',
+    name: 'Twin-Wingman Transponder',
+    icon: '✈️',
+    color: '#00e676',
+    costShards: 450,
+    unlockDesc: 'Clear Titan Protocol Wave 2 or ✦ 450',
+    desc: 'Deploys a second autonomous AI Wingman Fighter (WING-02) that flies in opposite orbital formation to WING-01 using your active Wingman Doctrine!',
+    perkSummary: 'Deploys second autonomous AI Wingman (WING-02)'
+  },
+  overchargedCoil: {
+    id: 'overchargedCoil',
+    name: 'Overcharged Capacitor Coil',
+    icon: '⚡',
+    color: '#ffd700',
+    costShards: 300,
+    unlockDesc: 'Complete 1 Daily Anomaly or ✦ 300',
+    desc: 'Every 4th turret laser shot fires an Overcharged Plasma Bolt (2.2x size & damage) that arcs electricity to 2 nearby targets.',
+    perkSummary: 'Every 4th shot is an Overcharged Chain Bolt (2.2x dmg)'
+  },
+  aegisMirror: {
+    id: 'aegisMirror',
+    name: 'Aegis Mirror Plating',
+    icon: '🛡️',
+    color: '#38bdf8',
+    costShards: 350,
+    unlockDesc: 'Achieve 100% Core HP on any planet or ✦ 350',
+    desc: 'When Planetary Shield is above 50%, enemy torpedoes that hit the shield have a 40% chance to ricochet back into space as friendly homing missiles!',
+    perkSummary: '40% chance to ricochet torpedoes back as homing missiles'
+  },
+  starlightSynth: {
+    id: 'starlightSynth',
+    name: 'Starlight Synthesizer',
+    icon: '💎',
+    color: '#e040fb',
+    costShards: 280,
+    reqStars: 25,
+    unlockDesc: 'Earn 25 ★ Stars or ✦ 280',
+    desc: 'Increases all Star Shard drops by +35% and causes Orbital Supply Pods to grant +1 bonus Spark Nova charge when shot.',
+    perkSummary: '+35% Star Shard drops & +1 Nova charge from Supply Pods'
+  },
+  supernovaEcho: {
+    id: 'supernovaEcho',
+    name: 'Supernova Echo Core',
+    icon: '☀️',
+    color: '#f59e0b',
+    costShards: 400,
+    unlockDesc: 'Defeat any Sector Boss or ✦ 400',
+    desc: 'Player-launched Spark Novas leave behind a burning Solar Ember Zone for 2.5 seconds that deals continuous DoT damage (35 dmg/s) to any alien inside.',
+    perkSummary: 'Novas leave burning Solar Ember Zones (35 dmg/s DoT for 2.5s)'
+  }
+};
+
+export const STRUCTURE_CONFIG = {
+  cooldown: 16.0,
+  duration: 14.0,
+  maxActive: 2,
+  orbitOffset: 75,
+  types: {
+    pylon: {
+      id: 'pylon',
+      name: 'Solar Prism Pylon',
+      chassisMatch: 'striker',
+      icon: '🔮',
+      color: '#00e5ff',
+      auraColor: 'rgba(0, 229, 255, 0.35)',
+      prismRadius: 28,
+      beamBonus: 0.30,
+      zapRadius: 85,
+      zapDamage: 25,
+      zapRate: 0.8,
+      desc: 'Refracts turret lasers into 3 superheated beams (+30% dmg) in a 30° fan and zaps nearby missiles.'
+    },
+    anchor: {
+      id: 'anchor',
+      name: 'Grav-Well Anchor',
+      chassisMatch: 'tesla',
+      icon: '🌀',
+      color: '#e040fb',
+      auraColor: 'rgba(224, 64, 251, 0.35)',
+      fieldRadius: 110,
+      slowFactor: 0.50,
+      chainRate: 1.2,
+      chainDamage: 24,
+      chainTargets: 3,
+      desc: 'Emits a 110px gravity field that slows aliens by 50% and continuously arcs chain-lightning every 1.2s.'
+    },
+    battery: {
+      id: 'battery',
+      name: 'Aegis Flak Battery',
+      chassisMatch: 'railgun',
+      icon: '🚀',
+      color: '#ffd700',
+      auraColor: 'rgba(255, 215, 0, 0.35)',
+      flakRate: 0.45,
+      flakRange: 175,
+      flakDamage: 20,
+      flakSpeed: 520,
+      desc: 'Autonomous rotary flak station firing rapid kinetic intercept bursts at incoming torpedoes and armored ships.'
+    }
+  }
+};
+
+export const DEFAULT_SETTINGS = {
+  screenShake: 100, // 100 (Full), 50 (Reduced), 0 (Off)
+  particleDensity: 'high', // 'high' | 'low'
+  threatRings: true, // boolean
+  floatingText: 'all' // 'all' | 'combos' | 'off'
+};

@@ -119,6 +119,9 @@ export class Planet {
       } else {
         const overflow = amount - this.shield;
         this.shield = 0;
+        if (this.engine && this.engine.onShieldBroken) {
+          this.engine.onShieldBroken();
+        }
         this.coreHp = Math.max(0, this.coreHp - overflow);
         this.addCrater(angle);
         audio.playShieldHit();

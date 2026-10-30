@@ -1,6 +1,7 @@
 // Spark Panic 2.0 - Particle Engine, Chain Nova Shockwaves & Floating Combat Callouts
 
 import { audio } from '../engine/audio.js';
+import { saveSystem } from '../engine/storage.js';
 
 export class ParticleEngine {
   constructor() {
@@ -33,7 +34,12 @@ export class ParticleEngine {
   }
 
   spawnDebris(x, y, color, count = 12) {
-    for (let i = 0; i < count; i++) {
+    const settings = saveSystem?.getSettings ? saveSystem.getSettings() : null;
+    let actualCount = count;
+    if (settings && settings.particleDensity === 'low') {
+      actualCount = Math.max(2, Math.round(count * 0.5));
+    }
+    for (let i = 0; i < actualCount; i++) {
       const angle = Math.random() * Math.PI * 2;
       const speed = 60 + Math.random() * 180;
       this.debris.push({
@@ -64,6 +70,15 @@ export class ParticleEngine {
   }
 
   addFloater(x, y, text, color = '#ffd700', size = 16) {
+    const settings = saveSystem?.getSettings ? saveSystem.getSettings() : null;
+    if (settings) {
+      if (settings.floatingText === 'off') return;
+      if (settings.floatingText === 'combos') {
+        const str = String(text);
+        const isPriority = str.includes('CHAIN') || str.includes('CRIT') || str.includes('BOSS') || str.includes('TITAN') || str.includes('RELIC') || str.includes('SAVED') || size >= 18;
+        if (!isPriority) return;
+      }
+    }
     this.floaters.push({
       x,
       y,

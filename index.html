@@ -267,6 +267,12 @@
           <rect x="14" y="4" width="4" height="16" rx="1" />
         </svg>
       </button>
+      <button id="btnSettings" class="glass-panel w-9 h-9 rounded-xl flex items-center justify-center hover:border-cosmic-cyan transition cursor-pointer text-sm text-slate-300 hover:text-white" title="Tactical Settings (O)">
+        <svg class="w-4 h-4 fill-none stroke-current" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+      </button>
     </div>
   </div>
 
@@ -366,6 +372,17 @@
         <div class="text-[9px] font-orbitron font-black text-white z-10">OVERDRIVE</div>
         <div class="text-[8px] font-orbitron font-bold text-cosmic-gold mt-0.5 z-10">[E / 3]</div>
       </button>
+
+      <!-- Skill R: Deployable Orbital Structure -->
+      <button id="btnSkillR" class="group glass-panel relative p-2 md:p-2.5 rounded-2xl flex flex-col items-center min-w-[76px] md:min-w-[88px] min-h-[48px] border-emerald-400/40 hover:border-emerald-400 cursor-pointer transition active:scale-95 touch-manipulation overflow-hidden" title="Deploy Orbital Defense Structure (R)">
+        <div id="cdFillR" class="absolute bottom-0 left-0 right-0 bg-emerald-400/20 pointer-events-none transition-all duration-75" style="height: 0%;"></div>
+        <div id="skillCdR" class="absolute inset-0 bg-slate-950/80 rounded-2xl flex items-center justify-center font-orbitron text-xs font-bold text-emerald-400 hidden z-10">
+          0.0s
+        </div>
+        <div class="text-base md:text-lg mb-0.5 group-hover:scale-110 transition z-10">🛰️</div>
+        <div id="skillRLabel" class="text-[9px] font-orbitron font-black text-white z-10">STRUCTURE</div>
+        <div class="text-[8px] font-orbitron font-bold text-emerald-400 mt-0.5 z-10">[R / 4]</div>
+      </button>
     </div>
 
     <!-- Right: Auto-Fire Toggle & Tactical Shortcuts -->
@@ -453,7 +470,7 @@
 
           <button id="btnTitleTitanProtocol" class="w-full py-3 px-6 rounded-2xl font-orbitron font-black text-xs tracking-wider bg-gradient-to-r from-amber-500 via-rose-600 to-purple-600 hover:from-amber-400 hover:via-rose-500 hover:to-purple-500 text-white shadow-[0_0_15px_rgba(245,158,11,0.35)] transition cursor-pointer flex items-center justify-center gap-2">
             <svg class="w-4 h-4 shrink-0 fill-current" viewBox="0 0 24 24"><path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm14 3c0 .6-.4 1-1 1H6c-.6 0-1-.4-1-1v-1h14v1z"/></svg>
-            <span>👑 TITAN PROTOCOL GAUNTLET</span>
+            <span>TITAN PROTOCOL GAUNTLET</span>
           </button>
 
           <button id="btnStartEndless" class="w-full py-3 px-6 rounded-2xl font-orbitron font-bold text-xs tracking-wider bg-gradient-to-r from-cosmic-magenta to-purple-700 hover:from-fuchsia-400 hover:to-purple-600 text-white shadow-[0_0_15px_rgba(224,64,251,0.3)] transition cursor-pointer flex items-center justify-center gap-2">
@@ -657,6 +674,27 @@
           </div>
         </div>
 
+        <!-- Ancient Cosmic Relics Deck (3 Active Slots + 8 Collectibles) -->
+        <div class="glass-panel p-3 rounded-2xl border border-amber-500/40">
+          <div class="flex items-center justify-between mb-2">
+            <div class="flex items-center gap-2">
+              <span class="text-base">🏺</span>
+              <span class="text-[10px] font-orbitron font-bold text-amber-400 tracking-wider">ANCIENT COSMIC RELICS (LOADOUT: MAX 3)</span>
+            </div>
+            <span id="relicsEquippedCount" class="text-[9px] text-amber-300 font-orbitron font-bold">0 / 3 EQUIPPED</span>
+          </div>
+          <div id="activeRelicSlots" class="grid grid-cols-3 gap-2 mb-2.5">
+            <!-- Populated dynamically via JS -->
+          </div>
+          <div class="text-[9px] text-slate-400 font-orbitron mb-1.5 flex items-center justify-between">
+            <span>COLLECTED RELICS (CLICK TO EQUIP / UNEQUIP)</span>
+            <span class="text-amber-400 font-bold">DEFEAT BOSSES & ANOMALIES TO DISCOVER</span>
+          </div>
+          <div id="relicsGrid" class="grid grid-cols-2 md:grid-cols-4 gap-2">
+            <!-- Populated dynamically via JS -->
+          </div>
+        </div>
+
         <!-- 6-Tier Tech Tree Grid -->
         <div>
           <div class="text-[10px] font-orbitron font-bold text-cosmic-gold tracking-wider mb-2">
@@ -696,9 +734,15 @@
             <p class="text-xs text-slate-400">Tactical intelligence on 7 invading alien ship classes and Guardian Trophies</p>
           </div>
         </div>
-        <button id="btnCodexClose" class="w-9 h-9 rounded-xl glass-panel flex items-center justify-center hover:border-cosmic-mint transition cursor-pointer text-sm font-bold text-slate-300">
-          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" d="M6 6l12 12M18 6L6 18"/></svg>
-        </button>
+        <div class="flex items-center gap-2">
+          <button id="btnCodexBattleCard" class="px-3 py-1.5 rounded-xl glass-panel text-xs font-orbitron font-bold text-amber-300 hover:border-amber-400 flex items-center gap-1.5 transition cursor-pointer shadow-[0_0_10px_rgba(245,158,11,0.2)]">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+            <span>📸 BATTLE CARD</span>
+          </button>
+          <button id="btnCodexClose" class="w-9 h-9 rounded-xl glass-panel flex items-center justify-center hover:border-cosmic-mint transition cursor-pointer text-sm font-bold text-slate-300">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" d="M6 6l12 12M18 6L6 18"/></svg>
+          </button>
+        </div>
       </div>
 
       <!-- Header Banner: Attached Artwork 2 -->
@@ -808,6 +852,10 @@
 
       <!-- Buttons -->
       <div class="w-full flex flex-col gap-2">
+        <button id="btnVictoryBattleCard" class="w-full py-2.5 rounded-xl font-orbitron font-bold text-xs glass-panel hover:border-amber-400 text-amber-300 transition cursor-pointer flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(245,158,11,0.25)]">
+          <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+          <span>📸 SHARE BATTLE CARD</span>
+        </button>
         <button id="btnVictoryNext" class="w-full py-3 rounded-xl font-orbitron font-black text-xs tracking-wider bg-gradient-to-r from-cosmic-cyan to-blue-600 hover:from-cyan-300 hover:to-blue-500 text-slate-950 shadow-lg transition cursor-pointer flex items-center justify-center gap-2">
           <span>NEXT PLANETARY SYSTEM</span>
           <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
@@ -882,6 +930,10 @@
       </div>
 
       <div class="w-full flex flex-col gap-2 mt-2">
+        <button id="btnDefeatBattleCard" class="w-full py-2 rounded-xl font-orbitron font-bold text-xs glass-panel hover:border-amber-400 text-amber-300 transition cursor-pointer flex items-center justify-center gap-2">
+          <svg class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+          <span>📸 SHARE BATTLE CARD</span>
+        </button>
         <button id="btnDefeatRetry" class="w-full py-3 rounded-xl font-orbitron font-black text-xs tracking-wider bg-gradient-to-r from-cosmic-crimson to-rose-700 hover:from-rose-500 hover:to-rose-600 text-white shadow-lg transition cursor-pointer flex items-center justify-center gap-2">
           <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>
           <span>RETRY ORBITAL DEFENSE</span>
@@ -990,6 +1042,130 @@
         <svg class="w-4 h-4 fill-current shrink-0" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
         <span>LAUNCH DAILY ANOMALY DEFENSE</span>
       </button>
+    </div>
+  </div>
+
+  <!-- 9. TACTICAL SETTINGS MODAL (#modalSettings) -->
+  <div id="modalSettings" class="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-6 bg-cosmic-950/90 backdrop-blur-md hidden">
+    <div class="glass-panel w-full max-w-lg rounded-3xl p-5 md:p-7 flex flex-col border border-cosmic-cyan/40 shadow-[0_0_45px_rgba(0,229,255,0.25)] relative max-h-[92vh] overflow-y-auto">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+        <div class="flex items-center gap-2.5">
+          <svg class="w-6 h-6 text-cosmic-cyan shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          <div>
+            <h2 class="text-base md:text-lg font-black font-orbitron text-white tracking-wide">TACTICAL SYSTEM SETTINGS</h2>
+            <p class="text-[10px] text-slate-400">Display, combat feedback, and twin-stick gamepad configuration</p>
+          </div>
+        </div>
+        <button id="btnSettingsClose" class="w-8 h-8 rounded-xl glass-panel flex items-center justify-center hover:border-cosmic-cyan transition cursor-pointer text-sm font-bold text-slate-300">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+
+      <div class="space-y-4 my-4">
+        <!-- Screen Shake -->
+        <div class="glass-card p-3 rounded-2xl border border-slate-700/60 flex items-center justify-between">
+          <div>
+            <div class="font-orbitron font-bold text-xs text-white">SCREEN SHAKE INTENSITY</div>
+            <div class="text-[10px] text-slate-400">Kinetic impact feedback on explosions</div>
+          </div>
+          <div class="flex items-center gap-1.5" id="settingShakeBtns">
+            <button data-val="100" class="btn-setting-shake px-2.5 py-1 rounded-lg text-[10px] font-orbitron font-bold border transition cursor-pointer">100%</button>
+            <button data-val="50" class="btn-setting-shake px-2.5 py-1 rounded-lg text-[10px] font-orbitron font-bold border transition cursor-pointer">50%</button>
+            <button data-val="0" class="btn-setting-shake px-2.5 py-1 rounded-lg text-[10px] font-orbitron font-bold border transition cursor-pointer">OFF</button>
+          </div>
+        </div>
+
+        <!-- Particle Density -->
+        <div class="glass-card p-3 rounded-2xl border border-slate-700/60 flex items-center justify-between">
+          <div>
+            <div class="font-orbitron font-bold text-xs text-white">PARTICLE DENSITY</div>
+            <div class="text-[10px] text-slate-400">Explosion debris & sparks volume</div>
+          </div>
+          <div class="flex items-center gap-1.5" id="settingParticleBtns">
+            <button data-val="high" class="btn-setting-part px-3 py-1 rounded-lg text-[10px] font-orbitron font-bold border transition cursor-pointer">HIGH</button>
+            <button data-val="low" class="btn-setting-part px-3 py-1 rounded-lg text-[10px] font-orbitron font-bold border transition cursor-pointer">LOW</button>
+          </div>
+        </div>
+
+        <!-- High-Contrast Threat Rings -->
+        <div class="glass-card p-3 rounded-2xl border border-slate-700/60 flex items-center justify-between">
+          <div>
+            <div class="font-orbitron font-bold text-xs text-white">HIGH-CONTRAST THREAT RINGS</div>
+            <div class="text-[10px] text-slate-400">Visual indicator rings around fast & boss ships</div>
+          </div>
+          <div class="flex items-center gap-1.5" id="settingThreatBtns">
+            <button data-val="true" class="btn-setting-threat px-3 py-1 rounded-lg text-[10px] font-orbitron font-bold border transition cursor-pointer">ON</button>
+            <button data-val="false" class="btn-setting-threat px-3 py-1 rounded-lg text-[10px] font-orbitron font-bold border transition cursor-pointer">OFF</button>
+          </div>
+        </div>
+
+        <!-- Floating Combat Numbers -->
+        <div class="glass-card p-3 rounded-2xl border border-slate-700/60 flex items-center justify-between">
+          <div>
+            <div class="font-orbitron font-bold text-xs text-white">DAMAGE NUMBERS & FLOATERS</div>
+            <div class="text-[10px] text-slate-400">Combat damage text frequency</div>
+          </div>
+          <div class="flex items-center gap-1.5" id="settingTextBtns">
+            <button data-val="all" class="btn-setting-text px-2.5 py-1 rounded-lg text-[10px] font-orbitron font-bold border transition cursor-pointer">ALL</button>
+            <button data-val="combos" class="btn-setting-text px-2.5 py-1 rounded-lg text-[10px] font-orbitron font-bold border transition cursor-pointer">COMBOS ONLY</button>
+            <button data-val="off" class="btn-setting-text px-2.5 py-1 rounded-lg text-[10px] font-orbitron font-bold border transition cursor-pointer">OFF</button>
+          </div>
+        </div>
+
+        <!-- Gamepad Controller Section -->
+        <div class="glass-card p-3 rounded-2xl border border-cosmic-cyan/30">
+          <div class="flex items-center justify-between mb-2">
+            <div class="flex items-center gap-2">
+              <svg class="w-4 h-4 text-cosmic-cyan" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="4"/><path d="M6 12h4m-2-2v4m10-2h.01m-3-2h.01m0 4h.01m3 0h.01"/></svg>
+              <span class="font-orbitron font-bold text-xs text-cosmic-cyan">HTML5 GAMEPAD CONTROLLER</span>
+            </div>
+            <span id="gamepadStatusBadge" class="text-[9px] font-orbitron font-bold px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700">DISCONNECTED</span>
+          </div>
+          <div class="grid grid-cols-2 gap-2 text-[10px] text-slate-300 font-orbitron mt-2">
+            <div class="p-1.5 rounded-lg bg-slate-900/60"><span class="text-cosmic-cyan font-bold">LEFT STICK:</span> Aim Turret</div>
+            <div class="p-1.5 rounded-lg bg-slate-900/60"><span class="text-cosmic-cyan font-bold">RIGHT STICK:</span> Aim Reticle</div>
+            <div class="p-1.5 rounded-lg bg-slate-900/60"><span class="text-cosmic-cyan font-bold">RT / A:</span> Spark Nova</div>
+            <div class="p-1.5 rounded-lg bg-slate-900/60"><span class="text-cosmic-cyan font-bold">RB:</span> Deploy Structure</div>
+            <div class="p-1.5 rounded-lg bg-slate-900/60"><span class="text-cosmic-cyan font-bold">X / Y / B:</span> Q / W / E Skills</div>
+            <div class="p-1.5 rounded-lg bg-slate-900/60"><span class="text-cosmic-cyan font-bold">START:</span> Pause / Resume</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 10. HOLOGRAPHIC COMMANDER BATTLE CARD MODAL (#modalBattleCard) -->
+  <div id="modalBattleCard" class="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-6 bg-cosmic-950/90 backdrop-blur-md hidden">
+    <div class="glass-panel w-full max-w-2xl rounded-3xl p-5 md:p-7 flex flex-col items-center border border-amber-500/40 shadow-[0_0_50px_rgba(245,158,11,0.3)] relative max-h-[94vh] overflow-y-auto">
+      <div class="w-full flex items-center justify-between pb-3 border-b border-slate-800">
+        <div class="flex items-center gap-2.5">
+          <span class="text-2xl animate-pulse">📸</span>
+          <div>
+            <h2 class="text-base md:text-lg font-black font-orbitron text-white tracking-wide">COMMANDER BATTLE CARD</h2>
+            <p class="text-[10px] text-slate-400">Holographic performance record & loadout dossier</p>
+          </div>
+        </div>
+        <button id="btnBattleCardClose" class="w-8 h-8 rounded-xl glass-panel flex items-center justify-center hover:border-amber-400 transition cursor-pointer text-sm font-bold text-slate-300">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+
+      <!-- Live Canvas Card Preview -->
+      <div class="w-full my-4 flex justify-center">
+        <canvas id="battleCardCanvas" width="1200" height="630" class="w-full max-w-xl h-auto rounded-2xl shadow-2xl border border-cosmic-cyan/40 bg-slate-950"></canvas>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="w-full grid grid-cols-1 md:grid-cols-2 gap-3 mt-1">
+        <button id="btnDownloadCard" class="py-3 px-4 rounded-xl font-orbitron font-black text-xs tracking-wider bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-slate-950 shadow-lg transition cursor-pointer flex items-center justify-center gap-2">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          <span>DOWNLOAD PNG CARD</span>
+        </button>
+        <button id="btnCopyCard" class="py-3 px-4 rounded-xl font-orbitron font-bold text-xs glass-panel hover:border-cosmic-cyan text-white transition cursor-pointer flex items-center justify-center gap-2">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          <span id="copyCardLabel">COPY IMAGE / STATS</span>
+        </button>
+      </div>
     </div>
   </div>
 
