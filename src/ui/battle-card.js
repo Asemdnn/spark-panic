@@ -81,13 +81,16 @@ export class BattleCardGenerator {
     ctx.letterSpacing = '3px';
     ctx.fillText('GUARDIAN COMMAND TELEMETRY • OFFICIAL BATTLE RECORD', 60, 68);
 
-    ctx.font = '900 28px Orbitron, Inter, sans-serif';
+    ctx.font = '900 26px Orbitron, Inter, sans-serif';
     ctx.fillStyle = '#ffffff';
+    ctx.textAlign = 'left';
     ctx.fillText('SPARK PANIC: PLANETARY INVASION DEFENSE', 60, 105);
 
     ctx.font = '700 13px Orbitron, Inter, sans-serif';
     ctx.fillStyle = '#ffd700';
-    ctx.fillText('v2.5 COMMANDER\'S ULTIMATE EDITION', 750, 105);
+    ctx.textAlign = 'right';
+    ctx.fillText("v2.5 COMMANDER'S ULTIMATE EDITION", 1150, 105);
+    ctx.textAlign = 'left';
 
     // Top Divider
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
@@ -214,16 +217,29 @@ export class BattleCardGenerator {
     });
 
     // Sparkline Graph Title & Legend
+    const boxX = 405;
+    const boxY = 232;
+    const boxW = 735;
+
     ctx.font = '700 11px Orbitron, sans-serif';
     ctx.fillStyle = '#ffffff';
-    ctx.fillText('POST-BATTLE TACTICAL TELEMETRY SPARKLINE', 425, 254);
+    ctx.textAlign = 'left';
+    ctx.fillText('POST-BATTLE TACTICAL TELEMETRY SPARKLINE', boxX + 16, boxY + 22);
 
     ctx.font = '600 10px Orbitron, sans-serif';
-    ctx.fillStyle = '#00e676';
-    ctx.fillText('● Planetary Integrity', 820, 254);
+    ctx.textAlign = 'right';
+    const comboLabel = '● Combo Surge Peak';
+    const integrityLabel = '● Planetary Integrity';
+    const legendSpace = '   ';
+    const comboW = (ctx.measureText && ctx.measureText(comboLabel)?.width) || 120;
+    const spaceW = (ctx.measureText && ctx.measureText(legendSpace)?.width) || 12;
 
     ctx.fillStyle = '#e040fb';
-    ctx.fillText('● Combo Surge Peak', 980, 254);
+    ctx.fillText(comboLabel, boxX + boxW - 16, boxY + 22);
+
+    ctx.fillStyle = '#00e676';
+    ctx.fillText(integrityLabel, boxX + boxW - 16 - comboW - spaceW, boxY + 22);
+    ctx.textAlign = 'left';
 
     // Sparkline Chart Box (695 x 110)
     const chartX = 425;

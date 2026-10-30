@@ -4,6 +4,8 @@ import { COSMIC_RELICS, STRUCTURE_CONFIG, DEFAULT_SETTINGS } from '../src/config
 import { SaveSystem } from '../src/engine/storage.js';
 import { DeployableStructure, StructureManager } from '../src/game/structures.js';
 import { BattleCardGenerator } from '../src/ui/battle-card.js';
+import fs from 'fs';
+import path from 'path';
 
 describe('v2.5 Commander\'s Ultimate Edition Suite', () => {
   let save;
@@ -259,6 +261,92 @@ describe('v2.5 Commander\'s Ultimate Edition Suite', () => {
 
       const res = await BattleCardGenerator.copyCardToClipboard(mockCanvas, mockEngine);
       expect(typeof res).toBe('string');
+    });
+
+    it('should format battle card header and telemetry sparkline legend spacing correctly', () => {
+      const fillTextCalls = [];
+      const mockCtx = {
+        textAlign: 'left',
+        fillStyle: '',
+        font: '',
+        createLinearGradient: () => ({ addColorStop: () => {} }),
+        createRadialGradient: () => ({ addColorStop: () => {} }),
+        fillRect: () => {},
+        strokeRect: () => {},
+        beginPath: () => {},
+        arc: () => {},
+        fill: () => {},
+        stroke: () => {},
+        moveTo: () => {},
+        lineTo: () => {},
+        setLineDash: () => {},
+        measureText: (str) => ({ width: str.length * 7 }),
+        fillText: (text, x, y) => {
+          fillTextCalls.push({ text, x, y, textAlign: mockCtx.textAlign });
+        }
+      };
+
+      const originalCreateElement = document.createElement.bind(document);
+      document.createElement = (tag) => {
+        if (tag === 'canvas') {
+          return {
+            width: 0,
+            height: 0,
+            getContext: (type) => (type === '2d' ? mockCtx : null)
+          };
+        }
+        return originalCreateElement(tag);
+      };
+
+      try {
+        const mockEngine = {
+          score: 12000,
+          maxCombo: 8,
+          currentWave: 3,
+          totalWaves: 4,
+          currentPlanetId: 1,
+          planet: { coreHp: 80, maxCoreHp: 100 },
+          telemetryHistory: [{ time: 0, combo: 1, integrity: 100 }],
+          damageSources: { turret: 100, nova: 50, wingman: 20 }
+        };
+
+        BattleCardGenerator.renderCard(mockEngine, save);
+
+        // 1. Header subtitle is right-aligned at x = 1150
+        const headerSub = fillTextCalls.find(c => c.text.includes("v2.5 COMMANDER'S ULTIMATE EDITION"));
+        expect(headerSub).toBeDefined();
+        expect(headerSub.x).toBe(1150);
+        expect(headerSub.y).toBe(105);
+        expect(headerSub.textAlign).toBe('right');
+
+        // 2. Telemetry Sparkline title is left-aligned at x = 421 (boxX + 16)
+        const sparklineTitle = fillTextCalls.find(c => c.text === 'POST-BATTLE TACTICAL TELEMETRY SPARKLINE');
+        expect(sparklineTitle).toBeDefined();
+        expect(sparklineTitle.x).toBe(405 + 16);
+        expect(sparklineTitle.y).toBe(232 + 22);
+        expect(sparklineTitle.textAlign).toBe('left');
+
+        // 3. Legend labels right-aligned at x = 1124 (boxX + boxW - 16)
+        const comboLegend = fillTextCalls.find(c => c.text === '● Combo Surge Peak');
+        expect(comboLegend).toBeDefined();
+        expect(comboLegend.x).toBe(405 + 735 - 16);
+        expect(comboLegend.y).toBe(232 + 22);
+        expect(comboLegend.textAlign).toBe('right');
+
+        const integrityLegend = fillTextCalls.find(c => c.text === '● Planetary Integrity');
+        expect(integrityLegend).toBeDefined();
+        expect(integrityLegend.y).toBe(232 + 22);
+        expect(integrityLegend.textAlign).toBe('right');
+      } finally {
+        document.createElement = originalCreateElement;
+      }
+    });
+
+    it('should have updated title screen badge to v2.5 Commander\'s Ultimate Edition in index.html', () => {
+      const htmlPath = path.resolve(__dirname, '../index.html');
+      const html = fs.readFileSync(htmlPath, 'utf-8');
+      expect(html).toContain('⚡ v2.5 COMMANDER\'S ULTIMATE EDITION');
+      expect(html).not.toContain('ORBITAL DEFENSE INVASION 2.0');
     });
   });
 });
