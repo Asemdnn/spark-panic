@@ -110,13 +110,14 @@ describe('Configuration & Universe Data (v2.0)', () => {
     });
   });
 
-  it('should define 6 Guardian Trophies with rewards', () => {
-    expect(TROPHIES.length).toBe(6);
+  it('should define 7 Guardian Trophies with rewards', () => {
+    expect(TROPHIES.length).toBe(7);
     TROPHIES.forEach(t => {
       expect(t.id).toBeDefined();
       expect(t.name).toBeDefined();
-      expect(t.reward).toBe(100);
+      expect(t.reward).toBeGreaterThanOrEqual(100);
     });
+    expect(TROPHIES.some(t => t.id === 'TITAN_CONQUEROR')).toBe(true);
   });
 
   it('should define 6 Guardian Ranks from Cadet Guardian to Supreme Cosmic Guardian', () => {

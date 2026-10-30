@@ -1,6 +1,6 @@
-// Spark Panic: Planetary Invasion Defense 2.0 - Core Game Engine Coordinator
+// Spark Panic: Planetary Invasion Defense 2.4 - Core Game Engine Coordinator
 
-import { PLANETS, SECTORS, ALIEN_CLASSES, ARMORY_CONFIG, TROPHIES, GUARDIAN_RANKS, getDailyAnomalyConfig, DAILY_MUTATORS } from '../config.js';
+import { PLANETS, SECTORS, ALIEN_CLASSES, ARMORY_CONFIG, TROPHIES, GUARDIAN_RANKS, getDailyAnomalyConfig, DAILY_MUTATORS, TITAN_PROTOCOL_CONFIG, WINGMAN_CONFIG, ASCENSION_CONFIG, TURRET_SKINS } from '../config.js';
 import { audio } from '../engine/audio.js';
 import { saveSystem } from '../engine/storage.js';
 import { Planet } from './planet.js';
@@ -12,6 +12,7 @@ import { ProjectileManager } from './projectiles.js';
 import { ParticleEngine } from './particles.js';
 import { HazardManager } from './hazards.js';
 import { SupplyPodManager } from './supply-pods.js';
+import { WingmanFighter } from './wingman.js';
 import { ICON_SVG } from '../ui/icons.js';
 
 export class GameEngine {
@@ -31,6 +32,8 @@ export class GameEngine {
     this.planet = new Planet(this);
     this.turret = new GuardianTurret();
     this.satellites = [];
+    this.wingman = new WingmanFighter(this);
+    this.wingmanActive = false;
     this.skills = new TacticalSkills();
     this.projectiles = new ProjectileManager();
     this.particles = new ParticleEngine();
@@ -41,7 +44,18 @@ export class GameEngine {
     this.currentPlanetId = 1;
     this.isEndlessMode = false;
     this.isDailyAnomalyMode = false;
+    this.isTitanProtocolMode = false;
     this.dailyAnomalyConfig = null;
+    this.titanProtocolTimer = 0;
+    this.isTitanPitStop = false;
+    this.titanPitStopTimer = 0;
+
+    // Tactical Telemetry & Damage Tracking
+    this.telemetryHistory = [];
+    this.telemetrySampleTimer = 0;
+    this.missionTimer = 0;
+    this.damageSources = { turret: 0, nova: 0, wingman: 0 };
+
     this.currentWave = 1;
     this.totalWaves = 2;
     this.waveSpawnQueue = [];
@@ -117,9 +131,10 @@ export class GameEngine {
   applyUpgrades() {
     const up = saveSystem.data.upgrades;
 
-    // 1. Turret Firepower & Barrels & Chassis
+    // 1. Turret Firepower & Barrels & Chassis & Skin
     this.turret.setUpgradeLevel(up.turretDmg || 0);
     this.turret.setChassis(saveSystem.getSelectedChassis());
+    this.turret.setSkin(saveSystem.getSelectedTurretSkin());
 
     // 2. Nova Radius & Catalyst
     this.novaMultiplier = 1.0 + (up.novaRadius || 0) * 0.14;
@@ -145,7 +160,13 @@ export class GameEngine {
       this.satellites.push(new DefenseSatellite(i, satCount));
     }
 
-    // 6. Tactical Core Cooldowns
+    // 6. Autonomous AI Wingman Fighter (WING-01)
+    this.wingmanActive = saveSystem.isWingmanUnlocked();
+    if (this.wingmanActive && this.wingman) {
+      this.wingman.setDoctrine(saveSystem.getSelectedWingmanDoctrine());
+    }
+
+    // 7. Tactical Core Cooldowns
     this.skills.setCooldownReduction(up.tacticalCd || 0);
   }
 
@@ -161,6 +182,7 @@ export class GameEngine {
     this.currentPlanetId = planetId;
     this.isEndlessMode = false;
     this.isDailyAnomalyMode = false;
+    this.isTitanProtocolMode = false;
     this.dailyAnomalyConfig = null;
     const cfg = PLANETS.find(p => p.id === planetId) || PLANETS[0];
     this.totalWaves = cfg.waves;
@@ -186,6 +208,7 @@ export class GameEngine {
   startDailyAnomaly(dateStr) {
     this.isDailyAnomalyMode = true;
     this.isEndlessMode = false;
+    this.isTitanProtocolMode = false;
     const cfg = getDailyAnomalyConfig(dateStr);
     this.dailyAnomalyConfig = cfg;
     this.currentPlanetId = cfg.planet.id;
@@ -225,6 +248,7 @@ export class GameEngine {
   startEndless() {
     this.isEndlessMode = true;
     this.isDailyAnomalyMode = false;
+    this.isTitanProtocolMode = false;
     this.dailyAnomalyConfig = null;
     this.currentPlanetId = 1;
     this.currentWave = 1;
@@ -249,6 +273,32 @@ export class GameEngine {
     audio.startBgm();
   }
 
+  startTitanProtocol() {
+    this.isTitanProtocolMode = true;
+    this.isEndlessMode = false;
+    this.isDailyAnomalyMode = false;
+    this.dailyAnomalyConfig = null;
+    this.titanProtocolTimer = 0;
+    this.totalWaves = TITAN_PROTOCOL_CONFIG.totalWaves;
+    this.currentWave = 1;
+
+    this.resetCombatState();
+    const waveCfg = TITAN_PROTOCOL_CONFIG.waves[0];
+    const planetCfg = PLANETS.find(p => p.id === waveCfg.planetId) || PLANETS[4];
+    this.planet.setPlanet(planetCfg, saveSystem.data.upgrades.shieldGrid || 0);
+    this.applyUpgrades();
+    this.hazards.initSector(waveCfg.hazardSector, this.planet.x, this.planet.y, this.planet.planetRadius);
+    this.supplyPods.reset();
+    this.setupWaveSpawns();
+
+    this.state = 'PLAYING';
+    audio.init();
+    audio.startBgm();
+
+    this.particles.addFloater(this.planet.x, this.planet.y - 120, '👑 TITAN PROTOCOL INITIATED', '#ffd700', 28);
+    this.addScreenShake(12, 0.4);
+  }
+
   resetCombatState() {
     this.score = 0;
     this.combo = 0;
@@ -263,11 +313,57 @@ export class GameEngine {
     this.waveSpawnQueue = [];
     this.projectiles.clear();
     this.particles.clear();
+
+    // v2.4 Tactical Telemetry & Damage Breakdown
+    this.telemetryHistory = [];
+    this.telemetrySampleTimer = 0;
+    this.missionTimer = 0;
+    this.damageSources = { turret: 0, nova: 0, wingman: 0 };
+    this.isTitanPitStop = false;
+    this.titanPitStopTimer = 0;
+    if (this.wingman) {
+      this.wingman.mines = [];
+    }
   }
 
   setupWaveSpawns() {
     this.waveSpawnQueue = [];
     this.spawnTimer = 0.5;
+
+    // Titan Protocol 4-Boss Rush Waves
+    if (this.isTitanProtocolMode) {
+      const waveCfg = TITAN_PROTOCOL_CONFIG.waves[this.currentWave - 1] || TITAN_PROTOCOL_CONFIG.waves[0];
+      this.hazards.initSector(waveCfg.hazardSector, this.planet.x, this.planet.y, this.planet.planetRadius);
+      const planetCfg = PLANETS.find(p => p.id === waveCfg.planetId) || PLANETS[0];
+      this.planet.color1 = planetCfg.color1;
+      this.planet.color2 = planetCfg.color2;
+      this.planet.atmo = planetCfg.atmo;
+      this.planet.hasRings = !!planetCfg.rings;
+      this.planet.name = planetCfg.name;
+
+      this.particles.addFloater(this.planet.x, this.planet.y - 120, waveCfg.title, '#ffd700', 22);
+
+      let delay = 0.5;
+      for (const escort of waveCfg.escorts) {
+        for (let e = 0; e < escort.count; e++) {
+          this.waveSpawnQueue.push({
+            classKey: escort.classKey,
+            delay: delay
+          });
+          delay += 0.45;
+        }
+      }
+
+      this.waveSpawnQueue.push({
+        classKey: 'BOSS',
+        delay: delay + 1.0,
+        bossCustomName: waveCfg.bossName,
+        bossCustomHp: waveCfg.bossHp
+      });
+
+      this.totalMissionEnemies += this.waveSpawnQueue.length;
+      return;
+    }
 
     // Endless Mode Cosmic Shift & Biome Rotation every 3 waves (Wave 1, Wave 4, Wave 7, ...)
     if (this.isEndlessMode && (this.currentWave - 1) % 3 === 0) {
@@ -617,6 +713,40 @@ export class GameEngine {
 
     const isOverdrive = this.skills.overdriveActive;
 
+    // Mission timer & Titan Protocol timer
+    this.missionTimer += dt;
+    if (this.isTitanProtocolMode) {
+      this.titanProtocolTimer += dt;
+    }
+
+    // Record Telemetry sample every 3.0s
+    this.telemetrySampleTimer += dt;
+    if (this.telemetrySampleTimer >= 3.0) {
+      this.telemetrySampleTimer = 0;
+      this.recordTelemetrySample();
+    }
+
+    // Inter-wave Tactical Pit-Stop Repairs & Nanite Particles
+    if (this.isTitanPitStop) {
+      this.titanPitStopTimer -= dt;
+      if (Math.random() < 0.45) {
+        const ang = Math.random() * Math.PI * 2;
+        const r = this.planet.shieldRadius * (0.8 + Math.random() * 0.4);
+        this.particles.addFloater(
+          this.planet.x + Math.cos(ang) * r,
+          this.planet.y + Math.sin(ang) * r,
+          '✦',
+          '#00e676',
+          14
+        );
+      }
+      if (this.titanPitStopTimer <= 0) {
+        this.isTitanPitStop = false;
+        this.currentWave++;
+        this.setupWaveSpawns();
+      }
+    }
+
     // 1. Update Central Planet & Aegis Shield
     this.planet.update(dt, isOverdrive);
 
@@ -675,8 +805,32 @@ export class GameEngine {
         this.projectiles.torpedoes,
         (sx, sy, tx, ty, angle, dmg) => {
           this.projectiles.spawnSatelliteLaser(sx, sy, tx, ty, angle, dmg);
+          for (const alien of this.aliens) {
+            if (!alien.alive) continue;
+            if (Math.hypot(alien.x - tx, alien.y - ty) <= (alien.radius || 18)) {
+              const destroyed = alien.takeDamage(dmg, tx, ty, false);
+              this.damageSources.wingman += dmg;
+              if (destroyed) this.onAlienDestroyed(alien, { x: tx, y: ty });
+              break;
+            }
+          }
+          for (const torp of this.projectiles.torpedoes) {
+            if (!torp.alive) continue;
+            if (Math.hypot(torp.x - tx, torp.y - ty) <= 16) {
+              torp.alive = false;
+              this.damageSources.wingman += 10;
+              this.particles.spawnDebris(tx, ty, '#e040fb', 6);
+              this.particles.addFloater(tx, ty, 'SATELLITE INTERCEPT!', '#00e676', 12);
+              break;
+            }
+          }
         }
       );
+    }
+
+    // 3.5. Update Autonomous AI Wingman Fighter (WING-01)
+    if (this.wingmanActive && this.wingman) {
+      this.wingman.update(dt, this);
     }
 
     // 4. Update Tactical Skills
@@ -721,9 +875,14 @@ export class GameEngine {
       this.height,
       this.aliens,
       this.planet,
-      (alien, destroyed, hitX, hitY) => {
+      (alien, destroyed, hitX, hitY, dmg, source) => {
         this.particles.spawnDebris(hitX, hitY, alien.color, 4);
-        if (destroyed) this.onAlienDestroyed(alien);
+        if (source === 'wingman') {
+          this.damageSources.wingman += (dmg || 14);
+        } else {
+          this.damageSources.turret += (dmg || 12);
+        }
+        if (destroyed) this.onAlienDestroyed(alien, { x: hitX, y: hitY });
       },
       (torpX, torpY) => {
         this.particles.spawnDebris(torpX, torpY, '#e040fb', 6);
@@ -750,8 +909,19 @@ export class GameEngine {
       const ay = this.planet.y + Math.sin(spawnAngle) * spawnDist;
 
       const alien = new Alien(ax, ay, item.classKey, item.bossCustomName);
+      if (item.bossCustomHp) {
+        alien.hp = item.bossCustomHp;
+        alien.maxHp = item.bossCustomHp;
+      }
       if (this.hasDailyMutator('swarmBlitz') && (item.classKey === 'SCOUT' || item.classKey === 'INTERCEPTOR')) {
         alien.speed *= 1.20;
+      }
+      // Ascension enemy scaling
+      const ascensionMults = saveSystem.getAscensionMultipliers();
+      if (ascensionMults.tier > 0) {
+        alien.hp = Math.round(alien.hp * ascensionMults.enemyHpMultiplier);
+        alien.maxHp = Math.round(alien.maxHp * ascensionMults.enemyHpMultiplier);
+        alien.speed *= ascensionMults.enemySpeedMultiplier;
       }
       if (item.classKey === 'BOSS') {
         this.activeBoss = alien;
@@ -804,6 +974,7 @@ export class GameEngine {
       this.planet.planetRadius,
       this.aliens,
       (alien, destroyed, nova) => {
+        this.damageSources.nova += (nova.damage || 32);
         if (destroyed) this.onAlienDestroyed(alien, nova);
       },
       (val) => {
@@ -817,11 +988,29 @@ export class GameEngine {
     );
 
     // 9. Wave Progression / Victory Check
-    if (this.waveSpawnQueue.length === 0 && this.aliens.length === 0) {
+    if (this.waveSpawnQueue.length === 0 && this.aliens.length === 0 && !this.isTitanPitStop) {
       if (this.currentWave < this.totalWaves) {
-        this.currentWave++;
-        this.particles.addFloater(this.planet.x, this.planet.y - 120, `WAVE ${this.currentWave}!`, '#ffd700', 32);
-        this.setupWaveSpawns();
+        if (this.isTitanProtocolMode) {
+          // Inter-wave Tactical Pit-Stop (4s)
+          this.isTitanPitStop = true;
+          this.titanPitStopTimer = TITAN_PROTOCOL_CONFIG.pitStop.duration;
+
+          const p = this.planet;
+          const shieldHeal = Math.round(p.maxShield * TITAN_PROTOCOL_CONFIG.pitStop.shieldRestorePct);
+          const coreHeal = Math.round(p.maxCoreHp * TITAN_PROTOCOL_CONFIG.pitStop.coreRestorePct);
+          p.shield = Math.min(p.maxShield, p.shield + shieldHeal);
+          p.coreHp = Math.min(p.maxCoreHp, p.coreHp + coreHeal);
+          this.novaCharges = Math.min(this.maxNovaCharges, this.novaCharges + TITAN_PROTOCOL_CONFIG.pitStop.novaChargesBonus);
+
+          this.particles.addFloater(this.planet.x, this.planet.y - 140, '👑 TITAN NEUTRALIZED!', '#ffd700', 30);
+          this.particles.addFloater(this.planet.x, this.planet.y - 105, `ORBITAL REPAIR: +${shieldHeal} SHIELD, +${coreHeal} CORE`, '#00e676', 20);
+          this.showToast(TITAN_PROTOCOL_CONFIG.pitStop.bannerText, '#ffd700');
+          audio.playVictory();
+        } else {
+          this.currentWave++;
+          this.particles.addFloater(this.planet.x, this.planet.y - 120, `WAVE ${this.currentWave}!`, '#ffd700', 32);
+          this.setupWaveSpawns();
+        }
       } else {
         this.onMissionVictory();
       }
@@ -854,14 +1043,23 @@ export class GameEngine {
     // Launch celebratory fireworks from surface cyber-cities
     this.planet.triggerVictoryFireworks();
 
-    if (this.isDailyAnomalyMode && this.dailyAnomalyConfig) {
+    let earnedShards = 0;
+    if (this.isTitanProtocolMode) {
+      const res = saveSystem.recordBossRushVictory(this.titanProtocolTimer);
+      this.checkTrophy('TITAN_CONQUEROR');
+      earnedShards = res.bonusShards;
+      const elTitle = document.getElementById('victoryPlanetTitle');
+      if (elTitle) elTitle.textContent = '👑 TITAN PROTOCOL CONQUERED (4/4 MOTHERSHIPS)';
+      if (res.isFirstClear) {
+        this.showToast('👑 TITAN PROTOCOL CONQUERED! +300 ✦ SHARDS', '#ffd700');
+      } else {
+        this.showToast(`👑 TITAN RUSH CLEARED: ${this.titanProtocolTimer.toFixed(1)}s!`, '#00e5ff');
+      }
+    } else if (this.isDailyAnomalyMode && this.dailyAnomalyConfig) {
       const res = saveSystem.recordDailyScore(this.dailyAnomalyConfig.dateKey, this.score);
+      earnedShards = res.bonusAwarded;
       const elTitle = document.getElementById('victoryPlanetTitle');
       if (elTitle) elTitle.textContent = `DAILY ANOMALY CONQUERED (${this.dailyAnomalyConfig.dateKey})`;
-      const elShards = document.getElementById('vicStatShards');
-      if (elShards) {
-        elShards.innerHTML = `<span class="flex items-center justify-end gap-1 font-bold text-cosmic-gold">+${res.bonusAwarded} ${ICON_SVG.shard('w-3.5 h-3.5 text-cosmic-gold')}</span>`;
-      }
       if (res.isFirstClearToday) {
         this.showToast('⚡ DAILY ANOMALY LIBERATED! +150 ✦ SHARDS', '#ffd700');
       } else {
@@ -872,9 +1070,10 @@ export class GameEngine {
       const cfg = PLANETS.find(p => p.id === this.currentPlanetId) || PLANETS[0];
       const elTitle = document.getElementById('victoryPlanetTitle');
       if (elTitle) elTitle.textContent = `${cfg.name.toUpperCase()} PRIME SAVED`;
-      const elShards = document.getElementById('vicStatShards');
-      if (elShards) elShards.innerHTML = `<span class="flex items-center justify-end gap-1 font-bold text-cosmic-gold">+${stars * 45} ${ICON_SVG.shard('w-3.5 h-3.5 text-cosmic-gold')}</span>`;
+      const ascensionMults = saveSystem.getAscensionMultipliers();
+      earnedShards = Math.round(stars * 45 * ascensionMults.shardMultiplier);
     }
+
     const elEnemies = document.getElementById('vicStatEnemies');
     if (elEnemies) elEnemies.textContent = `${this.enemiesVaporized}`;
     const elCombo = document.getElementById('vicStatCombo');
@@ -882,7 +1081,9 @@ export class GameEngine {
     const elCore = document.getElementById('vicStatCore');
     if (elCore) elCore.textContent = `${corePct}%`;
     const elShards = document.getElementById('vicStatShards');
-    if (elShards) elShards.innerHTML = `<span class="flex items-center justify-end gap-1 font-bold text-cosmic-gold">+${stars * 45} ${ICON_SVG.shard('w-3.5 h-3.5 text-cosmic-gold')}</span>`;
+    if (elShards) {
+      elShards.innerHTML = `<span class="flex items-center justify-end gap-1 font-bold text-cosmic-gold">+${earnedShards} ${ICON_SVG.shard('w-3.5 h-3.5 text-cosmic-gold')}</span>`;
+    }
     const elScore = document.getElementById('vicStatScore');
     if (elScore) elScore.textContent = this.score.toLocaleString();
 
@@ -898,6 +1099,7 @@ export class GameEngine {
       }
     }
 
+    this.renderTelemetrySparkline();
     document.getElementById('modalVictory')?.classList.remove('hidden');
   }
 
@@ -909,13 +1111,23 @@ export class GameEngine {
     const cfg = PLANETS.find(p => p.id === this.currentPlanetId) || PLANETS[0];
     const elTitle = document.getElementById('defeatPlanetTitle');
     if (elTitle) {
-      elTitle.textContent = this.isEndlessMode
-        ? 'ENDLESS SIEGE TERMINATED'
-        : `PLANETARY DEFENSES BREACHED ON ${cfg.name.toUpperCase()}`;
+      if (this.isTitanProtocolMode) {
+        elTitle.textContent = 'TITAN PROTOCOL DEFENSE BREACHED';
+      } else if (this.isEndlessMode) {
+        elTitle.textContent = 'ENDLESS SIEGE TERMINATED';
+      } else {
+        elTitle.textContent = `PLANETARY DEFENSES BREACHED ON ${cfg.name.toUpperCase()}`;
+      }
     }
     const elWave = document.getElementById('defStatWave');
     if (elWave) {
-      elWave.textContent = this.isEndlessMode ? `Wave ${this.currentWave}` : `Wave ${this.currentWave} / ${this.totalWaves}`;
+      if (this.isTitanProtocolMode) {
+        elWave.textContent = `Titan ${this.currentWave} / 4`;
+      } else if (this.isEndlessMode) {
+        elWave.textContent = `Wave ${this.currentWave}`;
+      } else {
+        elWave.textContent = `Wave ${this.currentWave} / ${this.totalWaves}`;
+      }
     }
     const elEnemies = document.getElementById('defStatEnemies');
     if (elEnemies) elEnemies.textContent = `${this.enemiesVaporized}`;
@@ -936,7 +1148,135 @@ export class GameEngine {
       }
     }
 
+    this.renderTelemetrySparkline();
     document.getElementById('modalDefeat')?.classList.remove('hidden');
+  }
+
+  recordTelemetrySample() {
+    const sPct = Math.round(((this.planet.shield || 0) / (this.planet.maxShield || 100)) * 100);
+    const cPct = Math.round(((this.planet.coreHp || 0) / (this.planet.maxCoreHp || 100)) * 100);
+    const avgIntegrity = Math.round((sPct + cPct) / 2);
+    this.telemetryHistory.push({
+      time: Math.round(this.missionTimer || 0),
+      wave: this.currentWave,
+      combo: Math.max(1, this.combo),
+      shieldPct: sPct,
+      corePct: cPct,
+      integrity: avgIntegrity
+    });
+    if (this.telemetryHistory.length > 30) {
+      this.telemetryHistory.shift();
+    }
+  }
+
+  renderTelemetrySparkline() {
+    const victoryCanvas = document.getElementById('victoryTelemetryCanvas');
+    const defeatCanvas = document.getElementById('defeatTelemetryCanvas');
+
+    const totalDamage = (this.damageSources?.turret || 0) + (this.damageSources?.nova || 0) + (this.damageSources?.wingman || 0);
+    let pctTurret = 55;
+    let pctNova = 30;
+    let pctWingman = 15;
+    if (totalDamage > 0) {
+      pctTurret = Math.round((this.damageSources.turret / totalDamage) * 100);
+      pctNova = Math.round((this.damageSources.nova / totalDamage) * 100);
+      pctWingman = Math.max(0, 100 - pctTurret - pctNova);
+    }
+
+    const breakdownText = `Turret ${pctTurret}% • Novas ${pctNova}% • Wingman ${pctWingman}%`;
+
+    // Update Victory Breakdown Elements
+    const vicText = document.getElementById('vicDmgBreakdownText');
+    if (vicText) vicText.textContent = breakdownText;
+    const vicBarT = document.getElementById('vicDmgBarTurret');
+    if (vicBarT) vicBarT.style.width = pctTurret + '%';
+    const vicBarN = document.getElementById('vicDmgBarNova');
+    if (vicBarN) vicBarN.style.width = pctNova + '%';
+    const vicBarW = document.getElementById('vicDmgBarWingman');
+    if (vicBarW) vicBarW.style.width = pctWingman + '%';
+
+    // Update Defeat Breakdown Elements
+    const defText = document.getElementById('defDmgBreakdownText');
+    if (defText) defText.textContent = breakdownText;
+    const defBarT = document.getElementById('defDmgBarTurret');
+    if (defBarT) defBarT.style.width = pctTurret + '%';
+    const defBarN = document.getElementById('defDmgBarNova');
+    if (defBarN) defBarN.style.width = pctNova + '%';
+    const defBarW = document.getElementById('defDmgBarWingman');
+    if (defBarW) defBarW.style.width = pctWingman + '%';
+
+    // Ensure we have samples
+    const history = [...(this.telemetryHistory || [])];
+    if (history.length < 2) {
+      history.unshift({ time: 0, combo: 1, integrity: 100 });
+      history.push({
+        time: Math.round(this.missionTimer || 1),
+        combo: Math.max(1, this.combo),
+        integrity: Math.round((((this.planet.shield || 0) + (this.planet.coreHp || 0)) / ((this.planet.maxShield || 100) + (this.planet.maxCoreHp || 100))) * 100)
+      });
+    }
+
+    let maxComboVal = 5;
+    for (const h of history) {
+      if (h.combo > maxComboVal) maxComboVal = h.combo;
+    }
+
+    [victoryCanvas, defeatCanvas].forEach(cvs => {
+      if (!cvs) return;
+      const ctx = cvs.getContext('2d');
+      const w = cvs.width || 280;
+      const h = cvs.height || 56;
+      ctx.clearRect(0, 0, w, h);
+
+      // Background subtle grid
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([3, 4]);
+      [h * 0.25, h * 0.5, h * 0.75].forEach(y => {
+        ctx.beginPath();
+        ctx.moveTo(8, y);
+        ctx.lineTo(w - 8, y);
+        ctx.stroke();
+      });
+      ctx.setLineDash([]);
+
+      const padX = 10;
+      const padY = 8;
+      const plotW = w - padX * 2;
+      const plotH = h - padY * 2;
+
+      // 1. Draw Planetary Integrity Curve (#00e676 emerald line)
+      ctx.beginPath();
+      history.forEach((pt, idx) => {
+        const x = padX + (idx / (history.length - 1)) * plotW;
+        const normIntegrity = Math.max(0, Math.min(100, pt.integrity !== undefined ? pt.integrity : 100)) / 100;
+        const y = padY + plotH * (1 - normIntegrity);
+        if (idx === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      });
+      ctx.strokeStyle = '#00e676';
+      ctx.lineWidth = 2.0;
+      ctx.shadowColor = '#00e676';
+      ctx.shadowBlur = 4;
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+
+      // 2. Draw Combo Peak Intensity Curve (#e040fb magenta line)
+      ctx.beginPath();
+      history.forEach((pt, idx) => {
+        const x = padX + (idx / (history.length - 1)) * plotW;
+        const normCombo = Math.min(1, (pt.combo || 1) / maxComboVal);
+        const y = padY + plotH * (1 - normCombo);
+        if (idx === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      });
+      ctx.strokeStyle = '#e040fb';
+      ctx.lineWidth = 2.0;
+      ctx.shadowColor = '#e040fb';
+      ctx.shadowBlur = 6;
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+    });
   }
 
   render() {

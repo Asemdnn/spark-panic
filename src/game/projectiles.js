@@ -35,9 +35,27 @@ export class ProjectileManager {
         isRailgun: !!b.isRailgun,
         isDirectPierce: !!b.isDirectPierce,
         chassis: b.chassis || 'striker',
+        source: 'turret',
         alive: true
       });
     }
+  }
+
+  addPlasmaBolt(config) {
+    this.bolts.push({
+      x: config.x,
+      y: config.y,
+      vx: Math.cos(config.angle) * config.speed,
+      vy: Math.sin(config.angle) * config.speed,
+      angle: config.angle,
+      damage: config.damage,
+      color: config.color || '#00e5ff',
+      pierce: config.pierce || 1,
+      isRocket: !!config.isRocket,
+      splashRadius: config.splashRadius || 0,
+      source: config.source || 'turret',
+      alive: true
+    });
   }
 
   spawnTorpedo(x, y, angle, speed, damage, color) {
@@ -147,7 +165,7 @@ export class ProjectileManager {
                 hitDmg *= 1.5;
               }
               const destroyed = alien.takeDamage(hitDmg, b.x, b.y, true, onBossPhase2Callback);
-              if (onAlienHitCallback) onAlienHitCallback(alien, destroyed, b.x, b.y);
+              if (onAlienHitCallback) onAlienHitCallback(alien, destroyed, b.x, b.y, hitDmg, b.source || 'turret');
 
               // Add fading golden laser wake trail
               this.railgunTrails.push({
@@ -162,7 +180,7 @@ export class ProjectileManager {
             } else if (b.isTesla) {
               // Tesla Arc Cannon: Chain-lightning to up to 2 (or 3 at Lv.5+) nearby targets within 115px
               const destroyed = alien.takeDamage(b.damage, b.x, b.y, false, onBossPhase2Callback);
-              if (onAlienHitCallback) onAlienHitCallback(alien, destroyed, b.x, b.y);
+              if (onAlienHitCallback) onAlienHitCallback(alien, destroyed, b.x, b.y, b.damage, b.source || 'turret');
 
               const candidates = [];
               for (const other of aliens) {
@@ -178,7 +196,7 @@ export class ProjectileManager {
               if (candidates[0]) {
                 const target1 = candidates[0].alien;
                 const k1 = target1.takeDamage(b.damage * 0.65, target1.x, target1.y, false, onBossPhase2Callback);
-                if (onAlienHitCallback) onAlienHitCallback(target1, k1, target1.x, target1.y);
+                if (onAlienHitCallback) onAlienHitCallback(target1, k1, target1.x, target1.y, b.damage * 0.65, b.source || 'turret');
                 this.teslaArcs.push({
                   x1: alien.x,
                   y1: alien.y,
@@ -195,7 +213,7 @@ export class ProjectileManager {
                 const target2 = candidates[1].alien;
                 const origin = candidates[0] ? candidates[0].alien : alien;
                 const k2 = target2.takeDamage(b.damage * 0.45, target2.x, target2.y, false, onBossPhase2Callback);
-                if (onAlienHitCallback) onAlienHitCallback(target2, k2, target2.x, target2.y);
+                if (onAlienHitCallback) onAlienHitCallback(target2, k2, target2.x, target2.y, b.damage * 0.45, b.source || 'turret');
                 this.teslaArcs.push({
                   x1: origin.x,
                   y1: origin.y,
@@ -212,7 +230,7 @@ export class ProjectileManager {
                 const target3 = candidates[2].alien;
                 const origin = candidates[1] ? candidates[1].alien : alien;
                 const k3 = target3.takeDamage(b.damage * 0.15, target3.x, target3.y, false, onBossPhase2Callback);
-                if (onAlienHitCallback) onAlienHitCallback(target3, k3, target3.x, target3.y);
+                if (onAlienHitCallback) onAlienHitCallback(target3, k3, target3.x, target3.y, b.damage * 0.15, b.source || 'turret');
                 this.teslaArcs.push({
                   x1: origin.x,
                   y1: origin.y,
@@ -224,9 +242,20 @@ export class ProjectileManager {
                 });
               }
             } else {
-              // Standard Pulse Striker bolt
+              // Standard Pulse Striker bolt or Wingman Bolt
               const destroyed = alien.takeDamage(b.damage, b.x, b.y, false, onBossPhase2Callback);
-              if (onAlienHitCallback) onAlienHitCallback(alien, destroyed, b.x, b.y);
+              if (onAlienHitCallback) onAlienHitCallback(alien, destroyed, b.x, b.y, b.damage, b.source || 'turret');
+
+              if (b.isRocket && b.splashRadius > 0) {
+                for (const other of aliens) {
+                  if (other === alien || !other.alive) continue;
+                  const splashDist = Math.hypot(other.x - b.x, other.y - b.y);
+                  if (splashDist <= b.splashRadius + (other.radius || 16)) {
+                    const k = other.takeDamage(b.damage * 0.5, b.x, b.y, false, onBossPhase2Callback);
+                    if (onAlienHitCallback) onAlienHitCallback(other, k, b.x, b.y, b.damage * 0.5, b.source || 'turret');
+                  }
+                }
+              }
             }
 
             b.pierce--;

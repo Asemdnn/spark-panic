@@ -202,6 +202,40 @@ export const ICON_SVG = {
     </svg>
   `,
 
+  // Titan Protocol Crown
+  titan: (cls = 'w-4 h-4 text-cosmic-crimson') => `
+    <svg class="${cls} inline-block shrink-0 fill-current" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm14 3c0 .6-.4 1-1 1H6c-.6 0-1-.4-1-1v-1h14v1z" />
+    </svg>
+  `,
+
+  // Wingman Delta Fighter
+  wingman: (cls = 'w-4 h-4 text-cosmic-mint') => `
+    <svg class="${cls} inline-block shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <polygon points="12 2 19 21 12 17 5 21 12 2" fill="currentColor" fill-opacity="0.2" />
+    </svg>
+  `,
+
+  // Hyperdrive Ascension Galaxy Portal
+  ascension: (cls = 'w-4 h-4 text-cosmic-purple') => `
+    <svg class="${cls} inline-block shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="10" />
+      <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+      <path d="M2 12h20" />
+    </svg>
+  `,
+
+  // Turret Skin Palette
+  skin: (cls = 'w-4 h-4 text-cosmic-gold') => `
+    <svg class="${cls} inline-block shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <circle cx="13.5" cy="6.5" r=".5" fill="currentColor" />
+      <circle cx="17.5" cy="10.5" r=".5" fill="currentColor" />
+      <circle cx="8.5" cy="7.5" r=".5" fill="currentColor" />
+      <circle cx="6.5" cy="12.5" r=".5" fill="currentColor" />
+      <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.9 0 1.7-.8 1.7-1.7 0-.4-.2-.8-.5-1.1-.3-.3-.4-.7-.4-1.2 0-.9.8-1.7 1.7-1.7H16c3.3 0 6-2.7 6-6 0-5.5-4.5-10-10-10z" />
+    </svg>
+  `,
+
   // Import / Download Save Code
   importSave: (cls = 'w-4 h-4') => `
     <svg class="${cls} inline-block shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">

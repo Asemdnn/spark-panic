@@ -1,6 +1,6 @@
-// Spark Panic 2.2 - Persistence & Upgrade Armory Save Engine
+// Spark Panic 2.4 - Persistence & Upgrade Armory Save Engine
 
-import { ARMORY_CONFIG, GUARDIAN_RANKS, TROPHIES, CHASSIS_CONFIG } from '../config.js';
+import { ARMORY_CONFIG, GUARDIAN_RANKS, TROPHIES, CHASSIS_CONFIG, TURRET_SKINS, WINGMAN_CONFIG, ASCENSION_CONFIG, TITAN_PROTOCOL_CONFIG } from '../config.js';
 
 const STORAGE_KEY = 'spark_panic_v2_save';
 
@@ -33,7 +33,13 @@ export class SaveSystem {
       isBgmEnabled: true,
       tutorialCompleted: false,
       dailyBest: {},
-      dailyClaimed: {}
+      dailyClaimed: {},
+      bestBossRushTime: null,
+      bossRushCleared: false,
+      selectedWingmanDoctrine: 'aegis',
+      wingmanUnlocked: false,
+      selectedTurretSkin: 'sentinel',
+      ascensionTier: 0
     };
 
     if (typeof localStorage === 'undefined') return defaults;
@@ -57,7 +63,13 @@ export class SaveSystem {
         isBgmEnabled: parsed.isBgmEnabled !== undefined ? parsed.isBgmEnabled : defaults.isBgmEnabled,
         tutorialCompleted: !!parsed.tutorialCompleted,
         dailyBest: { ...(parsed.dailyBest || {}) },
-        dailyClaimed: { ...(parsed.dailyClaimed || {}) }
+        dailyClaimed: { ...(parsed.dailyClaimed || {}) },
+        bestBossRushTime: parsed.bestBossRushTime !== undefined ? parsed.bestBossRushTime : defaults.bestBossRushTime,
+        bossRushCleared: !!parsed.bossRushCleared,
+        selectedWingmanDoctrine: parsed.selectedWingmanDoctrine || defaults.selectedWingmanDoctrine,
+        wingmanUnlocked: !!parsed.wingmanUnlocked,
+        selectedTurretSkin: parsed.selectedTurretSkin || defaults.selectedTurretSkin,
+        ascensionTier: typeof parsed.ascensionTier === 'number' ? parsed.ascensionTier : defaults.ascensionTier
       };
     } catch (e) {
       console.warn('Failed to parse saved game data, using defaults', e);
@@ -356,7 +368,13 @@ export class SaveSystem {
         isBgmEnabled: parsed.isBgmEnabled !== undefined ? parsed.isBgmEnabled : this.data.isBgmEnabled,
         tutorialCompleted: parsed.tutorialCompleted !== undefined ? !!parsed.tutorialCompleted : !!this.data.tutorialCompleted,
         dailyBest: { ...(this.data.dailyBest || {}), ...(parsed.dailyBest || {}) },
-        dailyClaimed: { ...(this.data.dailyClaimed || {}), ...(parsed.dailyClaimed || {}) }
+        dailyClaimed: { ...(this.data.dailyClaimed || {}), ...(parsed.dailyClaimed || {}) },
+        bestBossRushTime: parsed.bestBossRushTime !== undefined ? parsed.bestBossRushTime : this.data.bestBossRushTime,
+        bossRushCleared: parsed.bossRushCleared !== undefined ? !!parsed.bossRushCleared : this.data.bossRushCleared,
+        selectedWingmanDoctrine: parsed.selectedWingmanDoctrine || this.data.selectedWingmanDoctrine || 'aegis',
+        wingmanUnlocked: parsed.wingmanUnlocked !== undefined ? !!parsed.wingmanUnlocked : this.data.wingmanUnlocked,
+        selectedTurretSkin: parsed.selectedTurretSkin || this.data.selectedTurretSkin || 'sentinel',
+        ascensionTier: typeof parsed.ascensionTier === 'number' ? parsed.ascensionTier : (this.data.ascensionTier || 0)
       };
       this.save();
       return true;
@@ -390,9 +408,116 @@ export class SaveSystem {
       isBgmEnabled: true,
       tutorialCompleted: false,
       dailyBest: {},
-      dailyClaimed: {}
+      dailyClaimed: {},
+      bestBossRushTime: null,
+      bossRushCleared: false,
+      selectedWingmanDoctrine: 'aegis',
+      wingmanUnlocked: false,
+      selectedTurretSkin: 'sentinel',
+      ascensionTier: 0
     };
     this.save();
+  }
+
+  // Wingman System
+  isWingmanUnlocked() {
+    return !!this.data.wingmanUnlocked || (this.data.upgrades && (this.data.upgrades.satellites || 0) >= WINGMAN_CONFIG.unlockSatelliteReq);
+  }
+
+  unlockWingman() {
+    if (this.isWingmanUnlocked()) return true;
+    if (this.data.shards >= WINGMAN_CONFIG.unlockCostShards) {
+      this.data.shards -= WINGMAN_CONFIG.unlockCostShards;
+      this.data.wingmanUnlocked = true;
+      this.save();
+      return true;
+    }
+    return false;
+  }
+
+  selectWingmanDoctrine(doctrineId) {
+    if (WINGMAN_CONFIG.doctrines[doctrineId]) {
+      this.data.selectedWingmanDoctrine = doctrineId;
+      this.save();
+      return true;
+    }
+    return false;
+  }
+
+  getSelectedWingmanDoctrine() {
+    return this.data.selectedWingmanDoctrine || 'aegis';
+  }
+
+  // Turret Hull Skins
+  isTurretSkinUnlocked(skinId) {
+    const skin = TURRET_SKINS[skinId];
+    if (!skin) return false;
+    if (skin.reqStars === 0) return true;
+    const totalStars = this.getTotalStars();
+    const ascension = this.data.ascensionTier || 0;
+    if (skin.reqAscension && ascension >= skin.reqAscension) return true;
+    return totalStars >= skin.reqStars || ascension > 0;
+  }
+
+  selectTurretSkin(skinId) {
+    if (this.isTurretSkinUnlocked(skinId)) {
+      this.data.selectedTurretSkin = skinId;
+      this.save();
+      return true;
+    }
+    return false;
+  }
+
+  getSelectedTurretSkin() {
+    return this.data.selectedTurretSkin || 'sentinel';
+  }
+
+  // Hyperdrive Ascension (Prestige System)
+  canAscend() {
+    const totalStars = this.getTotalStars();
+    const currentTier = this.data.ascensionTier || 0;
+    const isReady = totalStars >= ASCENSION_CONFIG.reqStars || (this.data.unlockedPlanet || 1) >= ASCENSION_CONFIG.reqPlanet;
+    return isReady && currentTier < ASCENSION_CONFIG.maxTier;
+  }
+
+  ascend() {
+    if (!this.canAscend()) return { success: false, newTier: this.data.ascensionTier || 0 };
+    this.data.ascensionTier = (this.data.ascensionTier || 0) + 1;
+    this.data.planetStars = {};
+    this.data.unlockedPlanet = 1;
+    this.save();
+    return { success: true, newTier: this.data.ascensionTier };
+  }
+
+  getAscensionMultipliers() {
+    const tier = this.data.ascensionTier || 0;
+    return {
+      tier,
+      shardMultiplier: 1 + (tier * ASCENSION_CONFIG.shardGainBonusPerTier),
+      scoreMultiplier: 1 + (tier * ASCENSION_CONFIG.scoreMultBonusPerTier),
+      enemyHpMultiplier: 1 + (tier * ASCENSION_CONFIG.enemyHpScalingPerTier),
+      enemySpeedMultiplier: 1 + (tier * ASCENSION_CONFIG.enemySpeedScalingPerTier)
+    };
+  }
+
+  // Titan Protocol Boss Rush
+  recordBossRushVictory(timeSeconds) {
+    const isFirstClear = !this.data.bossRushCleared;
+    this.data.bossRushCleared = true;
+    const isNewRecord = this.data.bestBossRushTime === null || timeSeconds < this.data.bestBossRushTime;
+    if (isNewRecord) {
+      this.data.bestBossRushTime = Math.round(timeSeconds * 10) / 10;
+    }
+    const bonusShards = isFirstClear ? TITAN_PROTOCOL_CONFIG.rewards.firstClearShards : TITAN_PROTOCOL_CONFIG.rewards.repeatClearShards;
+    this.addShards(bonusShards);
+    this.data.trophies[TITAN_PROTOCOL_CONFIG.rewards.trophyId] = true;
+    this.save();
+    return {
+      isFirstClear,
+      isNewRecord,
+      bonusShards,
+      bestTime: this.data.bestBossRushTime
+    };
   }
 
   getGuardianRank() {

@@ -582,6 +582,13 @@ export const TROPHIES = [
     desc: 'Clear and defend all 5 planetary systems in Sector I.',
     icon: '🌌',
     reward: 100
+  },
+  {
+    id: 'TITAN_CONQUEROR',
+    name: 'Titan Protocol Conqueror',
+    desc: 'Defeat all 4 Sector Motherships back-to-back in Titan Protocol Boss Rush.',
+    icon: '👑',
+    reward: 300
   }
 ];
 
@@ -695,3 +702,193 @@ export function getDailyAnomalyConfig(dateStr) {
     mutators: [DAILY_MUTATORS[m1], DAILY_MUTATORS[m2]]
   };
 }
+
+// v2.4 Titan Protocol, Wingman AI & Prestige System Configurations
+
+export const TURRET_SKINS = {
+  sentinel: {
+    id: 'sentinel',
+    name: 'Cyan Sentinel',
+    reqStars: 0,
+    primaryColor: '#00e5ff',
+    accentColor: '#38bdf8',
+    bulletColor: '#00e5ff',
+    glowColor: '#00e5ff',
+    desc: 'Standard-issue cyber-cyan titanium orbital chassis with sapphire focus crystals.'
+  },
+  sovereign: {
+    id: 'sovereign',
+    name: 'Solar Sovereign',
+    reqStars: 20,
+    primaryColor: '#ffd700',
+    accentColor: '#f59e0b',
+    bulletColor: '#ffd700',
+    glowColor: '#ffd700',
+    desc: 'Forged from Solaria star-metal. Radiates golden solar warmth and amber plasma fire.'
+  },
+  valkyrie: {
+    id: 'valkyrie',
+    name: 'Crimson Valkyrie',
+    reqStars: 40,
+    primaryColor: '#ff3366',
+    accentColor: '#fb7185',
+    bulletColor: '#ff3366',
+    glowColor: '#ff3366',
+    desc: 'Aggressive crimson nano-alloy chassis optimized for high-intensity sector liberation.'
+  },
+  prismatic: {
+    id: 'prismatic',
+    name: 'Void Prismatic',
+    reqStars: 60,
+    reqAscension: 1,
+    primaryColor: '#e040fb',
+    accentColor: '#00e5ff',
+    bulletColor: '#a855f7',
+    glowColor: '#e040fb',
+    desc: 'Quantum-woven polychromatic hull that channels shifting chromatic spectrums across deep space.'
+  }
+};
+
+export const TITAN_PROTOCOL_CONFIG = {
+  name: 'Titan Protocol: 4-Boss Rush',
+  totalWaves: 4,
+  waves: [
+    {
+      waveNumber: 1,
+      bossName: 'Dreadnought Vexor',
+      bossClass: 'BOSS',
+      sector: 1,
+      hazardSector: 1,
+      planetId: 5,
+      title: 'SECTOR I TITAN: DREADNOUGHT VEXOR',
+      desc: 'Glacial Bastion flagship with twin torpedo arrays and escort recon swarms.',
+      escorts: [
+        { classKey: 'SCOUT', count: 6 },
+        { classKey: 'INTERCEPTOR', count: 4 }
+      ],
+      bossHp: 850
+    },
+    {
+      waveNumber: 2,
+      bossName: 'Mothership Kaelen',
+      bossClass: 'BOSS',
+      sector: 2,
+      hazardSector: 2,
+      planetId: 10,
+      title: 'SECTOR II TITAN: MOTHERSHIP KAELEN',
+      desc: 'Nebula Frontier command carrier firing triple plasma bursts with stasis cruiser escorts.',
+      escorts: [
+        { classKey: 'CRYO', count: 5 },
+        { classKey: 'PHASE', count: 4 }
+      ],
+      bossHp: 1100
+    },
+    {
+      waveNumber: 3,
+      bossName: 'Void Harbinger',
+      bossClass: 'BOSS',
+      sector: 3,
+      hazardSector: 3,
+      planetId: 15,
+      title: 'SECTOR III TITAN: VOID HARBINGER',
+      desc: 'Dark Rift dread-engine wielding rotating void shields and heavy siege drop escorts.',
+      escorts: [
+        { classKey: 'DROPSHIP', count: 4 },
+        { classKey: 'DREADNOUGHT', count: 2 }
+      ],
+      bossHp: 1400
+    },
+    {
+      waveNumber: 4,
+      bossName: 'The Apex Leviathan',
+      bossClass: 'BOSS',
+      sector: 4,
+      hazardSector: 4,
+      planetId: 20,
+      title: 'SECTOR IV APEX TITAN: THE APEX LEVIATHAN',
+      desc: 'Supreme Armada Flagship unleashing 360° torpedo barrages, phase warps, and elite escorts.',
+      escorts: [
+        { classKey: 'INTERCEPTOR', count: 4 },
+        { classKey: 'CRYO', count: 3 },
+        { classKey: 'PHASE', count: 3 },
+        { classKey: 'DROPSHIP', count: 2 },
+        { classKey: 'DREADNOUGHT', count: 2 }
+      ],
+      bossHp: 1800
+    }
+  ],
+  pitStop: {
+    duration: 4.0, // seconds
+    shieldRestorePct: 0.35,
+    coreRestorePct: 0.15,
+    novaChargesBonus: 2,
+    bannerText: '👑 TITAN NEUTRALIZED — ORBITAL REPAIR +35% SHIELD!'
+  },
+  rewards: {
+    firstClearShards: 300,
+    repeatClearShards: 100,
+    trophyId: 'TITAN_CONQUEROR'
+  }
+};
+
+export const WINGMAN_CONFIG = {
+  unlockSatelliteReq: 2,
+  unlockCostShards: 200,
+  doctrines: {
+    aegis: {
+      id: 'aegis',
+      name: 'Aegis Interceptor',
+      icon: '🛡️',
+      role: 'Point-Defense Interceptor',
+      color: '#00e5ff',
+      auraColor: 'rgba(0, 229, 255, 0.4)',
+      speed: 190,
+      fireRate: 0.35,
+      bulletSpeed: 520,
+      damage: 14,
+      bulletColor: '#00e5ff',
+      desc: 'Patrols mid-orbit at high speed (190 px/s), prioritizing incoming red torpedoes and fast Scouts.',
+      perkDesc: 'Rapid twin cyan pulse lasers targeting enemy torpedoes and flankers'
+    },
+    vanguard: {
+      id: 'vanguard',
+      name: 'Vanguard Striker',
+      icon: '⚔️',
+      role: 'Anti-Capital Striker',
+      color: '#ffd700',
+      auraColor: 'rgba(255, 215, 0, 0.4)',
+      speed: 165,
+      fireRate: 1.6,
+      bulletSpeed: 460,
+      damage: 38,
+      bulletColor: '#ffd700',
+      desc: 'Flies aggressively toward highest-HP targets (Bosses, Dreadnoughts) firing heavy armor-piercing rockets.',
+      perkDesc: 'Heavy golden plasma rockets dealing +40% armor damage with mini-splash'
+    },
+    harvester: {
+      id: 'harvester',
+      name: 'Nova Harvester',
+      icon: '🧲',
+      role: 'Support & Mine Layer',
+      color: '#00e676',
+      auraColor: 'rgba(0, 230, 118, 0.4)',
+      speed: 175,
+      fireRate: 0.8,
+      bulletSpeed: 480,
+      damage: 18,
+      bulletColor: '#00e676',
+      desc: 'Sweeps space collecting Sparks & Pods, boosts passive Nova recharge by +20%, and drops Plasma Mines every 5s.',
+      perkDesc: '+20% passive Nova recharge & Plasma Proximity Mines (70px chain detonation)'
+    }
+  }
+};
+
+export const ASCENSION_CONFIG = {
+  reqStars: 45,
+  reqPlanet: 20,
+  maxTier: 5,
+  shardGainBonusPerTier: 0.25,
+  scoreMultBonusPerTier: 0.20,
+  enemyHpScalingPerTier: 0.20,
+  enemySpeedScalingPerTier: 0.20
+};

@@ -1,6 +1,7 @@
-// Spark Panic 2.0 - 360° Orbital Guardian Turret
+// Spark Panic 2.4 - 360° Orbital Guardian Turret
 
 import { audio } from '../engine/audio.js';
+import { TURRET_SKINS } from '../config.js';
 
 export class GuardianTurret {
   constructor() {
@@ -13,6 +14,7 @@ export class GuardianTurret {
     this.fireInterval = 0.22;
 
     this.chassis = 'striker'; // 'striker' | 'tesla' | 'railgun'
+    this.skin = 'sentinel';
     this.level = 0;
     this.muzzleFlash = 0;
     this.setUpgradeLevel(0);
@@ -20,6 +22,12 @@ export class GuardianTurret {
 
   setChassis(chassisId = 'striker') {
     this.chassis = chassisId;
+  }
+
+  setSkin(skinId = 'sentinel') {
+    if (TURRET_SKINS[skinId]) {
+      this.skin = skinId;
+    }
   }
 
   setUpgradeLevel(level = 0) {
@@ -172,7 +180,9 @@ export class GuardianTurret {
     } else {
       // Default: Pulse Striker (520 px/s rapid plasma cannon)
       const speed = 520;
-      const color = isOverdrive ? '#ffd700' : (isOverclock ? '#38bdf8' : '#00e5ff');
+      const skinCfg = TURRET_SKINS[this.skin];
+      const skinBulletColor = skinCfg ? skinCfg.bulletColor : '#00e5ff';
+      const color = isOverdrive ? '#ffd700' : (isOverclock ? '#38bdf8' : skinBulletColor);
 
       if (barrelTier === 1) {
         bolts.push({
@@ -266,7 +276,8 @@ export class GuardianTurret {
     ctx.moveTo(planetX, planetY);
     ctx.lineTo(pointerX, pointerY);
 
-    let sightColor = isOverdrive ? 'rgba(255, 215, 0, 0.45)' : 'rgba(0, 229, 255, 0.4)';
+    const skinCfg = TURRET_SKINS[this.skin];
+    let sightColor = isOverdrive ? 'rgba(255, 215, 0, 0.45)' : (skinCfg ? `${skinCfg.glowColor}77` : 'rgba(0, 229, 255, 0.4)');
     if (this.chassis === 'tesla' && !isOverdrive) sightColor = 'rgba(224, 64, 251, 0.45)';
     if (this.chassis === 'railgun' && !isOverdrive) sightColor = 'rgba(255, 215, 0, 0.45)';
 
@@ -286,7 +297,9 @@ export class GuardianTurret {
     ctx.translate(tx, ty);
     ctx.rotate(this.angle);
 
-    const barrelColor = isOverdrive ? '#ffd700' : (this.chassis === 'tesla' ? '#e040fb' : (this.chassis === 'railgun' ? '#ffd700' : '#00e5ff'));
+    const skinCfg = TURRET_SKINS[this.skin];
+    const defaultColor = skinCfg ? skinCfg.primaryColor : '#00e5ff';
+    const barrelColor = isOverdrive ? '#ffd700' : (this.chassis === 'tesla' ? '#e040fb' : (this.chassis === 'railgun' ? '#ffd700' : defaultColor));
     const barrelTier = this.level >= 5 ? 3 : (this.level >= 3 ? 2 : 1);
 
     // Turret Mounting Base Ring

@@ -1,6 +1,6 @@
 // Spark Panic 2.0 - Application Bootstrap & Event Controller
 
-import { PLANETS, SECTORS, ALIEN_CLASSES, ARMORY_CONFIG, TROPHIES, GUARDIAN_RANKS, CHASSIS_CONFIG, getDailyAnomalyConfig } from './config.js';
+import { PLANETS, SECTORS, ALIEN_CLASSES, ARMORY_CONFIG, TROPHIES, GUARDIAN_RANKS, CHASSIS_CONFIG, getDailyAnomalyConfig, TITAN_PROTOCOL_CONFIG, WINGMAN_CONFIG, TURRET_SKINS, ASCENSION_CONFIG } from './config.js';
 import { audio } from './engine/audio.js';
 import { saveSystem } from './engine/storage.js';
 import { GameEngine } from './game/engine.js';
@@ -174,6 +174,11 @@ window.addEventListener('DOMContentLoaded', () => {
     audio.init();
     openStarMap();
   });
+  document.getElementById('btnTitleTitanProtocol')?.addEventListener('click', () => {
+    audio.init();
+    hideAllModals();
+    engine.startTitanProtocol();
+  });
   document.getElementById('btnTitleDailyAnomaly')?.addEventListener('click', () => {
     audio.init();
     openDailyAnomalyModal();
@@ -193,6 +198,17 @@ window.addEventListener('DOMContentLoaded', () => {
   });
 
   // Star Map Navigation & Launch
+  document.getElementById('btnStarMapTitanProtocol')?.addEventListener('click', () => {
+    audio.init();
+    hideAllModals();
+    engine.startTitanProtocol();
+  });
+  document.getElementById('btnAscension')?.addEventListener('click', () => {
+    handleAscensionClick();
+  });
+  document.getElementById('btnArmoryAscension')?.addEventListener('click', () => {
+    handleAscensionClick();
+  });
   document.getElementById('btnStarMapDailyAnomaly')?.addEventListener('click', () => {
     audio.init();
     openDailyAnomalyModal();
@@ -243,6 +259,8 @@ window.addEventListener('DOMContentLoaded', () => {
     const refunded = saveSystem.refundAllTech();
     renderArmoryGrid();
     renderChassisDeck();
+    renderWingmanDeck();
+    renderTurretSkinDeck();
     engine.applyUpgrades();
     engine.showToast(`REFUNDED ${refunded} STAR SHARDS!`, '#00e676');
   });
@@ -290,7 +308,7 @@ window.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btnVictoryNext')?.addEventListener('click', () => {
     audio.init();
     hideAllModals();
-    if (engine.isDailyAnomalyMode) {
+    if (engine.isTitanProtocolMode || engine.isDailyAnomalyMode) {
       openStarMap();
     } else {
       const nextPlanet = Math.min(20, engine.currentPlanetId + 1);
@@ -300,7 +318,9 @@ window.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btnVictoryRetry')?.addEventListener('click', () => {
     audio.init();
     hideAllModals();
-    if (engine.isDailyAnomalyMode) {
+    if (engine.isTitanProtocolMode) {
+      engine.startTitanProtocol();
+    } else if (engine.isDailyAnomalyMode) {
       engine.startDailyAnomaly();
     } else {
       engine.startCampaignPlanet(engine.currentPlanetId);
@@ -315,7 +335,8 @@ window.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btnDefeatRetry')?.addEventListener('click', () => {
     audio.init();
     hideAllModals();
-    if (engine.isDailyAnomalyMode) engine.startDailyAnomaly();
+    if (engine.isTitanProtocolMode) engine.startTitanProtocol();
+    else if (engine.isDailyAnomalyMode) engine.startDailyAnomaly();
     else if (engine.isEndlessMode) engine.startEndless();
     else engine.startCampaignPlanet(engine.currentPlanetId);
   });
@@ -351,7 +372,8 @@ window.addEventListener('DOMContentLoaded', () => {
 
   function restartCurrent() {
     hideAllModals();
-    if (engine.isDailyAnomalyMode) engine.startDailyAnomaly();
+    if (engine.isTitanProtocolMode) engine.startTitanProtocol();
+    else if (engine.isDailyAnomalyMode) engine.startDailyAnomaly();
     else if (engine.isEndlessMode) engine.startEndless();
     else engine.startCampaignPlanet(engine.currentPlanetId);
   }
@@ -481,6 +503,71 @@ window.addEventListener('DOMContentLoaded', () => {
     if (recordEl) {
       recordEl.textContent = `Wave ${bestWave} • ${bestScore.toLocaleString()} pts`;
     }
+
+    const titanRecordEl = document.getElementById('titleTitanRecordStats');
+    if (titanRecordEl) {
+      if (saveSystem.data.bestBossRushTime && saveSystem.data.bestBossRushTime > 0) {
+        titanRecordEl.textContent = `Cleared • ${saveSystem.data.bestBossRushTime.toFixed(1)}s`;
+      } else {
+        titanRecordEl.textContent = 'Not Cleared';
+      }
+    }
+
+    // Ascension HUD Badge
+    const tier = saveSystem.data.ascensionTier || 0;
+    const hudAscension = document.getElementById('hudAscensionBadge');
+    const hudAscensionLabel = document.getElementById('hudAscensionLabel');
+    if (hudAscension && hudAscensionLabel) {
+      if (tier > 0) {
+        hudAscension.classList.remove('hidden');
+        hudAscensionLabel.textContent = `ASCENSION ${'I'.repeat(tier)}`;
+      } else {
+        hudAscension.classList.add('hidden');
+      }
+    }
+  }
+
+  function handleAscensionClick() {
+    audio.init();
+    const canAscend = saveSystem.canAscend();
+    const currentTier = saveSystem.data.ascensionTier || 0;
+    const nextTier = currentTier + 1;
+
+    if (!canAscend) {
+      engine.showToast('ASCENSION REQUIRES 45+ LIBERATED STARS OR LIBERATING ALL 20 PLANETS!', '#ff3366');
+      return;
+    }
+
+    if (currentTier >= ASCENSION_CONFIG.maxTier) {
+      engine.showToast(`MAXIMUM ASCENSION TIER REACHED (TIER ${ASCENSION_CONFIG.maxTier})!`, '#ffd700');
+      return;
+    }
+
+    const bonusPct = nextTier * 25;
+    const scorePct = nextTier * 20;
+    const confirmMsg = `🌌 INITIATE HYPERDRIVE ASCENSION TO TIER ${nextTier}?\n\n` +
+      `• Liberated Stars & Planetary Conquest progress will reset to Planet 1\n` +
+      `• Invading Aliens receive +20% HP & Speed scaling\n` +
+      `• Star Shard yield increased by +${bonusPct}%\n` +
+      `• Mission Score yield increased by +${scorePct}%\n` +
+      `• Turret Chassis, Upgrades, AI Wingman, Trophies & Skins are 100% PRESERVED!\n\n` +
+      `Are you ready to ascend, Commander?`;
+
+    if (confirm(confirmMsg)) {
+      const res = saveSystem.ascend();
+      if (res.success) {
+        audio.playVictory();
+        engine.applyUpgrades();
+        updateTitleStats();
+        openStarMap();
+        renderArmoryGrid();
+        renderChassisDeck();
+        renderWingmanDeck();
+        renderTurretSkinDeck();
+        updateArmoryAscensionBtn();
+        engine.showToast(`🌌 HYPERDRIVE ASCENSION TIER ${nextTier} INITIATED!`, '#e040fb');
+      }
+    }
   }
 
   function openStarMap() {
@@ -488,6 +575,12 @@ window.addEventListener('DOMContentLoaded', () => {
     engine.state = 'STARMAP';
     document.getElementById('modalStarMap').classList.remove('hidden');
     document.getElementById('starMapShards').textContent = saveSystem.data.shards.toLocaleString();
+
+    const tier = saveSystem.data.ascensionTier || 0;
+    const starMapAscensionLabel = document.getElementById('starMapAscensionLabel');
+    if (starMapAscensionLabel) {
+      starMapAscensionLabel.textContent = tier > 0 ? `ASCENSION ${'I'.repeat(tier)}` : 'ASCENSION';
+    }
 
     // Default to sector of highest unlocked planet
     const unlocked = saveSystem.data.unlockedPlanet || 1;
@@ -604,7 +697,10 @@ window.addEventListener('DOMContentLoaded', () => {
   function openArmory() {
     document.getElementById('modalArmory').classList.remove('hidden');
     renderChassisDeck();
+    renderWingmanDeck();
+    renderTurretSkinDeck();
     renderArmoryGrid();
+    updateArmoryAscensionBtn();
   }
 
   function renderChassisDeck() {
@@ -707,6 +803,189 @@ window.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  function renderWingmanDeck() {
+    const container = document.getElementById('wingmanDoctrinesContainer');
+    const statusEl = document.getElementById('wingmanUnlockStatus');
+    if (!container) return;
+    container.innerHTML = '';
+
+    const isUnlocked = saveSystem.isWingmanUnlocked();
+    const selectedDoctrine = saveSystem.getSelectedWingmanDoctrine();
+    const shards = saveSystem.data.shards;
+    const canAffordUnlock = shards >= WINGMAN_CONFIG.unlockCostShards;
+
+    if (statusEl) {
+      if (isUnlocked) {
+        statusEl.innerHTML = `<span class="text-cosmic-mint font-bold">✓ WING-01 OPERATIONAL</span>`;
+      } else {
+        statusEl.innerHTML = `<span class="text-slate-400">REQ: SATELLITES LV.2 OR ✦ 200</span>`;
+      }
+    }
+
+    for (const [id, cfg] of Object.entries(WINGMAN_CONFIG.doctrines)) {
+      const isSelected = selectedDoctrine === id;
+      const card = document.createElement('div');
+      card.className = `glass-card p-3 rounded-2xl flex flex-col justify-between border transition ${
+        isUnlocked && isSelected ? 'border-cosmic-mint ring-2 ring-cosmic-mint/50 bg-cosmic-mint/10' : (isUnlocked ? 'border-slate-700/60 hover:border-slate-500' : 'border-slate-800 opacity-75')
+      }`;
+
+      let btnHtml = '';
+      if (!isUnlocked) {
+        btnHtml = `
+          <button class="btn-unlock-wingman w-full py-1.5 rounded-xl font-orbitron font-bold text-[10px] tracking-wider transition cursor-pointer flex items-center justify-center gap-1.5 ${
+            canAffordUnlock ? 'bg-gradient-to-r from-cosmic-mint to-teal-500 hover:from-emerald-300 hover:to-teal-400 text-slate-950 font-black shadow-md' : 'bg-slate-900 text-slate-500 border border-slate-800 cursor-not-allowed'
+          }" ${canAffordUnlock ? '' : 'disabled'}>
+            <span class="flex items-center gap-1">UNLOCK WING-01 [${ICON_SVG.shard('w-3 h-3 ' + (canAffordUnlock ? 'text-slate-950' : 'text-cosmic-gold'))} ${WINGMAN_CONFIG.unlockCostShards}]</span>
+          </button>
+        `;
+      } else if (isSelected) {
+        btnHtml = `
+          <div class="w-full py-1.5 rounded-xl font-orbitron font-black text-[10px] tracking-wider text-center bg-cosmic-mint/20 text-cosmic-mint border border-cosmic-mint/50">
+            ACTIVE DOCTRINE
+          </div>
+        `;
+      } else {
+        btnHtml = `
+          <button class="btn-equip-doctrine w-full py-1.5 rounded-xl font-orbitron font-bold text-[10px] tracking-wider transition cursor-pointer bg-slate-800 hover:bg-cosmic-mint hover:text-slate-950 text-white border border-slate-600 hover:border-cosmic-mint flex items-center justify-center gap-1.5" data-doctrine="${id}">
+            ENGAGE DOCTRINE
+          </button>
+        `;
+      }
+
+      card.innerHTML = `
+        <div>
+          <div class="flex items-center justify-between mb-1.5">
+            <div class="flex items-center gap-2">
+              <span class="text-xl p-1 rounded-lg bg-slate-950/80 border border-slate-800 shrink-0">${cfg.icon}</span>
+              <div>
+                <div class="font-orbitron font-black text-xs text-white">${cfg.name}</div>
+                <div class="text-[9px] font-orbitron font-bold" style="color: ${cfg.color}">${cfg.role}</div>
+              </div>
+            </div>
+            <span class="text-[9px] font-orbitron font-bold px-1.5 py-0.5 rounded ${
+              isUnlocked ? 'bg-cosmic-mint/20 text-cosmic-mint border border-cosmic-mint/30' : 'bg-slate-800 text-slate-400'
+            }">
+              ${isUnlocked ? (isSelected ? 'ACTIVE' : 'READY') : 'LOCKED'}
+            </span>
+          </div>
+          <p class="text-[10px] text-slate-300 leading-snug mb-2">${cfg.desc}</p>
+          <div class="bg-slate-950/50 p-1.5 rounded-xl border border-slate-800/80 text-[9px] font-orbitron text-cosmic-gold mb-2.5">
+            PERK: <span class="text-slate-300">${cfg.perkDesc}</span>
+          </div>
+        </div>
+        ${btnHtml}
+      `;
+
+      container.appendChild(card);
+    }
+
+    container.querySelectorAll('.btn-equip-doctrine').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        audio.init();
+        const id = e.currentTarget.getAttribute('data-doctrine');
+        saveSystem.selectWingmanDoctrine(id);
+        if (engine.wingman) engine.wingman.setDoctrine(id);
+        renderWingmanDeck();
+        engine.showToast(`AI WINGMAN: ${WINGMAN_CONFIG.doctrines[id]?.name.toUpperCase()} ENGAGED!`, '#00e676');
+      });
+    });
+
+    container.querySelectorAll('.btn-unlock-wingman').forEach(btn => {
+      btn.addEventListener('click', () => {
+        audio.init();
+        const success = saveSystem.unlockWingman();
+        if (success) {
+          audio.playShardPickup();
+          engine.applyUpgrades();
+          renderWingmanDeck();
+          renderArmoryGrid();
+          engine.showToast('AI WINGMAN STARFIGHTER (WING-01) UNLOCKED!', '#00e676');
+        }
+      });
+    });
+  }
+
+  function renderTurretSkinDeck() {
+    const container = document.getElementById('turretSkinsContainer');
+    if (!container) return;
+    container.innerHTML = '';
+
+    const selectedSkin = saveSystem.getSelectedTurretSkin();
+
+    for (const [id, skin] of Object.entries(TURRET_SKINS)) {
+      const isUnlocked = saveSystem.isTurretSkinUnlocked(id);
+      const isSelected = selectedSkin === id;
+
+      const card = document.createElement('div');
+      card.className = `glass-card p-2.5 rounded-2xl flex flex-col justify-between border transition ${
+        isSelected ? 'border-cosmic-gold ring-2 ring-cosmic-gold/50 bg-cosmic-gold/10' : (isUnlocked ? 'border-slate-700/60 hover:border-slate-500' : 'border-slate-800 opacity-70')
+      }`;
+
+      let btnHtml = '';
+      if (isSelected) {
+        btnHtml = `
+          <div class="w-full py-1 rounded-lg font-orbitron font-black text-[9px] tracking-wider text-center bg-cosmic-gold/20 text-cosmic-gold border border-cosmic-gold/50">
+            APPLIED
+          </div>
+        `;
+      } else if (isUnlocked) {
+        btnHtml = `
+          <button class="btn-equip-skin w-full py-1 rounded-lg font-orbitron font-bold text-[9px] tracking-wider transition cursor-pointer bg-slate-800 hover:bg-cosmic-gold hover:text-slate-950 text-white border border-slate-600 hover:border-cosmic-gold flex items-center justify-center gap-1" data-skin="${id}">
+            EQUIP SKIN
+          </button>
+        `;
+      } else {
+        const reqText = skin.reqAscension ? `ASCENSION TIER ${skin.reqAscension}` : `${skin.reqStars} ★ REQUIRED`;
+        btnHtml = `
+          <div class="w-full py-1 rounded-lg font-orbitron font-bold text-[8px] tracking-wider text-center bg-slate-900 text-slate-500 border border-slate-800">
+            ${reqText}
+          </div>
+        `;
+      }
+
+      card.innerHTML = `
+        <div>
+          <div class="flex items-center gap-2 mb-1.5">
+            <div class="w-6 h-6 rounded-full border shadow-sm shrink-0" style="background: radial-gradient(circle, ${skin.primaryColor}, ${skin.accentColor}); border-color: ${skin.glowColor}; box-shadow: 0 0 8px ${skin.glowColor};"></div>
+            <div class="truncate">
+              <div class="font-orbitron font-black text-xs text-white truncate">${skin.name}</div>
+              <div class="text-[8px] text-slate-400 font-orbitron">${isUnlocked ? 'UNLOCKED' : (skin.reqAscension ? `ASCENSION I+` : `${skin.reqStars} ★`)}</div>
+            </div>
+          </div>
+          <p class="text-[9px] text-slate-300 leading-snug mb-2 line-clamp-2">${skin.desc}</p>
+        </div>
+        ${btnHtml}
+      `;
+
+      container.appendChild(card);
+    }
+
+    container.querySelectorAll('.btn-equip-skin').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        audio.init();
+        const id = e.currentTarget.getAttribute('data-skin');
+        saveSystem.selectTurretSkin(id);
+        engine.turret.setSkin(id);
+        renderTurretSkinDeck();
+        engine.showToast(`TURRET HULL SKIN: ${TURRET_SKINS[id]?.name.toUpperCase()} EQUIPPED!`, TURRET_SKINS[id]?.primaryColor || '#ffd700');
+      });
+    });
+  }
+
+  function updateArmoryAscensionBtn() {
+    const btn = document.getElementById('btnArmoryAscension');
+    const label = document.getElementById('armoryAscensionText');
+    if (!btn || !label) return;
+    const tier = saveSystem.data.ascensionTier || 0;
+    const canAscend = saveSystem.canAscend();
+    label.textContent = tier > 0 ? `HYPERDRIVE ASCENSION (TIER ${tier})` : 'HYPERDRIVE ASCENSION';
+    if (canAscend) {
+      btn.classList.add('border-purple-400', 'text-purple-300', 'animate-pulse');
+    } else {
+      btn.classList.remove('border-purple-400', 'text-purple-300', 'animate-pulse');
+    }
+  }
+
   function renderArmoryGrid() {
     const grid = document.getElementById('armoryGrid');
     if (!grid) return;
@@ -760,6 +1039,9 @@ window.addEventListener('DOMContentLoaded', () => {
           audio.playShardPickup();
           renderArmoryGrid();
           renderChassisDeck();
+          renderWingmanDeck();
+          renderTurretSkinDeck();
+          updateArmoryAscensionBtn();
           engine.applyUpgrades();
         }
       });
