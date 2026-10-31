@@ -180,9 +180,11 @@ export class ParticleEngine {
   }
 
   render(ctx) {
-    // 1. Render Novas
+    // 1. Render Multi-Ring Supernova Shockwaves (Outer distortion ring + Inner additive plasma ring)
     for (const n of this.novas) {
       ctx.save();
+
+      // Outer fast-expanding distortion ring
       ctx.beginPath();
       ctx.arc(n.x, n.y, n.radius, 0, Math.PI * 2);
       ctx.strokeStyle = n.color;
@@ -192,11 +194,15 @@ export class ParticleEngine {
       ctx.shadowBlur = 18;
       ctx.stroke();
 
-      // Inner chromatic ring
+      // Inner bright plasma ring with additive lighter glow
+      ctx.globalCompositeOperation = 'lighter';
       ctx.beginPath();
-      ctx.arc(n.x, n.y, Math.max(0, n.radius * 0.75), 0, Math.PI * 2);
+      ctx.arc(n.x, n.y, Math.max(0, n.radius * 0.72), 0, Math.PI * 2);
       ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = 2;
+      ctx.lineWidth = 2.5;
+      ctx.globalAlpha = n.alpha * 0.9;
+      ctx.shadowColor = '#ffffff';
+      ctx.shadowBlur = 12;
       ctx.stroke();
 
       ctx.restore();

@@ -17,6 +17,7 @@ export class GuardianTurret {
     this.skin = 'sentinel';
     this.level = 0;
     this.muzzleFlash = 0;
+    this.recoil = 0;
     this.setUpgradeLevel(0);
   }
 
@@ -54,8 +55,13 @@ export class GuardianTurret {
     while (diff > Math.PI) diff -= Math.PI * 2;
     this.angle += diff * Math.min(1, dt * 18);
 
+    // Muzzle flash decay (~0.06s duration)
     if (this.muzzleFlash > 0) {
-      this.muzzleFlash -= dt * 10;
+      this.muzzleFlash = Math.max(0, this.muzzleFlash - dt * 16.6);
+    }
+    // Turret mechanical recoil decay
+    if (this.recoil > 0) {
+      this.recoil = Math.max(0, this.recoil - dt * 38);
     }
 
     // Fire timer (+35% fire rate when Overclock is active; Railgun is 1.45x interval)
@@ -71,11 +77,14 @@ export class GuardianTurret {
     if ((this.autoFire || this.isFiring) && this.fireTimer >= interval) {
       this.fireTimer = 0;
       this.muzzleFlash = 1.0;
+      this.recoil = 5.5;
       this.firePlasmaBolts(planetX, planetY, isOverdrive, onFireCallback, isOverclock);
     }
   }
 
   firePlasmaBolts(planetX, planetY, isOverdrive, onFireCallback, isOverclock = false) {
+    this.recoil = 5.5;
+    this.muzzleFlash = 1.0;
     audio.playLaser(isOverdrive);
     const dmg = this.getDamage(isOverdrive);
     const bolts = [];
@@ -289,18 +298,32 @@ export class GuardianTurret {
   }
 
   render(ctx, planetX, planetY, planetRadius, isOverdrive = false) {
-    const orbitR = planetRadius + 8;
+    const skinCfg = TURRET_SKINS[this.skin];
+    const defaultColor = skinCfg ? skinCfg.primaryColor : '#00e5ff';
+    const barrelColor = isOverdrive ? '#ffd700' : (this.chassis === 'tesla' ? '#e040fb' : (this.chassis === 'railgun' ? '#ffd700' : defaultColor));
+    const barrelTier = this.level >= 5 ? 3 : (this.level >= 3 ? 2 : 1);
+
+    // Subtle directional rim-light on planet's atmosphere right beneath turret barrel
+    if (this.muzzleFlash > 0.05) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(planetX, planetY, planetRadius + 5, this.angle - 0.35, this.angle + 0.35);
+      ctx.strokeStyle = barrelColor;
+      ctx.lineWidth = 6 * this.muzzleFlash;
+      ctx.globalAlpha = 0.55 * this.muzzleFlash;
+      ctx.shadowColor = barrelColor;
+      ctx.shadowBlur = 18;
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    const orbitR = planetRadius + 8 - (this.recoil || 0);
     const tx = planetX + Math.cos(this.angle) * orbitR;
     const ty = planetY + Math.sin(this.angle) * orbitR;
 
     ctx.save();
     ctx.translate(tx, ty);
     ctx.rotate(this.angle);
-
-    const skinCfg = TURRET_SKINS[this.skin];
-    const defaultColor = skinCfg ? skinCfg.primaryColor : '#00e5ff';
-    const barrelColor = isOverdrive ? '#ffd700' : (this.chassis === 'tesla' ? '#e040fb' : (this.chassis === 'railgun' ? '#ffd700' : defaultColor));
-    const barrelTier = this.level >= 5 ? 3 : (this.level >= 3 ? 2 : 1);
 
     // Turret Mounting Base Ring
     ctx.beginPath();
@@ -401,19 +424,42 @@ export class GuardianTurret {
       ctx.fill();
     }
 
-    // Muzzle Flash Spark
+    // Star-Shaped Muzzle Flash Flare
     if (this.muzzleFlash > 0.05) {
-      const flashX = this.chassis === 'railgun' ? 30 : 22;
-      ctx.beginPath();
-      ctx.arc(flashX, 0, 8 * this.muzzleFlash, 0, Math.PI * 2);
+      const flashX = this.chassis === 'railgun' ? 32 : 24;
+      const flareSize = 13 * this.muzzleFlash;
+
+      ctx.save();
+      ctx.translate(flashX, 0);
+      ctx.globalCompositeOperation = 'lighter';
+
+      // 4-point diamond star flare
       ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.moveTo(flareSize * 1.6, 0);
+      ctx.lineTo(0, flareSize * 0.35);
+      ctx.lineTo(-flareSize * 0.8, 0);
+      ctx.lineTo(0, -flareSize * 0.35);
+      ctx.closePath();
       ctx.fill();
-      ctx.strokeStyle = barrelColor;
-      ctx.lineWidth = 2;
+
+      ctx.beginPath();
+      ctx.moveTo(0, flareSize * 1.6);
+      ctx.lineTo(flareSize * 0.35, 0);
+      ctx.lineTo(0, -flareSize * 0.8);
+      ctx.lineTo(-flareSize * 0.35, 0);
+      ctx.closePath();
+      ctx.fill();
+
+      // Outer colored radiant glow
+      ctx.beginPath();
+      ctx.arc(0, 0, flareSize * 0.7, 0, Math.PI * 2);
+      ctx.fillStyle = barrelColor;
       ctx.shadowColor = barrelColor;
-      ctx.shadowBlur = 15;
-      ctx.stroke();
-      ctx.shadowBlur = 0;
+      ctx.shadowBlur = 18;
+      ctx.fill();
+
+      ctx.restore();
     }
 
     ctx.restore();

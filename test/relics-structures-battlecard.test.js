@@ -319,7 +319,7 @@ describe('v2.5 Commander\'s Ultimate Edition Suite', () => {
         expect(mainTitle.y).toBe(52);
         expect(mainTitle.textAlign).toBe('left');
 
-        const goldBadge = fillTextCalls.find(c => c.text === "⚡ v2.5 COMMANDER'S ULTIMATE EDITION");
+        const goldBadge = fillTextCalls.find(c => c.text === "⚡ v2.6 ARCADE SPECTACLE EDITION");
         expect(goldBadge).toBeDefined();
         expect(goldBadge.x).toBe(48);
         expect(goldBadge.y).toBe(76);
@@ -343,10 +343,10 @@ describe('v2.5 Commander\'s Ultimate Edition Suite', () => {
       }
     });
 
-    it('should have updated title screen badge to v2.5 Commander\'s Ultimate Edition in index.html', () => {
+    it('should have updated title screen badge to v2.6 Arcade Spectacle Edition in index.html', () => {
       const htmlPath = path.resolve(__dirname, '../index.html');
       const html = fs.readFileSync(htmlPath, 'utf-8');
-      expect(html).toContain('⚡ v2.5 COMMANDER\'S ULTIMATE EDITION');
+      expect(html).toContain('⚡ v2.6 ARCADE SPECTACLE EDITION');
       expect(html).not.toContain('ORBITAL DEFENSE INVASION 2.0');
     });
   });

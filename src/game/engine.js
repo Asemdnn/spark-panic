@@ -106,8 +106,21 @@ export class GameEngine {
     this.shakeIntensity = 0;
     this.shakeTimer = 0;
 
-    // Deep Space Starfield
+    // Deep Space Starfield & Arcade VFX
     this.stars = [];
+    this.turretRecoil = 0;
+    this.chainTethers = [];
+    this.debris = [];
+    this.threatIndicators = [];
+    this.warpPortals = [];
+    this.timeScale = 1.0;
+    this.hitStopTimer = 0;
+    this.vignettePulse = 0;
+    this.comets = [];
+    this.cometTimer = 0;
+    this.parallaxX = 0;
+    this.parallaxY = 0;
+    this.gameTime = 0;
     this.initStars();
 
     this.resize = this.resize.bind(this);
@@ -117,14 +130,28 @@ export class GameEngine {
 
   initStars() {
     this.stars = [];
-    for (let i = 0; i < 140; i++) {
+    for (let i = 0; i < 150; i++) {
+      const layer = (i % 5 === 0) ? 3 : ((i % 2 === 0) ? 2 : 1);
+      let size = Math.random() * 1.0 + 0.6;
+      let alpha = Math.random() * 0.4 + 0.3;
+      let speed = Math.random() * 1.5 + 0.8;
+      if (layer === 2) {
+        size = Math.random() * 1.2 + 1.3;
+        alpha = Math.random() * 0.35 + 0.55;
+        speed = Math.random() * 2.0 + 1.4;
+      } else if (layer === 3) {
+        size = Math.random() * 1.4 + 2.2;
+        alpha = Math.random() * 0.25 + 0.75;
+        speed = Math.random() * 2.5 + 2.0;
+      }
       this.stars.push({
         x: Math.random() * this.width,
         y: Math.random() * this.height,
-        size: Math.random() * 2 + 0.6,
-        alpha: Math.random() * 0.7 + 0.3,
+        layer,
+        size,
+        alpha,
         phase: Math.random() * Math.PI * 2,
-        speed: Math.random() * 2.5 + 1
+        speed
       });
     }
   }
@@ -478,6 +505,18 @@ export class GameEngine {
     this.solarEmberZones = [];
     this.turretShotCount = 0;
     this.relicChronoStasisCooldown = 0;
+
+    // v2.6 Arcade Juice & Spectacle states
+    this.chainTethers = [];
+    this.debris = [];
+    this.threatIndicators = [];
+    this.warpPortals = [];
+    this.timeScale = 1.0;
+    this.hitStopTimer = 0;
+    this.vignettePulse = 0;
+    this.comets = [];
+    this.cometTimer = 0;
+    this.turretRecoil = 0;
   }
 
   setupWaveSpawns() {
@@ -777,6 +816,46 @@ export class GameEngine {
     this.maxCombo = Math.max(this.maxCombo, this.combo);
     audio.playChainChime(this.combo);
 
+    // Supernova Spectacle: Chain-Reaction Lightning Tethers
+    if (killerNova && typeof killerNova.x === 'number' && typeof killerNova.y === 'number') {
+      this.chainTethers.push({
+        x1: killerNova.x,
+        y1: killerNova.y,
+        x2: alien.x,
+        y2: alien.y,
+        color: alien.color || '#00e5ff',
+        life: 0.28,
+        maxLife: 0.28
+      });
+    }
+
+    // Supernova Spectacle: Polygon Ship Hull Shatter Shards
+    const shardCount = 3 + Math.floor(Math.random() * 3);
+    for (let s = 0; s < shardCount; s++) {
+      const sAngle = Math.random() * Math.PI * 2;
+      const sSpd = 70 + Math.random() * 180;
+      this.debris.push({
+        x: alien.x,
+        y: alien.y,
+        vx: Math.cos(sAngle) * sSpd,
+        vy: Math.sin(sAngle) * sSpd,
+        angle: Math.random() * Math.PI * 2,
+        vRot: (Math.random() - 0.5) * 14,
+        size: 5 + Math.random() * 7,
+        color: alien.color || '#00e5ff',
+        life: 0.65,
+        maxLife: 0.65
+      });
+    }
+
+    // Multi-Ring Shockwaves & Hit-Stop Micro-Slow-Mo on Milestone Mega Chains (x8, x12, x16, x20+)
+    if (this.combo === 8 || this.combo === 12 || this.combo === 16 || (this.combo >= 20 && this.combo % 4 === 0)) {
+      this.hitStopTimer = 0.14;
+      this.timeScale = 0.35;
+      this.vignettePulse = 1.0;
+      this.addScreenShake(8, 0.2);
+    }
+
     // Vampiric Core Relic: Heal Core HP + Shield on x8+ Combo
     if (this.hasRelic('vampiricCore') && this.combo >= 8) {
       this.planet.coreHp = Math.min(this.planet.maxCoreHp, this.planet.coreHp + 15);
@@ -897,9 +976,57 @@ export class GameEngine {
   }
 
   update(dt) {
+    // Hit-stop recovery & arcade time scaling
+    if (this.hitStopTimer > 0) {
+      this.hitStopTimer = Math.max(0, this.hitStopTimer - dt);
+      if (this.hitStopTimer <= 0) {
+        this.timeScale = 1.0;
+      } else {
+        this.timeScale = 0.35 + (1 - this.hitStopTimer / 0.14) * 0.65;
+      }
+    }
+    if (this.vignettePulse > 0) {
+      this.vignettePulse = Math.max(0, this.vignettePulse - dt * 4.5);
+    }
+    const effectiveDt = dt * this.timeScale;
+    this.gameTime += dt;
+    this.turretRecoil = this.turret ? (this.turret.recoil || 0) : 0;
+
     // Stars twinkling
     for (const s of this.stars) {
       s.phase += dt * s.speed;
+    }
+
+    // Parallax camera offset lerp towards turret angle
+    const targetPx = Math.cos(this.turret ? this.turret.angle : 0) * -14;
+    const targetPy = Math.sin(this.turret ? this.turret.angle : 0) * -14;
+    this.parallaxX += (targetPx - this.parallaxX) * Math.min(1, dt * 6);
+    this.parallaxY += (targetPy - this.parallaxY) * Math.min(1, dt * 6);
+
+    // Shooting Star / Ice Comet every 8-12 seconds
+    this.cometTimer += dt;
+    if (this.cometTimer >= 9.0) {
+      this.cometTimer = 0;
+      const startX = Math.random() * (this.width || 800);
+      const startY = Math.random() * ((this.height || 600) * 0.4);
+      const cAngle = Math.PI / 4 + (Math.random() - 0.5) * 0.35;
+      const spd = 720 + Math.random() * 260;
+      this.comets.push({
+        x: startX,
+        y: startY,
+        vx: Math.cos(cAngle) * spd,
+        vy: Math.sin(cAngle) * spd,
+        color: '#38bdf8',
+        life: 0.85,
+        maxLife: 0.85
+      });
+    }
+    for (let i = this.comets.length - 1; i >= 0; i--) {
+      const c = this.comets[i];
+      c.x += c.vx * dt;
+      c.y += c.vy * dt;
+      c.life -= dt;
+      if (c.life <= 0) this.comets.splice(i, 1);
     }
 
     // Screen Shake decay
@@ -1154,6 +1281,55 @@ export class GameEngine {
       this.structures
     );
 
+    // Update Subspace Warp Portals (Boss Incursion Emergence)
+    for (let i = this.warpPortals.length - 1; i >= 0; i--) {
+      const wp = this.warpPortals[i];
+      wp.timer -= dt;
+      wp.rot += dt * 8;
+      if (wp.timer <= 0) {
+        const alien = new Alien(wp.x, wp.y, wp.item.classKey, wp.item.bossCustomName);
+        if (wp.item.bossCustomHp) {
+          alien.hp = wp.item.bossCustomHp;
+          alien.maxHp = wp.item.bossCustomHp;
+        }
+        const ascensionMults = saveSystem.getAscensionMultipliers();
+        if (ascensionMults.tier > 0) {
+          alien.hp = Math.round(alien.hp * ascensionMults.enemyHpMultiplier);
+          alien.maxHp = Math.round(alien.maxHp * ascensionMults.enemyHpMultiplier);
+          alien.speed *= ascensionMults.enemySpeedMultiplier;
+        }
+        this.activeBoss = alien;
+        this.aliens.push(alien);
+        this.particles.spawnNova(wp.x, wp.y, 110, '#e040fb', 0, false);
+        this.addScreenShake(12, 0.3);
+        this.warpPortals.splice(i, 1);
+      }
+    }
+
+    // Update Threat Warning Indicators
+    for (let i = this.threatIndicators.length - 1; i >= 0; i--) {
+      const ind = this.threatIndicators[i];
+      ind.timer -= dt;
+      if (ind.timer <= 0) this.threatIndicators.splice(i, 1);
+    }
+
+    // Update Chain-Reaction Lightning Tethers
+    for (let i = this.chainTethers.length - 1; i >= 0; i--) {
+      const t = this.chainTethers[i];
+      t.life -= dt;
+      if (t.life <= 0) this.chainTethers.splice(i, 1);
+    }
+
+    // Update Polygon Hull Shatter Debris
+    for (let i = this.debris.length - 1; i >= 0; i--) {
+      const d = this.debris[i];
+      d.x += d.vx * effectiveDt;
+      d.y += d.vy * effectiveDt;
+      d.angle += d.vRot * effectiveDt;
+      d.life -= dt;
+      if (d.life <= 0) this.debris.splice(i, 1);
+    }
+
     // 6. Spawn Alien Wave Incursions
     this.spawnTimer -= dt;
     if (this.spawnTimer <= 0 && this.waveSpawnQueue.length > 0) {
@@ -1166,25 +1342,53 @@ export class GameEngine {
       const ax = this.planet.x + Math.cos(spawnAngle) * spawnDist;
       const ay = this.planet.y + Math.sin(spawnAngle) * spawnDist;
 
-      const alien = new Alien(ax, ay, item.classKey, item.bossCustomName);
-      if (item.bossCustomHp) {
-        alien.hp = item.bossCustomHp;
-        alien.maxHp = item.bossCustomHp;
-      }
-      if (this.hasDailyMutator('swarmBlitz') && (item.classKey === 'SCOUT' || item.classKey === 'INTERCEPTOR')) {
-        alien.speed *= 1.20;
-      }
-      // Ascension enemy scaling
-      const ascensionMults = saveSystem.getAscensionMultipliers();
-      if (ascensionMults.tier > 0) {
-        alien.hp = Math.round(alien.hp * ascensionMults.enemyHpMultiplier);
-        alien.maxHp = Math.round(alien.maxHp * ascensionMults.enemyHpMultiplier);
-        alien.speed *= ascensionMults.enemySpeedMultiplier;
-      }
       if (item.classKey === 'BOSS') {
-        this.activeBoss = alien;
+        // Swirling Subspace Warp Rift for 1.0s before Boss emergence
+        this.warpPortals.push({
+          x: ax,
+          y: ay,
+          radius: 55,
+          timer: 1.0,
+          maxTimer: 1.0,
+          rot: 0,
+          item,
+          angle: spawnAngle
+        });
+        // Perimeter threat arrow
+        this.threatIndicators.push({
+          angle: spawnAngle,
+          timer: 1.2,
+          maxTimer: 1.2,
+          classKey: 'BOSS',
+          name: item.bossCustomName || 'APEX MOTHERSHIP'
+        });
+      } else {
+        if (item.classKey === 'DREADNOUGHT' || item.classKey === 'DROPSHIP') {
+          this.threatIndicators.push({
+            angle: spawnAngle,
+            timer: 1.2,
+            maxTimer: 1.2,
+            classKey: item.classKey,
+            name: item.classKey
+          });
+        }
+        const alien = new Alien(ax, ay, item.classKey, item.bossCustomName);
+        if (item.bossCustomHp) {
+          alien.hp = item.bossCustomHp;
+          alien.maxHp = item.bossCustomHp;
+        }
+        if (this.hasDailyMutator('swarmBlitz') && (item.classKey === 'SCOUT' || item.classKey === 'INTERCEPTOR')) {
+          alien.speed *= 1.20;
+        }
+        // Ascension enemy scaling
+        const ascensionMults = saveSystem.getAscensionMultipliers();
+        if (ascensionMults.tier > 0) {
+          alien.hp = Math.round(alien.hp * ascensionMults.enemyHpMultiplier);
+          alien.maxHp = Math.round(alien.maxHp * ascensionMults.enemyHpMultiplier);
+          alien.speed *= ascensionMults.enemySpeedMultiplier;
+        }
+        this.aliens.push(alien);
       }
-      this.aliens.push(alien);
     }
 
     // 7. Update Aliens
@@ -1247,7 +1451,7 @@ export class GameEngine {
     );
 
     // 9. Wave Progression / Victory Check
-    if (this.waveSpawnQueue.length === 0 && this.aliens.length === 0 && !this.isTitanPitStop) {
+    if (this.waveSpawnQueue.length === 0 && this.aliens.length === 0 && this.warpPortals.length === 0 && !this.isTitanPitStop) {
       if (this.currentWave < this.totalWaves) {
         if (this.isTitanProtocolMode) {
           // Inter-wave Tactical Pit-Stop (4s)
@@ -1558,7 +1762,7 @@ export class GameEngine {
       ctx.translate(shakeX, shakeY);
     }
 
-    // 1. Render Deep Space Background Void & Twinkling Stars
+    // 1. Render Deep Space Background Void & 3-Layer Parallax Starfield
     const bgGrad = ctx.createRadialGradient(
       this.planet.x, this.planet.y, 80,
       this.planet.x, this.planet.y, Math.max(this.width, this.height) * 0.75
@@ -1569,19 +1773,88 @@ export class GameEngine {
     ctx.fillStyle = bgGrad;
     ctx.fillRect(0, 0, this.width, this.height);
 
-    // Stars
+    // 3-Layer Parallax Starfield & Nebula Clouds
     ctx.save();
     for (const s of this.stars) {
+      const layerOffset = s.layer || 1;
+      let sx = s.x + this.parallaxX * layerOffset;
+      let sy = s.y + this.parallaxY * layerOffset;
+      if (this.width > 0 && this.height > 0) {
+        while (sx < 0) sx += this.width;
+        while (sx > this.width) sx -= this.width;
+        while (sy < 0) sy += this.height;
+        while (sy > this.height) sy -= this.height;
+      }
+
       const a = Math.max(0.15, Math.min(1, s.alpha * (0.6 + Math.sin(s.phase) * 0.4)));
-      ctx.fillStyle = `rgba(255, 255, 255, ${a})`;
+      ctx.fillStyle = s.layer === 3 ? `rgba(224, 242, 254, ${a})` : (s.layer === 2 ? `rgba(186, 230, 253, ${a})` : `rgba(255, 255, 255, ${a})`);
       ctx.beginPath();
-      ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+      ctx.arc(sx, sy, s.size, 0, Math.PI * 2);
       ctx.fill();
+    }
+
+    // Distant Shooting Stars / Ice Comets
+    for (const c of this.comets) {
+      const alpha = Math.max(0, c.life / c.maxLife);
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.beginPath();
+      ctx.moveTo(c.x, c.y);
+      ctx.lineTo(c.x - (c.vx / 18), c.y - (c.vy / 18));
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2.0;
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(c.x, c.y);
+      ctx.lineTo(c.x - (c.vx / 10), c.y - (c.vy / 10));
+      ctx.strokeStyle = c.color;
+      ctx.lineWidth = 3.5;
+      ctx.shadowColor = c.color;
+      ctx.shadowBlur = 12;
+      ctx.stroke();
+      ctx.restore();
     }
     ctx.restore();
 
     // 2. Render Background Ring Half
     this.planet.renderBackRing(ctx);
+
+    // Render Subspace Warp Rift Portals
+    for (const wp of this.warpPortals) {
+      const progress = Math.min(1, Math.max(0, 1 - (wp.timer / wp.maxTimer)));
+      const curR = wp.radius * Math.sin(progress * Math.PI);
+      ctx.save();
+      ctx.translate(wp.x, wp.y);
+      ctx.rotate(wp.rot || 0);
+
+      // Dark event-horizon core
+      ctx.beginPath();
+      ctx.arc(0, 0, Math.max(0, curR * 0.5), 0, Math.PI * 2);
+      ctx.fillStyle = '#050814';
+      ctx.fill();
+
+      // Swirling outer crimson/violet energy rift
+      ctx.beginPath();
+      ctx.arc(0, 0, Math.max(0, curR), 0, Math.PI * 2);
+      ctx.strokeStyle = '#e040fb';
+      ctx.lineWidth = 4.5;
+      ctx.shadowColor = '#e040fb';
+      ctx.shadowBlur = 24;
+      ctx.stroke();
+
+      // Rotating lightning spokes
+      ctx.strokeStyle = '#ff1744';
+      ctx.lineWidth = 2.0;
+      for (let sp = 0; sp < 6; sp++) {
+        const a = (sp / 6) * Math.PI * 2;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(Math.cos(a) * curR, Math.sin(a) * curR);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
 
     // 3. Render Living Central Planet & Aegis Shield
     const isOverdrive = this.skills.overdriveActive;
@@ -1628,7 +1901,7 @@ export class GameEngine {
     }
 
     // 7. Render Active Tactical Skills (Ion Beam & EMP)
-    this.skills.render(ctx, this.planet.x, this.planet.y);
+    this.skills.render(ctx, this.planet.x, this.planet.y, this.planet.planetRadius, this.gameTime);
 
     // Render Sector Environmental Hazards
     this.hazards.render(ctx, this.planet.x, this.planet.y);
@@ -1657,6 +1930,95 @@ export class GameEngine {
           ctx.restore();
         }
       }
+    }
+
+    // Perimeter Lock-On Threat Indicators (Edge Spawns)
+    if (this.threatIndicators && this.threatIndicators.length > 0) {
+      const radarR = Math.min(this.width, this.height) * 0.44;
+      for (const ind of this.threatIndicators) {
+        const alpha = Math.max(0, ind.timer / ind.maxTimer);
+        const pulse = 1.0 + Math.sin(Date.now() * 0.015) * 0.25;
+        const ix = this.planet.x + Math.cos(ind.angle) * radarR;
+        const iy = this.planet.y + Math.sin(ind.angle) * radarR;
+
+        ctx.save();
+        ctx.translate(ix, iy);
+        ctx.rotate(ind.angle);
+        ctx.globalAlpha = alpha;
+
+        // Pulsing directional chevron
+        ctx.beginPath();
+        ctx.moveTo(12 * pulse, 0);
+        ctx.lineTo(-8 * pulse, -10 * pulse);
+        ctx.lineTo(-4 * pulse, 0);
+        ctx.lineTo(-8 * pulse, 10 * pulse);
+        ctx.closePath();
+        ctx.fillStyle = '#ff1744';
+        ctx.shadowColor = '#ff1744';
+        ctx.shadowBlur = 15;
+        ctx.fill();
+
+        ctx.font = 'bold 11px Orbitron, sans-serif';
+        ctx.fillStyle = '#ffffff';
+        ctx.textAlign = 'center';
+        ctx.fillText('⚠️ HEAVY INCURSION', 0, -16);
+        ctx.restore();
+      }
+    }
+
+    // Supernova Spectacle: Chain-Reaction Lightning Tethers
+    if (this.chainTethers && this.chainTethers.length > 0) {
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      for (const t of this.chainTethers) {
+        const alpha = Math.max(0, t.life / t.maxLife);
+        const segments = 5;
+        ctx.globalAlpha = alpha;
+        ctx.beginPath();
+        ctx.moveTo(t.x1, t.y1);
+        for (let seg = 1; seg < segments; seg++) {
+          const pct = seg / segments;
+          const basePx = t.x1 + (t.x2 - t.x1) * pct;
+          const basePy = t.y1 + (t.y2 - t.y1) * pct;
+          const perpX = -(t.y2 - t.y1) * 0.06 * Math.sin(seg * 3.7 + t.life * 45);
+          const perpY = (t.x2 - t.x1) * 0.06 * Math.cos(seg * 3.7 + t.life * 45);
+          ctx.lineTo(basePx + perpX, basePy + perpY);
+        }
+        ctx.lineTo(t.x2, t.y2);
+        ctx.strokeStyle = t.color || '#00e5ff';
+        ctx.lineWidth = 3.0;
+        ctx.shadowColor = t.color || '#00e5ff';
+        ctx.shadowBlur = 12;
+        ctx.stroke();
+
+        ctx.lineWidth = 1.2;
+        ctx.strokeStyle = '#ffffff';
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    // Supernova Spectacle: Polygon Ship Hull Shatter Shards
+    for (const d of this.debris) {
+      const alpha = Math.max(0, d.life / d.maxLife);
+      ctx.save();
+      ctx.translate(d.x, d.y);
+      ctx.rotate(d.angle);
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = d.color || '#00e5ff';
+      ctx.shadowColor = d.color || '#00e5ff';
+      ctx.shadowBlur = 8;
+      ctx.beginPath();
+      ctx.moveTo(-d.size, -d.size * 0.5);
+      ctx.lineTo(d.size, 0);
+      ctx.lineTo(-d.size * 0.5, d.size * 0.8);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 1.0;
+      ctx.stroke();
+      ctx.restore();
     }
 
     // Tutorial Step 2: Draw pulsing golden target reticle ring on nearest alien
@@ -1693,11 +2055,25 @@ export class GameEngine {
       }
     }
 
-    // 9. Render Projectiles (Plasma Bolts, Torpedoes, Lasers)
-    this.projectiles.render(ctx);
+    // 9. Render Projectiles (Directional Plasma Bolts, Warheads, Lasers)
+    this.projectiles.render(ctx, this.planet.x, this.planet.y, this.planet.shieldRadius, this.getSettings().threatRings !== false);
 
     // 10. Render Particles, Chain Novas, Sparks, and Floating Combat Callouts
     this.particles.render(ctx);
+
+    // Edge Vignette Pulse on Mega Chains
+    if (this.vignettePulse > 0.02) {
+      ctx.save();
+      const vGrad = ctx.createRadialGradient(
+        this.width * 0.5, this.height * 0.5, Math.min(this.width, this.height) * 0.45,
+        this.width * 0.5, this.height * 0.5, Math.max(this.width, this.height) * 0.75
+      );
+      vGrad.addColorStop(0, 'rgba(0, 0, 0, 0)');
+      vGrad.addColorStop(1, `rgba(224, 64, 251, ${this.vignettePulse * 0.35})`);
+      ctx.fillStyle = vGrad;
+      ctx.fillRect(0, 0, this.width, this.height);
+      ctx.restore();
+    }
 
     // 11. Render Gamepad Tactical Reticle
     this.renderGamepadReticle(ctx);

@@ -77,7 +77,7 @@ export class TacticalSkills {
     return true;
   }
 
-  update(dt, turretAngle, planetX, planetY, aliens, torpedoes, novaMultiplier = 1, onScreenShake) {
+  update(dt, turretAngle, planetX, planetY, aliens, torpedoes, novaMultiplier = 1, onScreenShake, planetRadius = 75) {
     // Cooldown timers
     if (this.timerQ > 0) this.timerQ = Math.max(0, this.timerQ - dt);
     if (this.timerW > 0) this.timerW = Math.max(0, this.timerW - dt);
@@ -97,12 +97,13 @@ export class TacticalSkills {
       this.ionBeamTimer -= dt;
       if (onScreenShake) onScreenShake(4, 0.05);
 
+      const originDist = (planetRadius || 75) + 10;
       const beamLength = 1400;
       const beamWidth = 24;
       const dps = 160 * novaMultiplier;
       const dmgThisFrame = dps * dt;
 
-      // Check hits along beam ray
+      // Check hits along beam ray starting from turret cannon tip
       for (const alien of aliens) {
         if (!alien.alive) continue;
         const dx = alien.x - planetX;
@@ -117,7 +118,7 @@ export class TacticalSkills {
         const perpDist = dist * Math.sin(angleDiff);
         const parDist = dist * Math.cos(angleDiff);
 
-        if (parDist > 0 && parDist < beamLength && perpDist < (beamWidth / 2 + alien.radius)) {
+        if (parDist >= originDist && parDist < (originDist + beamLength) && perpDist < (beamWidth / 2 + alien.radius)) {
           alien.takeDamage(dmgThisFrame, null, null, true);
         }
       }
@@ -131,7 +132,8 @@ export class TacticalSkills {
         const torpAngle = Math.atan2(dy, dx);
         let angleDiff = Math.abs(torpAngle - this.ionBeamAngle);
         while (angleDiff > Math.PI) angleDiff = Math.abs(angleDiff - Math.PI * 2);
-        if (dist * Math.cos(angleDiff) > 0 && dist * Math.sin(angleDiff) < (beamWidth / 2 + torp.radius)) {
+        const parDist = dist * Math.cos(angleDiff);
+        if (parDist >= originDist && dist * Math.sin(angleDiff) < (beamWidth / 2 + torp.radius)) {
           torp.alive = false;
         }
       }
@@ -176,30 +178,71 @@ export class TacticalSkills {
     }
   }
 
-  render(ctx, planetX, planetY) {
-    // Render Orbital Ion Beam
+  render(ctx, planetX, planetY, planetRadius = 75, timeSec = 0) {
+    // Render Orbital Ion Beam (anchored directly to Turret Cannon Tip)
     if (this.ionBeamActive) {
+      const originDist = planetRadius + 20;
+      const length = 1500;
+      const width = 24;
+
       ctx.save();
       ctx.translate(planetX, planetY);
       ctx.rotate(this.ionBeamAngle);
 
-      const length = 1500;
-      const width = 24;
-
-      // Outer cyan aura
+      // 1. Glowing energy charge-sphere at turret muzzle
+      const pulseR = 12 + Math.sin(timeSec * 25) * 3;
+      const muzzleGlow = ctx.createRadialGradient(originDist, 0, 2, originDist, 0, pulseR);
+      muzzleGlow.addColorStop(0, '#ffffff');
+      muzzleGlow.addColorStop(0.45, '#00e5ff');
+      muzzleGlow.addColorStop(1, 'rgba(0, 229, 255, 0)');
+      ctx.fillStyle = muzzleGlow;
       ctx.beginPath();
-      ctx.rect(0, -width, length, width * 2);
-      ctx.fillStyle = 'rgba(0, 229, 255, 0.28)';
+      ctx.arc(originDist, 0, pulseR, 0, Math.PI * 2);
       ctx.fill();
 
-      // Core piercing white beam
+      // 2. Pulsing outer cyan plasma sheath
       ctx.beginPath();
-      ctx.rect(0, -width * 0.35, length, width * 0.7);
+      ctx.rect(originDist, -width, length, width * 2);
+      ctx.fillStyle = 'rgba(0, 229, 255, 0.32)';
+      ctx.fill();
+
+      // 3. Blazing white hot core
+      ctx.beginPath();
+      ctx.rect(originDist, -width * 0.35, length, width * 0.7);
       ctx.fillStyle = '#ffffff';
       ctx.shadowColor = '#00e5ff';
       ctx.shadowBlur = 25;
       ctx.fill();
       ctx.shadowBlur = 0;
+
+      // 4. Sine-wave helical energy ribbon spiraling down the length of the beam
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.beginPath();
+      for (let d = 0; d <= length; d += 14) {
+        const rx = originDist + d;
+        const ry = Math.sin(d * 0.06 - timeSec * 28) * 14;
+        if (d === 0) ctx.moveTo(rx, ry);
+        else ctx.lineTo(rx, ry);
+      }
+      ctx.strokeStyle = '#00e5ff';
+      ctx.lineWidth = 3.5;
+      ctx.shadowColor = '#00e5ff';
+      ctx.shadowBlur = 14;
+      ctx.stroke();
+
+      // Intertwined white counter-helix
+      ctx.beginPath();
+      for (let d = 0; d <= length; d += 14) {
+        const rx = originDist + d;
+        const ry = -Math.sin(d * 0.06 - timeSec * 28) * 14;
+        if (d === 0) ctx.moveTo(rx, ry);
+        else ctx.lineTo(rx, ry);
+      }
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
+      ctx.lineWidth = 1.8;
+      ctx.stroke();
+      ctx.restore();
 
       ctx.restore();
     }

@@ -70,8 +70,9 @@ export class ProjectileManager {
       vy: Math.sin(angle) * speed,
       angle,
       damage,
-      color,
+      color: color || '#ff1744',
       radius: 6.5,
+      trail: [],
       alive: true
     });
   }
@@ -116,8 +117,23 @@ export class ProjectileManager {
     // 1. Update Player Plasma Bolts
     for (let i = this.bolts.length - 1; i >= 0; i--) {
       const b = this.bolts[i];
+      const prevX = b.x;
+      const prevY = b.y;
       b.x += b.vx * dt;
       b.y += b.vy * dt;
+
+      // Lingering golden rail-wake line for Railgun Lancer shots
+      if (b.isRailgun && b.alive) {
+        this.railgunTrails.push({
+          x1: prevX,
+          y1: prevY,
+          x2: b.x,
+          y2: b.y,
+          timer: 0.18,
+          maxTimer: 0.18,
+          color: b.color || '#ffd700'
+        });
+      }
 
       // Check laser refraction through Solar Prism Pylons
       if (b.alive && structureManager) {
@@ -344,6 +360,10 @@ export class ProjectileManager {
     // 2. Update Enemy Torpedoes (affected by Cryo Time-Warp speedScale)
     for (let i = this.torpedoes.length - 1; i >= 0; i--) {
       const torp = this.torpedoes[i];
+      if (!torp.trail) torp.trail = [];
+      torp.trail.push({ x: torp.x, y: torp.y });
+      if (torp.trail.length > 5) torp.trail.shift();
+
       torp.x += torp.vx * dt * speedScale;
       torp.y += torp.vy * dt * speedScale;
 
@@ -403,7 +423,7 @@ export class ProjectileManager {
     }
   }
 
-  render(ctx) {
+  render(ctx, planetX = 0, planetY = 0, shieldRadius = 85, showThreatRings = true) {
     // 1. Render Satellite Lasers
     for (const sat of this.satelliteLasers) {
       ctx.save();
@@ -470,111 +490,152 @@ export class ProjectileManager {
       ctx.restore();
     }
 
-    // 4. Render Player Plasma & Railgun Bolts
+    // 4. Render Directional Glowing Plasma Capsules & Railgun Bolts (Additive Blending)
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
     for (const b of this.bolts) {
+      const angle = (b.vx !== 0 || b.vy !== 0) ? Math.atan2(b.vy, b.vx) : (b.angle || 0);
+      const r = b.r || (b.isOvercharged ? 5.5 : (b.isRailgun ? 5.0 : 4.5));
+      const trailLen = b.isOvercharged || b.isRailgun ? 26 : (b.isTesla ? 22 : 20);
+      const coreLen = 10;
+      const boltColor = b.isOvercharged ? '#ffd700' : (b.isRailgun ? '#ffd700' : (b.color || '#00e5ff'));
+
       ctx.save();
       ctx.translate(b.x, b.y);
-      ctx.rotate(b.angle);
+      ctx.rotate(angle);
 
-      if (b.isOvercharged) {
-        // High-energy overcharged golden plasma bolt
-        ctx.beginPath();
-        ctx.moveTo(-16, 0);
-        ctx.lineTo(16, 0);
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 4.5;
-        ctx.stroke();
+      // Outer glowing plasma capsule trail
+      ctx.beginPath();
+      ctx.lineCap = 'round';
+      ctx.moveTo(-trailLen, 0);
+      ctx.lineTo(coreLen * 0.5, 0);
+      ctx.strokeStyle = boltColor;
+      ctx.lineWidth = r * 2.4;
+      ctx.shadowColor = boltColor;
+      ctx.shadowBlur = b.isOvercharged ? 20 : 14;
+      ctx.stroke();
 
-        ctx.beginPath();
-        ctx.moveTo(-20, 0);
-        ctx.lineTo(20, 0);
+      // Pure white hot core
+      ctx.beginPath();
+      ctx.lineCap = 'round';
+      ctx.moveTo(-coreLen, 0);
+      ctx.lineTo(coreLen * 0.5, 0);
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = r * 0.9;
+      ctx.shadowColor = '#ffffff';
+      ctx.shadowBlur = 8;
+      ctx.stroke();
+
+      // For Railgun Lancer shots: tiny diamond shock-rings along trajectory
+      if (b.isRailgun) {
         ctx.strokeStyle = '#ffd700';
-        ctx.lineWidth = 3.0;
-        ctx.shadowColor = '#ffd700';
-        ctx.shadowBlur = 18;
-        ctx.stroke();
-      } else if (b.isRailgun) {
-        // High-velocity hyper-dense golden slug
-        ctx.beginPath();
-        ctx.moveTo(-16, 0);
-        ctx.lineTo(16, 0);
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 4.0;
-        ctx.stroke();
-
-        ctx.beginPath();
-        ctx.moveTo(-22, 0);
-        ctx.lineTo(22, 0);
-        ctx.strokeStyle = '#ffd700';
-        ctx.lineWidth = 2.5;
-        ctx.shadowColor = '#ffd700';
-        ctx.shadowBlur = 16;
-        ctx.stroke();
-      } else if (b.isTesla) {
-        // High-voltage shock bolt
-        ctx.beginPath();
-        ctx.moveTo(-11, 0);
-        ctx.lineTo(11, 0);
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 3.5;
-        ctx.stroke();
-
-        ctx.beginPath();
-        ctx.moveTo(-15, 0);
-        ctx.lineTo(15, 0);
-        ctx.strokeStyle = b.color || '#e040fb';
-        ctx.lineWidth = 2.5;
-        ctx.shadowColor = b.color || '#e040fb';
-        ctx.shadowBlur = 14;
-        ctx.stroke();
-      } else {
-        // Standard rapid plasma bolt
-        ctx.beginPath();
-        ctx.moveTo(-10, 0);
-        ctx.lineTo(10, 0);
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 3.5;
-        ctx.stroke();
-
-        ctx.beginPath();
-        ctx.moveTo(-14, 0);
-        ctx.lineTo(14, 0);
-        ctx.strokeStyle = b.color;
-        ctx.lineWidth = 2;
-        ctx.shadowColor = b.color;
-        ctx.shadowBlur = 12;
-        ctx.stroke();
+        ctx.lineWidth = 1.5;
+        for (const dx of [-6, -14, -22]) {
+          ctx.beginPath();
+          ctx.moveTo(dx, -3.5);
+          ctx.lineTo(dx + 3, 0);
+          ctx.lineTo(dx, 3.5);
+          ctx.lineTo(dx - 3, 0);
+          ctx.closePath();
+          ctx.stroke();
+        }
       }
 
       ctx.restore();
     }
+    ctx.restore();
 
-    // 5. Render Enemy Torpedoes
+    // 5. Render High-Visibility Enemy Warheads & Close-Orbit Trajectories
     for (const torp of this.torpedoes) {
+      const torpAngle = (torp.vx !== 0 || torp.vy !== 0) ? Math.atan2(torp.vy, torp.vx) : torp.angle;
+
+      // 5a. Tapering crimson ribbon trail
+      if (torp.trail && torp.trail.length >= 2) {
+        ctx.save();
+        for (let t = 0; t < torp.trail.length - 1; t++) {
+          const p1 = torp.trail[t];
+          const p2 = torp.trail[t + 1];
+          const pct = (t + 1) / torp.trail.length;
+          ctx.beginPath();
+          ctx.moveTo(p1.x, p1.y);
+          ctx.lineTo(p2.x, p2.y);
+          ctx.strokeStyle = `rgba(255, 23, 68, ${pct * 0.85})`;
+          ctx.lineWidth = 1.5 + pct * 4.5;
+          ctx.lineCap = 'round';
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+
+      // 5b. Close-Orbit Danger Trajectory & Lock-On Reticle
+      if (planetX !== undefined && planetY !== undefined && shieldRadius !== undefined) {
+        const distToPlanet = Math.hypot(torp.x - planetX, torp.y - planetY);
+        if (distToPlanet <= shieldRadius + 130) {
+          const angleToPlanet = Math.atan2(planetY - torp.y, planetX - torp.x);
+          const impactX = planetX - Math.cos(angleToPlanet) * shieldRadius;
+          const impactY = planetY - Math.sin(angleToPlanet) * shieldRadius;
+
+          ctx.save();
+          const pulse = 0.5 + Math.sin(Date.now() * 0.012) * 0.3;
+          ctx.setLineDash([3, 5]);
+          ctx.beginPath();
+          ctx.moveTo(torp.x, torp.y);
+          ctx.lineTo(impactX, impactY);
+          ctx.strokeStyle = showThreatRings ? `rgba(255, 23, 68, ${pulse * 1.3})` : `rgba(255, 23, 68, ${pulse})`;
+          ctx.lineWidth = showThreatRings ? 2.0 : 1.2;
+          ctx.stroke();
+          ctx.setLineDash([]);
+
+          // Rotating diamond warning reticle around the warhead
+          ctx.translate(torp.x, torp.y);
+          ctx.rotate(Date.now() * 0.005);
+          const rSize = showThreatRings ? 11 : 8.5;
+          ctx.strokeStyle = showThreatRings ? '#ff1744' : 'rgba(255, 23, 68, 0.85)';
+          ctx.lineWidth = showThreatRings ? 2.0 : 1.4;
+          ctx.shadowColor = '#ff1744';
+          ctx.shadowBlur = showThreatRings ? 12 : 6;
+          ctx.strokeRect(-rSize, -rSize, rSize * 2, rSize * 2);
+          ctx.restore();
+        }
+      }
+
+      // 5c. Pointed crimson-and-white tactical warhead with thruster flame
       ctx.save();
       ctx.translate(torp.x, torp.y);
-      ctx.rotate(torp.angle);
+      ctx.rotate(torpAngle);
 
-      // Torpedo glow & body
+      // Flickering orange/amber thruster flame
+      const flameLen = 4 + Math.random() * 6;
       ctx.beginPath();
-      ctx.arc(0, 0, torp.radius, 0, Math.PI * 2);
-      ctx.fillStyle = torp.color;
-      ctx.shadowColor = torp.color;
-      ctx.shadowBlur = 14;
+      ctx.moveTo(-6, -3);
+      ctx.lineTo(-6 - flameLen, 0);
+      ctx.lineTo(-6, 3);
+      ctx.closePath();
+      ctx.fillStyle = '#ff9100';
+      ctx.shadowColor = '#ff3d00';
+      ctx.shadowBlur = 10;
       ctx.fill();
 
+      // Pointed tactical crimson warhead hull
       ctx.beginPath();
-      ctx.arc(0, 0, torp.radius * 0.5, 0, Math.PI * 2);
+      ctx.moveTo(8, 0);
+      ctx.lineTo(-6, -5);
+      ctx.lineTo(-3, 0);
+      ctx.lineTo(-6, 5);
+      ctx.closePath();
+      ctx.fillStyle = torp.color || '#ff1744';
+      ctx.shadowColor = '#ff1744';
+      ctx.shadowBlur = 12;
+      ctx.fill();
+
+      // White hot tactical nose cone
+      ctx.beginPath();
+      ctx.moveTo(8, 0);
+      ctx.lineTo(0, -2.5);
+      ctx.lineTo(0, 2.5);
+      ctx.closePath();
       ctx.fillStyle = '#ffffff';
       ctx.fill();
-
-      // Exhaust tail
-      ctx.beginPath();
-      ctx.moveTo(-torp.radius, 0);
-      ctx.lineTo(-torp.radius - 12, 0);
-      ctx.strokeStyle = torp.color;
-      ctx.lineWidth = 2.5;
-      ctx.stroke();
 
       ctx.restore();
     }
