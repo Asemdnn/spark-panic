@@ -37,6 +37,7 @@ export class Alien {
     this.torpedoTimer = 1.5 + Math.random() * 2.0;
     this.blinkTimer = 3.4;
     this.spawnTimer = 3.5;
+    this.escapeTimer = (classKey === 'GALLEON') ? 9.0 : 0;
     this.orbitDistance = 200 + Math.random() * 80;
     this.orbitAngle = Math.atan2(y, x);
   }
@@ -57,6 +58,17 @@ export class Alien {
       if (diff <= halfArc) {
         amount *= 0.5; // Deflected by 50%
         this.shieldHitFlash = 0.22;
+      }
+    }
+
+    // Aegis Jammer Frigate: Curved 90° Frontal Energy Barrier ricochets standard lasers
+    if (this.classKey === 'JAMMER' && !isDirectPierce && hitX !== null && hitY !== null) {
+      const hitAngle = Math.atan2(hitY - this.y, hitX - this.x);
+      let diff = Math.abs(hitAngle - this.heading);
+      while (diff > Math.PI) diff = Math.abs(diff - Math.PI * 2);
+      if (diff <= Math.PI * 0.25) { // 45° either side of heading = 90° frontal arc
+        this.shieldHitFlash = 0.22;
+        return false; // Ricochet harmlessly!
       }
     }
 
@@ -85,6 +97,8 @@ export class Alien {
 
     if (this.isBoss && this.isPhase2) {
       this.shieldAngle += dt * 1.8;
+      if (this.shieldHitFlash > 0) this.shieldHitFlash -= dt;
+    } else if (this.classKey === 'JAMMER') {
       if (this.shieldHitFlash > 0) this.shieldHitFlash -= dt;
     }
 
@@ -187,6 +201,34 @@ export class Alien {
           fireTorpedoCallback(this.x, this.y, angleToPlanet + 0.22, 175, 18, '#ff1744');
         }
       }
+    } else if (this.classKey === 'JAMMER') {
+      // Forward Advance pointing Frontal Barrier directly at planet
+      this.heading = angleToPlanet;
+      this.x += Math.cos(this.heading) * (this.speed * speedMult) * dt;
+      this.y += Math.sin(this.heading) * (this.speed * speedMult) * dt;
+    } else if (this.classKey === 'WEAVER') {
+      // Mid-Range Orbit & Graviton Web Tether
+      if (distToPlanet > this.orbitDistance) {
+        this.heading = angleToPlanet;
+        this.x += Math.cos(this.heading) * (this.speed * speedMult) * dt;
+        this.y += Math.sin(this.heading) * (this.speed * speedMult) * dt;
+      } else {
+        this.orbitAngle += (this.speed / this.orbitDistance) * speedMult * dt;
+        this.x = planetX + Math.cos(this.orbitAngle) * this.orbitDistance;
+        this.y = planetY + Math.sin(this.orbitAngle) * this.orbitDistance;
+        this.heading = angleToPlanet;
+      }
+    } else if (this.classKey === 'GALLEON') {
+      // Fast Tangential Outer Orbit & 9-second escape timer
+      this.escapeTimer -= dt * speedMult;
+      if (this.escapeTimer <= 0) {
+        this.alive = false;
+        this.escaped = true;
+      }
+      const tangentAngle = angleToPlanet + Math.PI * 0.52;
+      this.heading = tangentAngle;
+      this.x += Math.cos(tangentAngle) * (this.speed * speedMult) * dt;
+      this.y += Math.sin(tangentAngle) * (this.speed * speedMult) * dt;
     }
   }
 
@@ -363,6 +405,100 @@ export class Alien {
       ctx.arc(0, 0, r * 0.28, 0, Math.PI * 2);
       ctx.fillStyle = '#ffffff';
       ctx.fill();
+    } else if (this.classKey === 'JAMMER') {
+      // Aegis Jammer Frigate: Armored Hull with Curved 90° Frontal Energy Barrier
+      ctx.beginPath();
+      ctx.moveTo(r * 1.3, 0);
+      ctx.lineTo(r * 0.4, -r * 0.95);
+      ctx.lineTo(-r * 0.9, -r * 0.7);
+      ctx.lineTo(-r * 0.4, 0);
+      ctx.lineTo(-r * 0.9, r * 0.7);
+      ctx.lineTo(r * 0.4, r * 0.95);
+      ctx.closePath();
+      ctx.fillStyle = '#06202c';
+      ctx.fill();
+      ctx.strokeStyle = this.color;
+      ctx.lineWidth = 2.2;
+      ctx.stroke();
+
+      // Crimson reinforced central armor
+      ctx.beginPath();
+      ctx.moveTo(r * 0.6, 0);
+      ctx.lineTo(0, -r * 0.45);
+      ctx.lineTo(-r * 0.4, 0);
+      ctx.lineTo(0, r * 0.45);
+      ctx.closePath();
+      ctx.fillStyle = '#ff1744';
+      ctx.fill();
+
+      // Curved 90° Frontal Energy Barrier (Facing +X / Heading toward planet)
+      ctx.beginPath();
+      ctx.arc(r * 0.2, 0, r * 1.15, -Math.PI * 0.25, Math.PI * 0.25);
+      ctx.strokeStyle = this.shieldHitFlash > 0 ? '#ffffff' : '#00e5ff';
+      ctx.lineWidth = this.shieldHitFlash > 0 ? 4.2 : 2.6;
+      ctx.shadowColor = this.shieldHitFlash > 0 ? '#ffffff' : '#00e5ff';
+      ctx.shadowBlur = this.shieldHitFlash > 0 ? 18 : 9;
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+    } else if (this.classKey === 'WEAVER') {
+      // Void Weaver Carrier: Twin Catamaran Hulls with Graviton Matrix
+      ctx.fillStyle = '#220835';
+      ctx.strokeStyle = this.color;
+      ctx.lineWidth = 2.0;
+
+      // Twin hulls
+      ctx.beginPath();
+      ctx.rect(-r * 0.9, -r * 0.95, r * 1.8, r * 0.45);
+      ctx.rect(-r * 0.9, r * 0.50, r * 1.8, r * 0.45);
+      ctx.fill();
+      ctx.stroke();
+
+      // Connecting bridge
+      ctx.fillRect(-r * 0.2, -r * 0.55, r * 0.4, r * 1.1);
+      ctx.strokeRect(-r * 0.2, -r * 0.55, r * 0.4, r * 1.1);
+
+      // Glowing Graviton Core
+      ctx.beginPath();
+      ctx.arc(0, 0, r * 0.38, 0, Math.PI * 2);
+      ctx.fillStyle = '#f0abfc';
+      ctx.shadowColor = '#d946ef';
+      ctx.shadowBlur = 12;
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    } else if (this.classKey === 'GALLEON') {
+      // Astral Treasure Galleon: Gilded Hull, Solar Sails & Treasure Core
+      ctx.beginPath();
+      ctx.moveTo(r * 1.5, 0);
+      ctx.lineTo(-r * 0.5, -r * 1.4);
+      ctx.lineTo(-r * 0.2, 0);
+      ctx.lineTo(-r * 0.5, r * 1.4);
+      ctx.closePath();
+      ctx.fillStyle = '#451a03';
+      ctx.fill();
+      ctx.strokeStyle = '#ffd700';
+      ctx.lineWidth = 2.4;
+      ctx.shadowColor = '#ffd700';
+      ctx.shadowBlur = 10;
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+
+      // Gilded Hull
+      ctx.beginPath();
+      ctx.ellipse(0, 0, r * 0.8, r * 0.4, 0, 0, Math.PI * 2);
+      ctx.fillStyle = '#78350f';
+      ctx.fill();
+      ctx.strokeStyle = '#facc15';
+      ctx.lineWidth = 1.8;
+      ctx.stroke();
+
+      // Astral Core
+      ctx.beginPath();
+      ctx.arc(0, 0, r * 0.35, 0, Math.PI * 2);
+      ctx.fillStyle = '#fef08a';
+      ctx.shadowColor = '#ffffff';
+      ctx.shadowBlur = 15;
+      ctx.fill();
+      ctx.shadowBlur = 0;
     }
 
     // Health Bar for Heavy and Boss ships

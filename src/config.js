@@ -423,6 +423,48 @@ export const ALIEN_CLASSES = {
     role: 'Armada Command Flagship',
     behaviorDesc: 'Giant command leviathan with top HUD Boss Health Bar, firing 3-torpedo spread salvos.',
     deathPayload: 'Colossal 210px Galaxy Super-Nova!'
+  },
+  JAMMER: {
+    type: 'JAMMER',
+    name: 'Aegis Jammer Frigate',
+    color: '#00e5ff',
+    hp: 90,
+    speed: 38,
+    radius: 18,
+    score: 90,
+    damage: 15,
+    novaRadius: 90,
+    role: 'Frontal Shield Escort',
+    behaviorDesc: 'Projects a curved 90° frontal energy barrier facing the planet that deflects standard lasers. Flank with Novas or pierce with Railgun / Ion Beam.',
+    deathPayload: 'Disruptor Pulse Nova'
+  },
+  WEAVER: {
+    type: 'WEAVER',
+    name: 'Void Weaver Carrier',
+    color: '#d946ef',
+    hp: 110,
+    speed: 30,
+    radius: 20,
+    score: 110,
+    damage: 16,
+    novaRadius: 95,
+    role: 'Graviton Web Suppressor',
+    behaviorDesc: 'Twin-hulled carrier that tethers a magenta Graviton Web to the player turret, reducing fire rate by 30%. On defeat, refunds 3.0s to all tactical skills!',
+    deathPayload: '⚡ OVERCHARGE SURGE! -3.0s Tactical Cooldowns'
+  },
+  GALLEON: {
+    type: 'GALLEON',
+    name: 'Astral Treasure Galleon',
+    color: '#ffd700',
+    hp: 160,
+    speed: 58,
+    radius: 22,
+    score: 300,
+    damage: 0,
+    novaRadius: 110,
+    role: 'Elusive Jackpot Target',
+    behaviorDesc: 'Flies a fast tangential outer orbit for 9 seconds before warping away. Does not attack. Destroying it awards +65 Shards, +25% Cataclysm, and 1 Supply Pod!',
+    deathPayload: '💎 ASTRAL JACKPOT: +65 ✦ Shards, +25% Cataclysm, +1 Supply Pod!'
   }
 };
 

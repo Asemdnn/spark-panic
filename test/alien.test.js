@@ -4,8 +4,8 @@ import { Alien } from '../src/game/alien.js';
 import { ALIEN_CLASSES } from '../src/config.js';
 
 describe('Alien Armada Invader Entities (v2.0)', () => {
-  it('should initialize all 7 alien classes with correct base parameters', () => {
-    const classes = ['SCOUT', 'INTERCEPTOR', 'CRYO', 'PHASE', 'DROPSHIP', 'DREADNOUGHT', 'BOSS'];
+  it('should initialize all 10 alien classes with correct base parameters', () => {
+    const classes = ['SCOUT', 'INTERCEPTOR', 'CRYO', 'PHASE', 'DROPSHIP', 'DREADNOUGHT', 'BOSS', 'JAMMER', 'WEAVER', 'GALLEON'];
 
     classes.forEach(cls => {
       const alien = new Alien(100, 100, cls);
@@ -139,5 +139,45 @@ describe('Alien Armada Invader Entities (v2.0)', () => {
     boss.takeDamage(40, frontHitX, frontHitY, true); // isDirectPierce = true
     // Pierces through shield: takes full 40 damage, HP goes from 340 to 300
     expect(boss.hp).toBe(300);
+  });
+
+  it('should deflect frontal turret fire for Aegis Jammer Frigate (90° barrier) but allow rear and piercing attacks', () => {
+    const jammer = new Alien(300, 300, 'JAMMER');
+    jammer.heading = 0; // Heading right (+X, towards planet)
+    expect(jammer.hp).toBe(90);
+
+    // Frontal laser attack along angle 0 (within 90° frontal barrier arc)
+    const frontHitX = jammer.x + 20;
+    const frontHitY = jammer.y;
+    const res = jammer.takeDamage(30, frontHitX, frontHitY, false);
+    // Ricochet off harmlessly: returns false, HP intact
+    expect(res).toBe(false);
+    expect(jammer.hp).toBe(90);
+    expect(jammer.shieldHitFlash).toBeGreaterThan(0);
+
+    // Flank / rear attack from behind (angle PI)
+    const rearHitX = jammer.x - 20;
+    const rearHitY = jammer.y;
+    jammer.takeDamage(30, rearHitX, rearHitY, false);
+    expect(jammer.hp).toBe(60);
+
+    // Piercing attack (Railgun slug or Ion Beam) through the front
+    jammer.takeDamage(30, frontHitX, frontHitY, true);
+    expect(jammer.hp).toBe(30);
+  });
+
+  it('should manage Void Weaver and Astral Treasure Galleon escape timer', () => {
+    const weaver = new Alien(300, 300, 'WEAVER');
+    expect(weaver.classKey).toBe('WEAVER');
+    expect(weaver.hp).toBe(110);
+
+    const galleon = new Alien(300, 300, 'GALLEON');
+    expect(galleon.classKey).toBe('GALLEON');
+    expect(galleon.escapeTimer).toBe(9.0);
+
+    // Update galleon past 9 seconds
+    galleon.update(9.2, 400, 300, 90);
+    expect(galleon.alive).toBe(false);
+    expect(galleon.escaped).toBe(true);
   });
 });

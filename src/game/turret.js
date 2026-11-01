@@ -45,7 +45,7 @@ export class GuardianTurret {
     return isOverdrive ? baseDmg * 1.5 : baseDmg;
   }
 
-  update(dt, pointerX, pointerY, planetX, planetY, isOverdrive = false, onFireCallback, isOverclock = false) {
+  update(dt, pointerX, pointerY, planetX, planetY, isOverdrive = false, onFireCallback, isOverclock = false, isWeaverSlowed = false) {
     // Smooth aim tracking towards pointer
     this.targetAngle = Math.atan2(pointerY - planetY, pointerX - planetX);
     
@@ -64,7 +64,7 @@ export class GuardianTurret {
       this.recoil = Math.max(0, this.recoil - dt * 38);
     }
 
-    // Fire timer (+35% fire rate when Overclock is active; Railgun is 1.45x interval)
+    // Fire timer (+35% fire rate when Overclock is active; Railgun is 1.45x interval; Weaver web slows by 30%)
     this.fireTimer += dt;
     let interval = isOverdrive ? this.fireInterval * 0.55 : this.fireInterval;
     if (this.chassis === 'railgun') {
@@ -72,6 +72,9 @@ export class GuardianTurret {
     }
     if (isOverclock) {
       interval /= 1.35;
+    }
+    if (isWeaverSlowed) {
+      interval /= 0.70; // 30% reduced fire rate
     }
 
     if ((this.autoFire || this.isFiring) && this.fireTimer >= interval) {

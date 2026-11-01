@@ -121,6 +121,12 @@ export class GameEngine {
     this.parallaxX = 0;
     this.parallaxY = 0;
     this.gameTime = 0;
+    this.coreCharge = 0;
+    this.cataclysmShockwave = null;
+    this.cataclysmMeteors = [];
+    this.cataclysmDysonBeams = null;
+    this.cataclysmFlashAlpha = 0;
+    this.galleonSpawnedThisMission = false;
     this.initStars();
 
     this.resize = this.resize.bind(this);
@@ -237,6 +243,122 @@ export class GameEngine {
     return !!structure;
   }
 
+  triggerPlanetaryCataclysm() {
+    if (this.state !== 'PLAYING') return false;
+    if (this.coreCharge < 100) {
+      this.particles.addFloater(this.planet.x, this.planet.y - 50, `CATACLYSM CHARGING: ${Math.round(this.coreCharge)}%`, '#ff9100', 14);
+      return false;
+    }
+
+    this.coreCharge = 0;
+    audio.playCataclysm();
+    this.addScreenShake(20, 0.7);
+
+    const sector = this.planet.sector || (this.planet.data ? this.planet.data.sector : 1) || 1;
+
+    if (sector === 1) {
+      // Sector I — ❄️ CRYO-TSUNAMI PULSE
+      this.cataclysmShockwave = {
+        x: this.planet.x,
+        y: this.planet.y,
+        radius: 15,
+        maxRadius: 450,
+        speed: 540,
+        color: '#00e5ff'
+      };
+      // Freeze all enemies on screen for 5.0s & deal 140 damage
+      for (const a of this.aliens) {
+        if (a.alive) {
+          a.freeze(5.0);
+          a.takeDamage(140, this.planet.x, this.planet.y, true);
+        }
+      }
+      // Shatter all torpedoes into healing sparks
+      let torpHeals = 0;
+      for (const torp of this.projectiles.torpedoes) {
+        if (torp.alive) {
+          torp.alive = false;
+          torpHeals++;
+          this.particles.spawnCosmicSpark(torp.x, torp.y, 2);
+        }
+      }
+      if (torpHeals > 0) {
+        this.planet.restoreShield(Math.min(45, torpHeals * 15));
+        this.planet.coreHp = Math.min(this.planet.maxCoreHp, this.planet.coreHp + torpHeals * 10);
+      }
+      this.particles.addFloater(this.planet.x, this.planet.y - 80, '❄️ CRYO-TSUNAMI PULSE! FLEET FROZEN & 140 DMG!', '#00e5ff', 20);
+    } else if (sector === 2) {
+      // Sector II — 🌋 MAGMA METEOR ERUPTION
+      this.cataclysmMeteors = [];
+      const count = 12;
+      const targets = [...this.aliens].filter(a => a.alive).sort((a, b) => b.hp - a.hp);
+
+      for (let m = 0; m < count; m++) {
+        const mAngle = (m / count) * Math.PI * 2;
+        const target = targets.length > 0 ? targets[m % targets.length] : null;
+        this.cataclysmMeteors.push({
+          x: this.planet.x + Math.cos(mAngle) * (this.planet.planetRadius + 10),
+          y: this.planet.y + Math.sin(mAngle) * (this.planet.planetRadius + 10),
+          vx: Math.cos(mAngle) * 220,
+          vy: Math.sin(mAngle) * 220,
+          target,
+          timer: 1.5,
+          maxTimer: 1.5,
+          speed: 380,
+          color: '#ff3d00'
+        });
+      }
+      this.particles.addFloater(this.planet.x, this.planet.y - 80, '🌋 MAGMA METEOR ERUPTION! 12 VOLCANIC BOMBS!', '#ff3d00', 20);
+    } else if (sector === 3) {
+      // Sector III — ⚙️ DYSON ORBITAL LASER CAGE
+      this.cataclysmDysonBeams = {
+        angle: 0,
+        timer: 4.0,
+        maxTimer: 4.0,
+        length: Math.max(this.width, this.height) * 0.95
+      };
+      this.particles.addFloater(this.planet.x, this.planet.y - 80, '⚙️ DYSON ORBITAL LASER CAGE! 360° FLEET CLEAVE!', '#ffd700', 20);
+    } else {
+      // Sector IV — ☀️ GENESIS SUPERNOVA
+      this.cataclysmFlashAlpha = 1.0;
+      for (const a of this.aliens) {
+        if (a.alive) {
+          if (a.classKey === 'BOSS') {
+            a.takeDamage(350, this.planet.x, this.planet.y, true);
+          } else {
+            a.takeDamage(9999, this.planet.x, this.planet.y, true);
+          }
+        }
+      }
+      this.planet.restoreShield(Math.round(this.planet.maxShield * 0.30));
+      this.particles.addFloater(this.planet.x, this.planet.y - 80, '☀️ GENESIS SUPERNOVA! ARMADA VAPORIZED +30% SHIELD!', '#ffd700', 20);
+    }
+
+    this.updateCataclysmUI();
+    return true;
+  }
+
+  updateCataclysmUI() {
+    const btn = document.getElementById('btnCataclysm');
+    const fill = document.getElementById('cataclysmFill');
+    const label = document.getElementById('cataclysmPercent');
+    const glow = document.getElementById('cataclysmReadyGlow');
+    if (!btn) return;
+
+    const pct = Math.min(100, Math.max(0, Math.round(this.coreCharge || 0)));
+    if (fill) fill.style.height = `${pct}%`;
+
+    if (pct >= 100) {
+      if (label) label.textContent = '[F] READY!';
+      if (glow) glow.classList.remove('hidden');
+      btn.classList.add('border-amber-400', 'shadow-[0_0_18px_rgba(251,191,36,0.5)]');
+    } else {
+      if (label) label.textContent = `[F] ${pct}%`;
+      if (glow) glow.classList.add('hidden');
+      btn.classList.remove('border-amber-400', 'shadow-[0_0_18px_rgba(251,191,36,0.5)]');
+    }
+  }
+
   onShieldBroken() {
     if (this.hasRelic('chronoStasis') && this.relicChronoStasisCooldown <= 0) {
       this.relicChronoStasisCooldown = 18;
@@ -303,6 +425,10 @@ export class GameEngine {
     // RB (button 5): Skill R (Deploy Structure)
     if (wasJustPressed(5)) {
       this.deployStructure();
+    }
+    // LB (button 4) or D-pad Up (button 12): Planetary Cataclysm Superweapon
+    if (wasJustPressed(4) || wasJustPressed(12)) {
+      this.triggerPlanetaryCataclysm();
     }
     // Start (button 9): Pause
     if (wasJustPressed(9)) {
@@ -517,6 +643,12 @@ export class GameEngine {
     this.comets = [];
     this.cometTimer = 0;
     this.turretRecoil = 0;
+    this.coreCharge = 0;
+    this.cataclysmShockwave = null;
+    this.cataclysmMeteors = [];
+    this.cataclysmDysonBeams = null;
+    this.cataclysmFlashAlpha = 0;
+    this.galleonSpawnedThisMission = false;
   }
 
   setupWaveSpawns() {
@@ -609,13 +741,23 @@ export class GameEngine {
       let classKey = 'SCOUT';
       const roll = Math.random();
 
-      if (this.currentPlanetId >= 2 && roll < 0.28) classKey = 'INTERCEPTOR';
-      else if (this.currentPlanetId >= 4 && roll < 0.44) classKey = 'CRYO';
-      else if (this.currentPlanetId >= 7 && roll < 0.58) classKey = 'PHASE';
-      else if (this.currentPlanetId >= 10 && roll < 0.72) classKey = 'DROPSHIP';
-      else if (this.currentPlanetId >= 13 && roll < 0.85) classKey = 'DREADNOUGHT';
+      if (this.currentPlanetId >= 2 && roll < 0.25) classKey = 'INTERCEPTOR';
+      else if (this.currentPlanetId >= 3 && roll < 0.38) classKey = 'JAMMER';
+      else if (this.currentPlanetId >= 4 && roll < 0.48) classKey = 'CRYO';
+      else if (this.currentPlanetId >= 7 && roll < 0.60) classKey = (roll < 0.54 ? 'PHASE' : 'WEAVER');
+      else if (this.currentPlanetId >= 10 && roll < 0.74) classKey = 'DROPSHIP';
+      else if (this.currentPlanetId >= 13 && roll < 0.88) classKey = 'DREADNOUGHT';
 
       this.waveSpawnQueue.push({ classKey, delay: i * (1.1 - Math.min(0.6, this.currentWave * 0.08)) });
+    }
+
+    // Astral Treasure Galleon mid-wave encounter (once per mission from wave 2+, or every 2 waves in Endless/Daily)
+    if (!this.galleonSpawnedThisMission && (this.currentWave >= 2 || (this.isEndlessMode && this.currentWave % 2 === 0))) {
+      this.waveSpawnQueue.push({
+        classKey: 'GALLEON',
+        delay: Math.max(3.0, totalEnemies * 0.45)
+      });
+      this.galleonSpawnedThisMission = true;
     }
 
     // Boss spawn
@@ -856,6 +998,31 @@ export class GameEngine {
       this.addScreenShake(8, 0.2);
     }
 
+    // Planetary Cataclysm Core Overcharge (+3.5% per kill, +6% for x5+ combo)
+    this.coreCharge = Math.min(100, this.coreCharge + 3.5);
+    if (this.combo >= 5) {
+      this.coreCharge = Math.min(100, this.coreCharge + 6.0);
+    }
+
+    // Void Weaver defeat: Overcharge Surge resets Q, W, E cooldowns by 3.0s
+    if (alien.classKey === 'WEAVER') {
+      this.skills.timerQ = Math.max(0, this.skills.timerQ - 3.0);
+      this.skills.timerW = Math.max(0, this.skills.timerW - 3.0);
+      this.skills.timerE = Math.max(0, this.skills.timerE - 3.0);
+      this.particles.addFloater(this.planet.x, this.planet.y - 45, 'OVERCHARGE SURGE! -3.0s CD', '#d946ef', 18);
+      this.particles.spawnNova(alien.x, alien.y, 95, '#d946ef', 0, false);
+    }
+
+    // Astral Treasure Galleon defeat: Jackpot Shower (+65 Shards, +25% Cataclysm, 1 Supply Pod)
+    if (alien.classKey === 'GALLEON') {
+      saveSystem.addShards(65);
+      this.coreCharge = Math.min(100, this.coreCharge + 25.0);
+      this.supplyPods.spawnPod(alien.x, alien.y, this.planet.planetRadius, 'OVERCHARGE');
+      this.particles.addFloater(alien.x, alien.y - 65, '💎 ASTRAL JACKPOT! +65 ✦ SHARDS! +25% CATACLYSM!', '#ffd700', 20);
+      this.particles.spawnDebris(alien.x, alien.y, '#ffd700', 24);
+      audio.playVictory();
+    }
+
     // Vampiric Core Relic: Heal Core HP + Shield on x8+ Combo
     if (this.hasRelic('vampiricCore') && this.combo >= 8) {
       this.planet.coreHp = Math.min(this.planet.maxCoreHp, this.planet.coreHp + 15);
@@ -1035,6 +1202,84 @@ export class GameEngine {
       if (this.shakeTimer <= 0) this.shakeIntensity = 0;
     }
 
+    audio.update(dt);
+
+    // Update Cataclysm Visual & Combat Lifecycles
+    if (this.cataclysmFlashAlpha > 0) {
+      this.cataclysmFlashAlpha = Math.max(0, this.cataclysmFlashAlpha - dt * 1.4);
+    }
+    if (this.cataclysmShockwave) {
+      this.cataclysmShockwave.radius += this.cataclysmShockwave.speed * dt;
+      if (this.cataclysmShockwave.radius >= this.cataclysmShockwave.maxRadius) {
+        this.cataclysmShockwave = null;
+      }
+    }
+    for (let mIdx = this.cataclysmMeteors.length - 1; mIdx >= 0; mIdx--) {
+      const m = this.cataclysmMeteors[mIdx];
+      const tx = m.target && m.target.alive ? m.target.x : m.x + m.vx;
+      const ty = m.target && m.target.alive ? m.target.y : m.y + m.vy;
+      const mAng = Math.atan2(ty - m.y, tx - m.x);
+      m.vx += Math.cos(mAng) * 850 * dt;
+      m.vy += Math.sin(mAng) * 850 * dt;
+      const spd = Math.hypot(m.vx, m.vy);
+      if (spd > 480) { m.vx = (m.vx / spd) * 480; m.vy = (m.vy / spd) * 480; }
+      m.x += m.vx * dt;
+      m.y += m.vy * dt;
+      m.timer -= dt;
+
+      let hit = false;
+      for (const a of this.aliens) {
+        if (a.alive && Math.hypot(a.x - m.x, a.y - m.y) < a.radius + 14) {
+          hit = true;
+          break;
+        }
+      }
+      if (hit || m.timer <= 0) {
+        this.particles.spawnNova(m.x, m.y, 85 * this.novaMultiplier, '#ff3d00', 95 * this.novaMultiplier, true);
+        this.particles.spawnDebris(m.x, m.y, '#ff9100', 8);
+        this.addScreenShake(6, 0.15);
+        this.cataclysmMeteors.splice(mIdx, 1);
+      }
+    }
+    if (this.cataclysmDysonBeams) {
+      this.cataclysmDysonBeams.timer -= dt;
+      this.cataclysmDysonBeams.angle += dt * (Math.PI * 2 / 4.0);
+      const bAngles = [
+        this.cataclysmDysonBeams.angle,
+        this.cataclysmDysonBeams.angle + Math.PI * 0.5,
+        this.cataclysmDysonBeams.angle + Math.PI,
+        this.cataclysmDysonBeams.angle + Math.PI * 1.5
+      ];
+      for (const a of this.aliens) {
+        if (!a.alive) continue;
+        const dist = Math.hypot(a.x - this.planet.x, a.y - this.planet.y);
+        const aAngle = Math.atan2(a.y - this.planet.y, a.x - this.planet.x);
+        for (const bAng of bAngles) {
+          let diff = Math.abs(aAngle - bAng);
+          while (diff > Math.PI) diff = Math.abs(diff - Math.PI * 2);
+          if (diff * dist < a.radius + 15) {
+            a.takeDamage(220 * dt, this.planet.x, this.planet.y, true);
+            this.particles.spawnDebris(a.x, a.y, '#ffd700', 1);
+            break;
+          }
+        }
+      }
+      if (this.cataclysmDysonBeams.timer <= 0) {
+        this.cataclysmDysonBeams = null;
+      }
+    }
+
+    // Astral Treasure Galleon stardust spark trails
+    for (const a of this.aliens) {
+      if (a.alive && a.classKey === 'GALLEON') {
+        if (Math.random() < 0.45) {
+          this.particles.spawnCosmicSpark(a.x + (Math.random() - 0.5) * 16, a.y + (Math.random() - 0.5) * 16, 1);
+        }
+      }
+    }
+
+    this.updateCataclysmUI();
+
     if (this.state !== 'PLAYING') return;
 
     // Dynamic BGM Tempo Boost during Boss battles (136 BPM vs 118 BPM)
@@ -1123,8 +1368,9 @@ export class GameEngine {
       return;
     }
 
-    // 2. Update Guardian Turret (+2 barrels & +35% fire rate when Overclock is active)
+    // 2. Update Guardian Turret (+2 barrels & +35% fire rate when Overclock is active; Weaver web slows by 30%)
     const isOverclock = this.supplyPods.isQuadPulseActive();
+    const isWeaverSlowed = this.aliens.some(a => a.alive && a.classKey === 'WEAVER');
     this.turret.update(
       dt,
       this.pointerX,
@@ -1145,7 +1391,8 @@ export class GameEngine {
         }
         this.projectiles.spawnTurretBolts(this.planet.x, this.planet.y, this.planet.planetRadius, bolts);
       },
-      isOverclock
+      isOverclock,
+      isWeaverSlowed
     );
 
     // 3. Update Autonomous Defense Satellites
@@ -1441,6 +1688,7 @@ export class GameEngine {
       },
       (val) => {
         saveSystem.addShards(val);
+        this.coreCharge = Math.min(100, this.coreCharge + 2.0);
       },
       (boss) => this.onBossPhase2(boss),
       this.hazards,
@@ -1858,7 +2106,8 @@ export class GameEngine {
 
     // 3. Render Living Central Planet & Aegis Shield
     const isOverdrive = this.skills.overdriveActive;
-    this.planet.render(ctx, isOverdrive);
+    const beatPulse = this.audio ? (this.audio.beatPulse || 0) : (audio ? (audio.beatPulse || 0) : 0);
+    this.planet.render(ctx, isOverdrive, this.gameTime, beatPulse, this.coreCharge || 0);
 
     // 4. Render Orbital Guardian Turret
     this.turret.render(ctx, this.planet.x, this.planet.y, this.planet.planetRadius, isOverdrive);
@@ -1912,6 +2161,112 @@ export class GameEngine {
     // 8. Render Aliens
     for (const alien of this.aliens) {
       alien.render(ctx);
+    }
+
+    // Void Weaver Graviton Web Tethers (slows turret by 30%)
+    for (const alien of this.aliens) {
+      if (alien.alive && alien.classKey === 'WEAVER') {
+        const orbitR = this.planet.planetRadius + 8;
+        const tx = this.planet.x + Math.cos(this.turret.angle) * orbitR;
+        const ty = this.planet.y + Math.sin(this.turret.angle) * orbitR;
+
+        ctx.save();
+        ctx.strokeStyle = '#e040fb';
+        ctx.lineWidth = 2.2;
+        ctx.shadowColor = '#e040fb';
+        ctx.shadowBlur = 14;
+
+        const segments = 8;
+        ctx.beginPath();
+        ctx.moveTo(alien.x, alien.y);
+        for (let s = 1; s < segments; s++) {
+          const pct = s / segments;
+          const bx = alien.x + (tx - alien.x) * pct;
+          const by = alien.y + (ty - alien.y) * pct;
+          const distTot = Math.hypot(tx - alien.x, ty - alien.y) || 1;
+          const wave = Math.sin(this.gameTime * 14 + s * 1.5) * 6;
+          const perpX = -(ty - alien.y) / distTot * wave;
+          const perpY = (tx - alien.x) / distTot * wave;
+          ctx.lineTo(bx + perpX, by + perpY);
+        }
+        ctx.lineTo(tx, ty);
+        ctx.stroke();
+
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1.0;
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
+
+    // Cataclysm Sector III: Dyson Orbital Laser Cage
+    if (this.cataclysmDysonBeams) {
+      const bAngles = [
+        this.cataclysmDysonBeams.angle,
+        this.cataclysmDysonBeams.angle + Math.PI * 0.5,
+        this.cataclysmDysonBeams.angle + Math.PI,
+        this.cataclysmDysonBeams.angle + Math.PI * 1.5
+      ];
+      const maxLen = Math.max(this.width, this.height) * 1.2;
+      ctx.save();
+      for (const bAng of bAngles) {
+        ctx.beginPath();
+        ctx.moveTo(this.planet.x, this.planet.y);
+        ctx.lineTo(this.planet.x + Math.cos(bAng) * maxLen, this.planet.y + Math.sin(bAng) * maxLen);
+        ctx.strokeStyle = '#ffd700';
+        ctx.lineWidth = 6;
+        ctx.shadowColor = '#ffd700';
+        ctx.shadowBlur = 25;
+        ctx.stroke();
+
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    // Cataclysm Sector I: Cryo-Tsunami Expanding Shockwave
+    if (this.cataclysmShockwave) {
+      const cr = this.cataclysmShockwave.radius;
+      const alpha = Math.max(0, 1 - cr / this.cataclysmShockwave.maxRadius);
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(this.planet.x, this.planet.y, cr, 0, Math.PI * 2);
+      ctx.strokeStyle = `rgba(0, 229, 255, ${alpha})`;
+      ctx.lineWidth = 5;
+      ctx.shadowColor = '#00e5ff';
+      ctx.shadowBlur = 24;
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(this.planet.x, this.planet.y, Math.max(0, cr - 12), 0, Math.PI * 2);
+      ctx.strokeStyle = `rgba(255, 255, 255, ${alpha * 0.8})`;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // Cataclysm Sector II: Magma Meteors
+    if (this.cataclysmMeteors && this.cataclysmMeteors.length > 0) {
+      ctx.save();
+      for (const m of this.cataclysmMeteors) {
+        ctx.save();
+        ctx.translate(m.x, m.y);
+        ctx.beginPath();
+        ctx.arc(0, 0, 8, 0, Math.PI * 2);
+        ctx.fillStyle = '#ff3d00';
+        ctx.shadowColor = '#ff6d00';
+        ctx.shadowBlur = 20;
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.arc(0, 0, 4, 0, Math.PI * 2);
+        ctx.fillStyle = '#fff3e0';
+        ctx.fill();
+        ctx.restore();
+      }
+      ctx.restore();
     }
 
     // High-Contrast Threat Rings (Settings Toggle)
@@ -2077,6 +2432,14 @@ export class GameEngine {
 
     // 11. Render Gamepad Tactical Reticle
     this.renderGamepadReticle(ctx);
+
+    // Cataclysm Sector IV: Genesis Supernova Cosmic Flash
+    if (this.cataclysmFlashAlpha > 0.01) {
+      ctx.save();
+      ctx.fillStyle = `rgba(255, 245, 220, ${this.cataclysmFlashAlpha * 0.85})`;
+      ctx.fillRect(0, 0, this.width, this.height);
+      ctx.restore();
+    }
 
     ctx.restore();
 

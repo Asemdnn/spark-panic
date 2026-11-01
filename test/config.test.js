@@ -42,9 +42,9 @@ describe('Configuration & Universe Data (v2.0)', () => {
     expect(PLANETS[19].bossName).toBe('The Apex Leviathan');
   });
 
-  it('should define 7 unique Alien Classes with exact combat stats and death payloads', () => {
+  it('should define 10 unique Alien Classes with exact combat stats and death payloads', () => {
     const keys = Object.keys(ALIEN_CLASSES);
-    expect(keys).toEqual(['SCOUT', 'INTERCEPTOR', 'CRYO', 'PHASE', 'DROPSHIP', 'DREADNOUGHT', 'BOSS']);
+    expect(keys).toEqual(['SCOUT', 'INTERCEPTOR', 'CRYO', 'PHASE', 'DROPSHIP', 'DREADNOUGHT', 'BOSS', 'JAMMER', 'WEAVER', 'GALLEON']);
 
     // Scout
     const scout = ALIEN_CLASSES.SCOUT;
@@ -95,6 +95,19 @@ describe('Configuration & Universe Data (v2.0)', () => {
     expect(boss.radius).toBe(40);
     expect(boss.score).toBe(800);
     expect(boss.novaRadius).toBe(210);
+
+    // Elite Squadron Leaders & Jackpot
+    const jammer = ALIEN_CLASSES.JAMMER;
+    expect(jammer.hp).toBe(90);
+    expect(jammer.role).toContain('Shield');
+
+    const weaver = ALIEN_CLASSES.WEAVER;
+    expect(weaver.hp).toBe(110);
+    expect(weaver.role).toContain('Graviton');
+
+    const galleon = ALIEN_CLASSES.GALLEON;
+    expect(galleon.hp).toBe(160);
+    expect(galleon.score).toBe(300);
   });
 
   it('should define 6 Guardian Armory Tech Upgrades', () => {

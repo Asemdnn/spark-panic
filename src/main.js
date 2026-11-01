@@ -38,6 +38,12 @@ window.addEventListener('DOMContentLoaded', () => {
       const dy = e.clientY - engine.planet.y;
       const dist = Math.hypot(dx, dy);
 
+      // If clicked inside planet core when Cataclysm is ready (100%), unleash Planetary Cataclysm!
+      if (dist <= engine.planet.planetRadius * 0.7 && engine.coreCharge >= 100) {
+        engine.triggerPlanetaryCataclysm();
+        return;
+      }
+
       // If clicked inside planet shield, don't waste nova
       if (dist > engine.planet.shieldRadius + 8) {
         engine.triggerSparkNova(e.clientX, e.clientY);
@@ -101,6 +107,10 @@ window.addEventListener('DOMContentLoaded', () => {
       } else if (engine.state === 'DEFEAT' || engine.state === 'PAUSED') {
         restartCurrent();
       }
+    } else if (key === 'F' || key === '5') {
+      if (engine.state === 'PLAYING') {
+        engine.triggerPlanetaryCataclysm();
+      }
     } else if (key === 'O') {
       openSettingsModal();
     }
@@ -142,6 +152,11 @@ window.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btnSkillR')?.addEventListener('click', () => {
     if (engine.state === 'PLAYING') {
       engine.deployStructure();
+    }
+  });
+  document.getElementById('btnCataclysm')?.addEventListener('click', () => {
+    if (engine.state === 'PLAYING') {
+      engine.triggerPlanetaryCataclysm();
     }
   });
   document.getElementById('btnAutoFire')?.addEventListener('click', () => {

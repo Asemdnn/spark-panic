@@ -1,44 +1,56 @@
-# Spark Panic: Planetary Invasion Defense — Guardian of the Universe (v2.6 Arcade Spectacle Edition)
+# Spark Panic: Planetary Invasion Defense — Guardian of the Universe (v2.7 Cosmic Cataclysm Edition)
 
 [![Deploy to GitHub Pages](https://github.com/Asemdnn/spark-panic/actions/workflows/deploy.yml/badge.svg)](https://github.com/Asemdnn/spark-panic/actions/workflows/deploy.yml)
 [![Live Demo](https://img.shields.io/badge/Play_Live-GitHub_Pages-00e5ff?style=flat&logo=github)](https://asemdnn.github.io/spark-panic/)
 [![PWA Ready](https://img.shields.io/badge/PWA-Ready-00e676?style=flat&logo=pwa)](https://asemdnn.github.io/spark-panic/)
 
-**Spark Panic 2.6 ("Arcade Spectacle Edition")** is a high-octane, self-contained HTML5 Canvas + Tailwind CSS arcade strategy and action planetary defense game. You are the **Orbital Guardian**, defending living celestial worlds and their cyber-cities against 360° incoming waves of relentless alien invasion fleets.
+**Spark Panic 2.7 ("Cosmic Cataclysm Edition")** is a high-octane, self-contained HTML5 Canvas + Tailwind CSS arcade strategy and action planetary defense game. You are the **Orbital Guardian**, defending living celestial worlds and their cyber-cities against 360° incoming waves of relentless alien invasion fleets.
 
 - 🎮 **Play Online**: [https://asemdnn.github.io/spark-panic/](https://asemdnn.github.io/spark-panic/)
 - 📦 **GitHub Repository**: [https://github.com/Asemdnn/spark-panic](https://github.com/Asemdnn/spark-panic)
 
 ---
 
-## 🌟 What's New in v2.6: Arcade Spectacle Edition
+## 🌟 What's New in v2.7: Cosmic Cataclysm Edition
 
-1. **⚡ Directional Plasma Laser Bolts, Barrel Recoil & Helical [Q] Ion Beam**:
-   - **Directional Plasma Capsules**: Replaced circular dots with elongated, high-velocity plasma bolts oriented along trajectory vector (`Math.atan2(b.vy, b.vx)`), rendered in additive `'lighter'` blend mode with intense white cores and colored corona glow.
-   - **Railgun Lancer Shock-Rings & Wakes**: Diamond shockwave rings and lingering golden wake line trails behind hypersonic kinetic slug strikes.
-   - **Turret Barrel Kickback & Muzzle Flash**: Snappy recoil kickback (`5.5px` offset decaying at `38px/s`), brilliant 4-point star-flare muzzle flash, and directional planetary rim-light glow beneath the turret barrel.
-   - **Helical [Q] Orbital Ion Beam Overhaul**: Ion beam anchored precisely at turret muzzle (`planetRadius + 20`), featuring a glowing charge-sphere, wide cyan sheath, blazing white core, and high-frequency sine-wave helical energy ribbon (`Math.sin(d * 0.06 - timeSec * 28) * 14`) with counter-helix braid.
+1. **🌋 Chargeable Planetary Cataclysm Superweapons (`[F]` / Click Core / LB / D-pad Up)**:
+   - **Planetary Core Overcharge Gauge**: Charged to 100% via alien eliminations (+3.5%), high-chain combos (+6%), and magnetic cosmic spark pickups (+2%).
+   - **Sector I — ❄️ CRYO-TSUNAMI PULSE**: Emits an expanding 450px frost shockwave that freezes all enemies for 5.0s, shatters incoming torpedoes into restorative healing sparks, and deals 140 damage.
+   - **Sector II — 🌋 MAGMA METEOR ERUPTION**: Launches 12 homing molten volcanic fireballs seeking the highest-HP alien threats and detonating into 85px novas dealing 95 damage each.
+   - **Sector III — ⚙️ DYSON ORBITAL LASER CAGE**: Activates 4 golden orbital laser beams rotating 360° for 4.0s, dealing 220 continuous damage per second across the sector.
+   - **Sector IV — ☀️ GENESIS SUPERNOVA**: Blinding cosmic solar flash that instantly vaporizes all non-boss ships, inflicts 350 direct damage to Boss motherships, and restores +30% Aegis Shield integrity.
 
-2. **🚀 High-Visibility Enemy Warheads, Ribbon Trails & Perimeter Threat Warning Chevrons**:
-   - **Pointed Tactical Warheads**: Enemy siege torpedoes rendered as sharp crimson/white missile cones with flickering thruster exhaust flame and a 5-point tapering trailing smoke ribbon.
-   - **Close-Orbit Trajectory & Rotating Diamond Reticle**: When warheads breach within `shieldRadius + 130px`, projected danger trajectory dotted lines and rotating red diamond lock-on reticles activate for instant tactical priority.
-   - **Perimeter Radar Warning Chevrons**: Flashing offscreen radar chevrons with high-contrast warning text (`⚠️ HEAVY INCURSION`) pointing towards incoming Flagship, Dreadnought, and Dropship incursions.
+2. **🛸 Elite Squadron Leaders & Astral Treasure Galleon**:
+   - **🛡️ Aegis Jammer Frigate (`JAMMER`)**: Equipped with a curved 90° frontal energy barrier facing the planet; deflects frontal kinetic and plasma turret fire with spark clinks; vulnerable to rear/flank novas, prism lasers, and direct pierce weapons (Railgun Lancer / Ion Beam).
+   - **🕸️ Void Weaver Carrier (`WEAVER`)**: Orbits at mid-range and channels a magenta Graviton Web Beam to the turret, reducing turret fire rate by 30%; on defeat, unleashes an Overcharge Surge refunding 3.0s cooldown to skills Q, W, and E.
+   - **💎 Astral Treasure Galleon (`GALLEON`)**: High-speed golden vessel navigating tangential outer arcs with a 9-second escape timer; on destruction, awards an Astral Jackpot (+65 Star Shards, +25% Cataclysm charge, and a guaranteed Orbital Supply Pod).
+   - **📖 10-Class Codex Dossiers**: Updated Guardian Archives with stats and custom vector SVG ship diagrams for all 10 alien classes.
 
-3. **💥 "Supernova Spectacle": Chain-Lightning Tethers, Hull Shatter Shards & Hit-Stop**:
-   - **Chain-Reaction Lightning Tethers**: Jagged 5-segment electric plasma arcs snapping between the epicenter of detonating Novas and newly obliterated alien hulls.
-   - **Polygonal Hull Shatter Shards**: 3 to 5 tumbling geometric hull fragments bursting outward with randomized angular spin and fade-out trail.
-   - **Concentric Multi-Ring Novas**: Supernovas render dual concentric rings — an outer rapid distortion shockwave plus an inner additive plasma blast ring.
-   - **Milestone Combo Hit-Stop & Micro Bullet-Time**: Detonating x8, x12, x16, and x20+ chain combos triggers a brief cinematic hit-stop (`timeScale = 0.35` for 0.14s) accompanied by a subtle cosmic edge-vignette pulse.
+3. **🌍 Sector-Specific Living Biome Shaders & Atmospheric Weather**:
+   - **Sector I (Planets 1–5)**: Dual counter-rotating cloud layers and shimmering Cyan/Emerald Aurora Borealis ribbons dancing across the poles.
+   - **Sector II (Planets 6–10)**: Glowing molten magma veins and volcanic fissures pulsing on the surface alongside 3 drifting volumetric ionized nebula clouds.
+   - **Sector III (Planets 11–15)**: 4 rotating golden Dyson-Ring megastructure arc segments with glowing cyan circuit nodes and gravitational lensing distortion rings.
+   - **Sector IV (Planets 16–20 & Endless)**: 8 animated solar corona prominence loops / plasma flares arching from the planet limb with rising golden starlight embers.
 
-4. **🌌 3-Layer Parallax Starfield, Ice Comets & Subspace Warp-Rift Portals**:
-   - **3-Layer Parallax Starfield**: Background, midground, and foreground star layers with smooth camera parallax offset tracking turret rotation (`Math.cos(turretAngle) * -14 * layer`).
-   - **Distant Background Ice Comets**: Cyan/white comets streaking diagonally across the deep starfield every 8-12 seconds.
-   - **Subspace Warp-Rift Portals**: Swirling 55px crimson/violet subspace gateways with rotating lightning spokes and distortion ripples announcing Sector Boss arrivals prior to emergence.
-   - **Title & Battle Card Badges**: Updated hero badge to `⚡ v2.6 ARCADE SPECTACLE EDITION`.
+4. **🎵 Beat-Synced Audio-Reactive Halo & Aegis Node Resonance**:
+   - Audio-reactive `beatPulse` driven by procedural synthwave bass/kick steps and laser fire, pulsing atmospheric halo radius and hexagonal shield node luminosity.
+   - Dedicated `#btnCataclysm` in the tactical ability bar, gamepad trigger support (LB / D-pad Up), and updated `⚡ v2.7 COSMIC CATACLYSM EDITION` title and battle card badges.
 
 ---
 
 ## 🌟 Previous Update Highlights
+
+- **⚡ Arcade Juice & Next-Gen VFX (v2.6)**: Directional plasma bolts, turret recoil & muzzle star-flares, helical Ion Beam, pointed tactical warheads with trailing exhaust smoke ribbons, chain-lightning tethers, hull debris shards, 3-layer parallax starfield, and Boss subspace warp rifts.
+- **🏺 Ancient Cosmic Relics (v2.5)**: 8 collectible artifacts and 3-slot passive loadout (Chrono-Stasis, Vampiric Core, Singularity Lens, Twin Wingman, Overcharged Coil, Aegis Mirror, Starlight Synth, Supernova Echo).
+- **🛰️ Deployable Orbital Defense Structures (`[R]`, v2.5)**: Solar Prism Pylon, Grav-Well Anchor, and Aegis Flak Battery.
+- **📸 Holographic Commander Battle Card (v2.5)**: 1200×630 canvas exporter for social sharing.
+- **🎮 Gamepad / Controller Support & Settings (v2.5)**: Dual-stick controls and custom accessibility settings.
+- **👑 Titan Protocol (4-Boss Rush Gauntlet Mode, v2.4)**: Back-to-back mothership encounters with 4-second orbital repair pit-stops.
+- **🤖 Autonomous AI Wingman Fighter (`WING-01`, v2.4)**: Interceptor, Vanguard, and Harvester doctrines.
+- **🌌 Galactic Prestige ("Hyperdrive Ascension", v2.4)**: Ascend up to Tier V for permanent shard & score multipliers with custom turret skins.
+- **📊 Post-Battle Tactical Telemetry**: Real-time integrity curve and damage attribution breakdown.
+- **⚡ Daily Cosmic Anomaly**: Deterministic daily invasion challenges with unique tactical mutators.
+- **🎵 Procedural Synthwave Web Audio BGM**: Dynamic chord progressions, basslines, and boss wave tempo boosts.
 
 - **🏺 Ancient Cosmic Relics (v2.5)**: 8 collectible artifacts and 3-slot passive loadout (Chrono-Stasis, Vampiric Core, Singularity Lens, Twin Wingman, Overcharged Coil, Aegis Mirror, Starlight Synth, Supernova Echo).
 - **🛰️ Deployable Orbital Defense Structures (`[R]`, v2.5)**: Solar Prism Pylon, Grav-Well Anchor, and Aegis Flak Battery.

@@ -29,6 +29,30 @@ export class SupplyPodManager {
     return this.isCryoTimeWarpActive() ? 0.40 : 1.0;
   }
 
+  spawnPod(x, y, planetRadius = 75, buffType = null) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 32 + Math.random() * 16;
+    const tangAngle = angle + (Math.random() < 0.5 ? Math.PI * 0.5 : -Math.PI * 0.5);
+
+    const pod = {
+      x,
+      y,
+      vx: Math.cos(tangAngle) * speed,
+      vy: Math.sin(tangAngle) * speed,
+      angle,
+      orbitDist: Math.hypot(x, y),
+      radius: 16,
+      hp: 15,
+      maxHp: 15,
+      rotation: 0,
+      beaconPhase: 0,
+      alive: true,
+      buffType
+    };
+    this.pods.push(pod);
+    return pod;
+  }
+
   update(dt, planetX, planetY, planetRadius, onBuffGranted) {
     // 1. Buff Timers
     if (this.quadPulseTimer > 0) this.quadPulseTimer = Math.max(0, this.quadPulseTimer - dt);

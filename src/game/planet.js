@@ -315,23 +315,94 @@ export class Planet {
     ctx.restore();
   }
 
-  render(ctx, isOverdrive = false) {
+  render(ctx, isOverdrive = false, timeSec = 0, beatPulse = 0, coreCharge = 0) {
     if (!this.data) return;
     const r = this.planetRadius;
     const sr = this.shieldRadius;
     const atmo = this.data.atmo || '#00e5ff';
     const c1 = this.data.color1 || '#0ea5e9';
     const c2 = this.data.color2 || '#10b981';
+    const sector = this.sector || (this.data ? this.data.sector : 1) || 1;
 
-    // 1. Atmospheric Outer Halo
-    const halo = ctx.createRadialGradient(this.x, this.y, r * 0.8, this.x, this.y, sr + 24);
-    halo.addColorStop(0, `${atmo}44`);
-    halo.addColorStop(0.7, `${atmo}18`);
+    // 1. Atmospheric Outer Halo (modulated by Web Audio Beat-Pulse)
+    const haloExtra = 6 * (beatPulse || 0);
+    const haloR = sr + 24 + haloExtra;
+    const halo = ctx.createRadialGradient(this.x, this.y, r * 0.8, this.x, this.y, haloR);
+    halo.addColorStop(0, `${atmo}55`);
+    halo.addColorStop(0.7, `${atmo}20`);
     halo.addColorStop(1, 'transparent');
     ctx.fillStyle = halo;
     ctx.beginPath();
-    ctx.arc(this.x, this.y, sr + 24, 0, Math.PI * 2);
+    ctx.arc(this.x, this.y, haloR, 0, Math.PI * 2);
     ctx.fill();
+
+    // Sector II: 3 Translucent Volumetric Violet/Magenta Ionized Nebula Clouds
+    if (sector === 2) {
+      ctx.save();
+      const nebulae = [
+        { dx: -r * 1.5, dy: -r * 0.9, rad: r * 1.6, col: '#7928ca' },
+        { dx: r * 1.4, dy: r * 0.8, rad: r * 1.8, col: '#e040fb' },
+        { dx: -r * 0.6, dy: r * 1.5, rad: r * 1.4, col: '#4c1d95' }
+      ];
+      for (let nIdx = 0; nIdx < nebulae.length; nIdx++) {
+        const neb = nebulae[nIdx];
+        const driftX = Math.cos(timeSec * 0.15 + nIdx * 2.1) * 24;
+        const driftY = Math.sin(timeSec * 0.15 + nIdx * 2.1) * 18;
+        const ng = ctx.createRadialGradient(
+          this.x + neb.dx + driftX, this.y + neb.dy + driftY, neb.rad * 0.1,
+          this.x + neb.dx + driftX, this.y + neb.dy + driftY, neb.rad
+        );
+        const nebAlpha = Math.min(0.28, 0.14 + (beatPulse || 0) * 0.08);
+        ng.addColorStop(0, `rgba(168, 85, 247, ${nebAlpha})`);
+        ng.addColorStop(0.6, `rgba(217, 70, 239, ${nebAlpha * 0.6})`);
+        ng.addColorStop(1, 'transparent');
+        ctx.fillStyle = ng;
+        ctx.beginPath();
+        ctx.arc(this.x + neb.dx + driftX, this.y + neb.dy + driftY, neb.rad, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    // Sector IV: Solar Corona Prominence Loops / Plasma Flares from Planet Limb
+    if (sector === 4) {
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      const flareCount = 8;
+      for (let f = 0; f < flareCount; f++) {
+        const fAng = (f / flareCount) * Math.PI * 2 + (timeSec * 0.2);
+        const loopReach = 14 + Math.sin(timeSec * 3 + f * 1.5) * 12;
+        const p1x = this.x + Math.cos(fAng - 0.16) * r;
+        const p1y = this.y + Math.sin(fAng - 0.16) * r;
+        const p2x = this.x + Math.cos(fAng + 0.16) * r;
+        const p2y = this.y + Math.sin(fAng + 0.16) * r;
+        const ctrlX = this.x + Math.cos(fAng) * (r + loopReach);
+        const ctrlY = this.y + Math.sin(fAng) * (r + loopReach);
+
+        ctx.beginPath();
+        ctx.moveTo(p1x, p1y);
+        ctx.quadraticCurveTo(ctrlX, ctrlY, p2x, p2y);
+        ctx.strokeStyle = f % 2 === 0 ? '#ff9100' : '#ffd700';
+        ctx.lineWidth = 3.2;
+        ctx.shadowColor = '#ff3d00';
+        ctx.shadowBlur = 14;
+        ctx.stroke();
+      }
+      // Rising golden starlight embers
+      for (let e = 0; e < 6; e++) {
+        const eAng = (e / 6) * Math.PI * 2 + (timeSec * 0.45);
+        const eDist = r * 0.45 + (Math.sin(timeSec * 2.2 + e * 1.2) * 0.5 + 0.5) * (r * 0.85);
+        const ex = this.x + Math.cos(eAng) * eDist;
+        const ey = this.y + Math.sin(eAng) * eDist;
+        ctx.beginPath();
+        ctx.arc(ex, ey, 2.2, 0, Math.PI * 2);
+        ctx.fillStyle = '#ffd700';
+        ctx.shadowColor = '#ffd700';
+        ctx.shadowBlur = 8;
+        ctx.fill();
+      }
+      ctx.restore();
+    }
 
     // 2. Rotating Celestial Planet Body
     ctx.save();
@@ -370,6 +441,63 @@ export class Planet {
     }
     ctx.restore();
 
+    // Sector I: 2 Counter-Rotating Semi-Transparent Cloud Layers
+    if (sector === 1) {
+      // Cloud Layer 1 (Drifting forward at rotation * 1.35)
+      ctx.save();
+      ctx.translate(this.x, this.y);
+      ctx.rotate(this.rotation * 1.35);
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.22)';
+      for (let c = 0; c < 5; c++) {
+        const cAng = (c / 5) * Math.PI * 2;
+        const cDist = r * (0.22 + (c % 3) * 0.2);
+        ctx.beginPath();
+        ctx.ellipse(Math.cos(cAng) * cDist, Math.sin(cAng) * cDist, r * 0.45, r * 0.18, cAng + 0.35, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+
+      // Cloud Layer 2 (Counter-rotating at -rotation * 0.95)
+      ctx.save();
+      ctx.translate(this.x, this.y);
+      ctx.rotate(-this.rotation * 0.95);
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.16)';
+      for (let c = 0; c < 4; c++) {
+        const cAng = (c / 4) * Math.PI * 2 + 0.5;
+        const cDist = r * (0.35 + (c % 2) * 0.25);
+        ctx.beginPath();
+        ctx.ellipse(Math.cos(cAng) * cDist, Math.sin(cAng) * cDist, r * 0.38, r * 0.15, cAng - 0.3, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    // Sector II: Glowing Molten Magma Veins / Volcanic Cracks Pulsing Across Surface
+    if (sector === 2) {
+      ctx.save();
+      ctx.translate(this.x, this.y);
+      ctx.rotate(this.rotation * 0.85);
+      const mPulse = 0.5 + Math.sin(timeSec * 4) * 0.5;
+      ctx.strokeStyle = `rgba(255, 61, 0, ${0.75 + mPulse * 0.25})`;
+      ctx.lineWidth = 2.4;
+      ctx.shadowColor = '#ff9100';
+      ctx.shadowBlur = 10 + mPulse * 8;
+      const cracks = [
+        [-r * 0.65, -r * 0.2, -r * 0.35, -r * 0.4, -r * 0.1, -r * 0.12, 0, -r * 0.3],
+        [-r * 0.25, r * 0.1, r * 0.1, r * 0.32, r * 0.45, r * 0.2, r * 0.62, r * 0.5],
+        [r * 0.1, -r * 0.55, r * 0.3, -r * 0.25, r * 0.5, -r * 0.32, r * 0.65, 0]
+      ];
+      for (const path of cracks) {
+        ctx.beginPath();
+        ctx.moveTo(path[0], path[1]);
+        for (let pt = 2; pt < path.length; pt += 2) {
+          ctx.lineTo(path[pt], path[pt + 1]);
+        }
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
     // 3D Spherical Night-Side Terminator Shadow
     const shadow = ctx.createRadialGradient(
       this.x - r * 0.45, this.y - r * 0.45, r * 0.2,
@@ -381,6 +509,136 @@ export class Planet {
     ctx.fillStyle = shadow;
     ctx.fillRect(this.x - r, this.y - r, r * 2, r * 2);
 
+    ctx.restore();
+
+    // Sector I: Shimmering Cyan/Emerald Aurora Borealis Ribbons at North & South Poles
+    if (sector === 1) {
+      ctx.save();
+      const poles = [-r, r];
+      for (const poleY of poles) {
+        const isNorth = poleY < 0;
+        ctx.save();
+        ctx.translate(this.x, this.y + poleY);
+        ctx.globalCompositeOperation = 'lighter';
+        for (let rib = 0; rib < 2; rib++) {
+          const col = rib === 0 ? '#00e5ff' : '#00e676';
+          ctx.beginPath();
+          const span = r * 0.72;
+          for (let x = -span; x <= span; x += 6) {
+            const wave = Math.sin(timeSec * 2.5 + x * 0.08 + rib * 1.5) * (isNorth ? -10 : 10);
+            const y = wave * (1 - Math.abs(x) / span);
+            if (x === -span) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+          }
+          ctx.strokeStyle = col;
+          ctx.lineWidth = 3.2;
+          ctx.shadowColor = col;
+          ctx.shadowBlur = 12;
+          ctx.globalAlpha = 0.65 + Math.sin(timeSec * 2 + rib) * 0.25;
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+      ctx.restore();
+    }
+
+    // Sector III: Rotating Golden Cybernetic Dyson-Ring Megastructure Segments
+    if (sector === 3) {
+      ctx.save();
+      ctx.translate(this.x, this.y);
+
+      // Subtle gravitational lens distortion ring
+      const lensR = r * 1.12 + Math.sin(timeSec * 2) * 3;
+      ctx.beginPath();
+      ctx.arc(0, 0, lensR, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(0, 229, 255, 0.20)';
+      ctx.lineWidth = 2.0;
+      ctx.setLineDash([8, 12]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // 4 mechanical arc plates orbiting inside Aegis Shield
+      const dysonR = (r + sr) * 0.51;
+      const dysonRot = timeSec * 0.35;
+      ctx.rotate(dysonRot);
+
+      for (let seg = 0; seg < 4; seg++) {
+        const startA = (seg / 4) * Math.PI * 2 + 0.15;
+        const endA = ((seg + 1) / 4) * Math.PI * 2 - 0.15;
+
+        ctx.beginPath();
+        ctx.arc(0, 0, dysonR, startA, endA);
+        ctx.strokeStyle = '#ffd700';
+        ctx.lineWidth = 4.2;
+        ctx.shadowColor = '#ffd700';
+        ctx.shadowBlur = 10;
+        ctx.stroke();
+
+        // Glowing cyan circuit nodes on plate joints & midpoints
+        for (const pct of [0.15, 0.5, 0.85]) {
+          const nodeA = startA + (endA - startA) * pct;
+          const nx = Math.cos(nodeA) * dysonR;
+          const ny = Math.sin(nodeA) * dysonR;
+          ctx.beginPath();
+          ctx.arc(nx, ny, 2.8, 0, Math.PI * 2);
+          ctx.fillStyle = '#00e5ff';
+          ctx.shadowColor = '#00e5ff';
+          ctx.shadowBlur = 8;
+          ctx.fill();
+        }
+      }
+      ctx.restore();
+    }
+
+    // Chargeable Planetary Cataclysm Core Overcharge Gauge Arc (radius * 0.48)
+    const coreR = r * 0.48;
+    const chargePct = Math.min(1.0, Math.max(0, (coreCharge || 0) / 100));
+
+    ctx.save();
+    // Circular background track
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, coreR, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.14)';
+    ctx.lineWidth = 3.5;
+    ctx.stroke();
+
+    // Charged progress arc
+    if (chargePct > 0) {
+      const startA = -Math.PI * 0.5;
+      const endA = startA + chargePct * Math.PI * 2;
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, coreR, startA, endA);
+      if (chargePct >= 1.0) {
+        const strobe = Math.sin(timeSec * 16) > 0;
+        ctx.strokeStyle = strobe ? '#ffd700' : '#ff0055';
+        ctx.shadowColor = '#ffd700';
+        ctx.shadowBlur = 16;
+        ctx.lineWidth = 5.0;
+      } else {
+        ctx.strokeStyle = '#ff9100';
+        ctx.shadowColor = '#ff9100';
+        ctx.shadowBlur = 8;
+        ctx.lineWidth = 3.8;
+      }
+      ctx.stroke();
+    }
+
+    // Center Cataclysm Ready Pulsing Glow & Callout
+    if (chargePct >= 1.0) {
+      const corePulse = 1.0 + Math.sin(timeSec * 12) * 0.22;
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, coreR * 0.65 * corePulse, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255, 215, 0, 0.28)';
+      ctx.shadowColor = '#ffd700';
+      ctx.shadowBlur = 22;
+      ctx.fill();
+
+      ctx.font = 'bold 15px sans-serif';
+      ctx.fillStyle = '#ffffff';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('⚡', this.x, this.y);
+    }
     ctx.restore();
 
     // Atmospheric Edge Glow
@@ -536,16 +794,19 @@ export class Planet {
       ctx.stroke();
       ctx.shadowBlur = 0;
 
-      // Hexagonal Lattice Defense Nodes
+      // Hexagonal Lattice Defense Nodes (brightness modulated by beatPulse)
       const nodeCount = 16;
+      const nodePulse = 1.0 + (beatPulse || 0) * 0.8;
       for (let i = 0; i < nodeCount; i++) {
         const ang = (i / nodeCount) * Math.PI * 2 + (this.pulsePhase * 0.1);
         const nx = this.x + Math.cos(ang) * curSr;
         const ny = this.y + Math.sin(ang) * curSr;
 
         ctx.beginPath();
-        ctx.arc(nx, ny, 2.8, 0, Math.PI * 2);
+        ctx.arc(nx, ny, 2.8 * nodePulse, 0, Math.PI * 2);
         ctx.fillStyle = '#ffffff';
+        ctx.shadowColor = shieldColor;
+        ctx.shadowBlur = 8 * nodePulse;
         ctx.fill();
         ctx.strokeStyle = shieldColor;
         ctx.lineWidth = 1.2;

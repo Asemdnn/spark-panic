@@ -46,8 +46,8 @@ describe('Crisp Inline Vector SVG Icon System (v2.1)', () => {
     expect(unmutedVol).not.toEqual(mutedVol);
   });
 
-  it('should render distinct custom SVG ship diagrams for all 7 Alien Classes in Codex', () => {
-    const classes = ['SCOUT', 'INTERCEPTOR', 'CRYO', 'PHASE', 'DROPSHIP', 'DREADNOUGHT', 'BOSS'];
+  it('should render distinct custom SVG ship diagrams for all 10 Alien Classes in Codex', () => {
+    const classes = ['SCOUT', 'INTERCEPTOR', 'CRYO', 'PHASE', 'DROPSHIP', 'DREADNOUGHT', 'BOSS', 'JAMMER', 'WEAVER', 'GALLEON'];
     const renderedSet = new Set();
 
     classes.forEach(cls => {
@@ -60,6 +60,6 @@ describe('Crisp Inline Vector SVG Icon System (v2.1)', () => {
       renderedSet.add(shipSvg);
     });
 
-    expect(renderedSet.size).toBe(7);
+    expect(renderedSet.size).toBe(10);
   });
 });

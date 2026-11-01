@@ -19,6 +19,14 @@ export class AudioEngine {
     this.bgmTimer = null;
     this.nextNoteTime = 0;
     this.isBgmPlaying = false;
+    this.beatPulse = 0;
+  }
+
+  update(dt = 0.016) {
+    if (this.beatPulse > 0) {
+      this.beatPulse *= Math.pow(0.04, dt);
+      if (this.beatPulse < 0.01) this.beatPulse = 0;
+    }
   }
 
   init() {
@@ -118,6 +126,7 @@ export class AudioEngine {
 
     // 1. Sub-Bass Pulse on 8th notes (steps 0, 2, 4, 6...)
     if (step % 2 === 0) {
+      this.beatPulse = 1.0;
       try {
         const bassOsc = this.ctx.createOscillator();
         const bassFilter = this.ctx.createBiquadFilter();
@@ -165,6 +174,9 @@ export class AudioEngine {
   }
 
   playLaser(isOverdrive = false) {
+    if (!this.isBgmPlaying || !this.isBgmEnabled) {
+      this.beatPulse = Math.max(this.beatPulse, 0.5);
+    }
     if (this.isMuted || !this.ctx) return;
     this.init();
     const t = this.ctx.currentTime;
@@ -210,6 +222,7 @@ export class AudioEngine {
   }
 
   playChainChime(comboIndex = 1) {
+    this.beatPulse = 1.0;
     if (this.isMuted || !this.ctx) return;
     this.init();
     const t = this.ctx.currentTime;
@@ -355,6 +368,46 @@ export class AudioEngine {
       osc.start(start);
       osc.stop(start + 0.65);
     });
+  }
+
+  playCataclysm() {
+    this.beatPulse = 1.0;
+    if (this.isMuted || !this.ctx) return;
+    this.init();
+    const t = this.ctx.currentTime;
+
+    // Sub-bass rumble sweep
+    try {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(45, t);
+      osc.frequency.exponentialRampToValueAtTime(160, t + 0.35);
+      osc.frequency.exponentialRampToValueAtTime(30, t + 0.85);
+
+      gain.gain.setValueAtTime(0.45, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.9);
+
+      osc.connect(gain);
+      gain.connect(this.masterGain);
+      osc.start(t);
+      osc.stop(t + 0.95);
+
+      // Shimmer chord
+      [523.25, 659.25, 783.99, 1046.50].forEach((freq, i) => {
+        const cOsc = this.ctx.createOscillator();
+        const cGain = this.ctx.createGain();
+        cOsc.type = 'sine';
+        cOsc.frequency.setValueAtTime(freq, t + 0.05 + i * 0.04);
+        cGain.gain.setValueAtTime(0.2, t + 0.05 + i * 0.04);
+        cGain.gain.exponentialRampToValueAtTime(0.001, t + 0.7);
+
+        cOsc.connect(cGain);
+        cGain.connect(this.masterGain);
+        cOsc.start(t + 0.05 + i * 0.04);
+        cOsc.stop(t + 0.75);
+      });
+    } catch (e) {}
   }
 
   playDefeat() {

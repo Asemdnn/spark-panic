@@ -359,6 +359,44 @@ export const ICON_SVG = {
             <circle cx="24" cy="28" r="2" fill="#ffffff" />
           </svg>
         `;
+      case 'JAMMER':
+        return `
+          <svg viewBox="0 0 48 48" class="w-12 h-12 shrink-0 drop-shadow-[0_0_10px_#00e5ff]">
+            <!-- Curved 90° Frontal Energy Barrier -->
+            <path d="M10 8 Q24 2 38 8" fill="none" stroke="#00e5ff" stroke-width="3" stroke-linecap="round" filter="drop-shadow(0 0 4px #00e5ff)" />
+            <path d="M12 12 Q24 7 36 12" fill="none" stroke="#ffffff" stroke-width="1.5" stroke-dasharray="2,2" opacity="0.8" />
+            <!-- Heavy Armored Frigate Hull -->
+            <path d="M24 14 L34 26 L30 42 L24 36 L18 42 L14 26 Z" fill="#092532" stroke="#00e5ff" stroke-width="2" stroke-linejoin="round" />
+            <polygon points="24,20 28,30 24,28 20,30" fill="#ff1744" />
+            <circle cx="24" cy="24" r="3" fill="#00e5ff" />
+          </svg>
+        `;
+      case 'WEAVER':
+        return `
+          <svg viewBox="0 0 48 48" class="w-12 h-12 shrink-0 drop-shadow-[0_0_10px_#d946ef]">
+            <!-- Twin Catamaran Hulls -->
+            <path d="M12 8 L18 20 L16 42 L10 38 L8 18 Z" fill="#290b38" stroke="#d946ef" stroke-width="2" stroke-linejoin="round" />
+            <path d="M36 8 L40 18 L38 38 L32 42 L30 20 Z" fill="#290b38" stroke="#d946ef" stroke-width="2" stroke-linejoin="round" />
+            <!-- Central Graviton Web Matrix -->
+            <line x1="16" y1="20" x2="32" y2="20" stroke="#f0abfc" stroke-width="2" />
+            <line x1="14" y1="30" x2="34" y2="30" stroke="#d946ef" stroke-width="1.5" stroke-dasharray="3,2" />
+            <circle cx="24" cy="20" r="4.5" fill="#d946ef" />
+            <circle cx="24" cy="20" r="2" fill="#ffffff" />
+          </svg>
+        `;
+      case 'GALLEON':
+        return `
+          <svg viewBox="0 0 48 48" class="w-12 h-12 shrink-0 drop-shadow-[0_0_12px_#ffd700]">
+            <!-- Solar Sail Wings -->
+            <path d="M24 6 L44 24 L24 18 L4 24 Z" fill="#422006" stroke="#ffd700" stroke-width="2" stroke-linejoin="round" />
+            <path d="M14 24 L24 44 L34 24 Z" fill="#582a08" stroke="#facc15" stroke-width="2" />
+            <!-- Gilded Astral Treasure Core -->
+            <polygon points="24,14 30,24 24,34 18,24" fill="#fef08a" stroke="#ffd700" stroke-width="1.5" />
+            <circle cx="24" cy="24" r="3.5" fill="#ffffff" />
+            <circle cx="8" cy="24" r="1.5" fill="#ffd700" />
+            <circle cx="40" cy="24" r="1.5" fill="#ffd700" />
+          </svg>
+        `;
       default:
         return `
           <svg viewBox="0 0 48 48" class="w-12 h-12 shrink-0">
