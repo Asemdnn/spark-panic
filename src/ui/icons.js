@@ -397,6 +397,27 @@ export const ICON_SVG = {
             <circle cx="40" cy="24" r="1.5" fill="#ffd700" />
           </svg>
         `;
+      case 'LEECH':
+        return `
+          <svg viewBox="0 0 48 48" class="w-12 h-12 shrink-0 drop-shadow-[0_0_10px_#d946ef]">
+            <!-- Organic Spider Drone Legs -->
+            <path d="M14 18 L6 10 M14 28 L6 36 M34 18 L42 10 M34 28 L42 36" stroke="#d946ef" stroke-width="2" stroke-linecap="round" />
+            <!-- Central Infiltrator Pod -->
+            <ellipse cx="24" cy="24" rx="10" ry="12" fill="#2d0536" stroke="#d946ef" stroke-width="2" />
+            <circle cx="24" cy="24" r="4.5" fill="#ff1744" />
+            <circle cx="24" cy="24" r="1.8" fill="#ffffff" />
+          </svg>
+        `;
+      case 'BEACON':
+        return `
+          <svg viewBox="0 0 48 48" class="w-12 h-12 shrink-0 drop-shadow-[0_0_12px_#a855f7]">
+            <!-- Warp Resonance Rings -->
+            <circle cx="24" cy="24" r="18" fill="none" stroke="#a855f7" stroke-width="1.8" stroke-dasharray="4,3" />
+            <polygon points="24,8 36,24 24,40 12,24" fill="#2a0845" stroke="#c084fc" stroke-width="2" />
+            <circle cx="24" cy="24" r="5" fill="#e879f9" />
+            <circle cx="24" cy="24" r="2" fill="#ffffff" />
+          </svg>
+        `;
       default:
         return `
           <svg viewBox="0 0 48 48" class="w-12 h-12 shrink-0">

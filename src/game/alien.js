@@ -33,12 +33,28 @@ export class Alien {
     this.shieldAngle = 0;
     this.shieldHitFlash = 0;
 
+    // v2.8 Reactor Weak-Spot for Capital and Elite Ships (Boss, Dreadnought, Dropship, Weaver)
+    this.hasWeakSpot = ['BOSS', 'DREADNOUGHT', 'DROPSHIP', 'WEAVER'].includes(classKey);
+    this.weakSpotRadius = (classKey === 'BOSS') ? 14 : (classKey === 'DREADNOUGHT' ? 12 : 10);
+    this.weakSpotAngle = Math.random() * Math.PI * 2;
+    this.weakSpotExposedTimer = 0;
+    this.lastHitWasCrit = false;
+
+    // v2.8 Leech Pod & Warp Ambush Beacon states
+    this.isLeech = (classKey === 'LEECH');
+    this.isBeacon = (classKey === 'BEACON');
+    this.targetCityIndex = Math.floor(Math.random() * 4);
+    this.latched = false;
+    this.leechDps = 2.5;
+    this.beaconTimer = (classKey === 'BEACON') ? 12.0 : 0;
+    this.beaconTriggered = false;
+
     // Class specific AI timers
     this.torpedoTimer = 1.5 + Math.random() * 2.0;
     this.blinkTimer = 3.4;
     this.spawnTimer = 3.5;
     this.escapeTimer = (classKey === 'GALLEON') ? 9.0 : 0;
-    this.orbitDistance = 200 + Math.random() * 80;
+    this.orbitDistance = (classKey === 'BEACON') ? 260 : (200 + Math.random() * 80);
     this.orbitAngle = Math.atan2(y, x);
   }
 
@@ -46,8 +62,31 @@ export class Alien {
     this.frozenTimer = Math.max(this.frozenTimer, duration);
   }
 
-  takeDamage(amount, hitX = null, hitY = null, isDirectPierce = false, onBossPhase2 = null) {
+  takeDamage(amount, hitX = null, hitY = null, isDirectPierce = false, onBossPhase2 = null, canTriggerCrit = false) {
     if (!this.alive) return false;
+
+    this.lastHitWasCrit = false;
+
+    // Check Reactor Weak-Spot Hit (from Overcharge Lance or Reflected Parry)
+    if (this.hasWeakSpot && canTriggerCrit) {
+      let isWeakSpotHit = false;
+      if (hitX !== null && hitY !== null) {
+        const wsDist = this.radius * 0.85;
+        const wsX = this.x + Math.cos(this.heading + this.weakSpotAngle) * wsDist;
+        const wsY = this.y + Math.sin(this.heading + this.weakSpotAngle) * wsDist;
+        const d = Math.hypot(hitX - wsX, hitY - wsY);
+        if (d <= this.weakSpotRadius + 8) {
+          isWeakSpotHit = true;
+        }
+      } else {
+        isWeakSpotHit = true;
+      }
+      if (isWeakSpotHit) {
+        this.lastHitWasCrit = true;
+        amount *= 2.5; // 💥 CRITICAL BREACH! x2.5
+        this.freeze(1.5); // 1.5s EMP Stun
+      }
+    }
 
     // Boss Phase 2 Rotating Directional Shield Arc deflection (50% reduction for standard turret fire)
     if (this.isBoss && this.isPhase2 && !isDirectPierce && hitX !== null && hitY !== null) {
@@ -90,10 +129,16 @@ export class Alien {
     return false;
   }
 
-  update(dt, planetX, planetY, shieldRadius, spawnDropshipScoutCallback, fireTorpedoCallback) {
+  update(dt, planetX, planetY, shieldRadius, spawnDropshipScoutCallback, fireTorpedoCallback, planet = null) {
     if (!this.alive) return;
 
     this.pulsePhase += dt * 4;
+
+    // v2.8 Weak-Spot rotation & exposure cooldown
+    if (this.hasWeakSpot) {
+      this.weakSpotAngle += dt * 1.5;
+      if (this.weakSpotExposedTimer > 0) this.weakSpotExposedTimer -= dt;
+    }
 
     if (this.isBoss && this.isPhase2) {
       this.shieldAngle += dt * 1.8;
@@ -161,7 +206,7 @@ export class Alien {
         this.y += Math.sin(angleToPlanet) * 48;
       }
     } else if (this.classKey === 'DROPSHIP') {
-      // Heavy Lander marching straight, spawning mini scouts
+      // Heavy Lander marching straight, spawning mini scouts / leech pods
       this.heading = angleToPlanet;
       this.x += Math.cos(this.heading) * (this.speed * speedMult) * dt;
       this.y += Math.sin(this.heading) * (this.speed * speedMult) * dt;
@@ -169,6 +214,7 @@ export class Alien {
       this.spawnTimer -= dt * speedMult;
       if (this.spawnTimer <= 0) {
         this.spawnTimer = 4.5;
+        this.weakSpotExposedTimer = 2.5; // Expose reactor after spawn
         if (spawnDropshipScoutCallback) {
           spawnDropshipScoutCallback(this.x, this.y);
         }
@@ -182,6 +228,7 @@ export class Alien {
       this.torpedoTimer -= dt * speedMult;
       if (this.torpedoTimer <= 0) {
         this.torpedoTimer = 4.2;
+        this.weakSpotExposedTimer = 2.5; // Expose reactor after salvo
         if (fireTorpedoCallback) {
           fireTorpedoCallback(this.x, this.y, angleToPlanet, 160, 20, '#ffd700');
         }
@@ -195,6 +242,7 @@ export class Alien {
       this.torpedoTimer -= dt * speedMult;
       if (this.torpedoTimer <= 0) {
         this.torpedoTimer = 3.5;
+        this.weakSpotExposedTimer = 2.5; // Expose reactor after 3-spread salvo
         if (fireTorpedoCallback) {
           fireTorpedoCallback(this.x, this.y, angleToPlanet - 0.22, 175, 18, '#ff1744');
           fireTorpedoCallback(this.x, this.y, angleToPlanet, 190, 22, '#ff1744');
@@ -229,6 +277,45 @@ export class Alien {
       this.heading = tangentAngle;
       this.x += Math.cos(tangentAngle) * (this.speed * speedMult) * dt;
       this.y += Math.sin(tangentAngle) * (this.speed * speedMult) * dt;
+    } else if (this.classKey === 'LEECH') {
+      // v2.8 Surface City Infiltrator: Bypasses shields, latches onto surface city, drains Core HP directly
+      const planetRot = planet ? (planet.rotation || 0) : 0;
+      const cityAngle = (this.targetCityIndex * Math.PI * 0.5) + planetRot;
+      const planetR = planet ? (planet.planetRadius || 75) : 75;
+      const targetX = planetX + Math.cos(cityAngle) * planetR;
+      const targetY = planetY + Math.sin(cityAngle) * planetR;
+
+      if (!this.latched) {
+        const dCity = Math.hypot(targetX - this.x, targetY - this.y);
+        this.heading = Math.atan2(targetY - this.y, targetX - this.x);
+        if (dCity <= 12) {
+          this.latched = true;
+          this.x = targetX;
+          this.y = targetY;
+        } else {
+          this.x += Math.cos(this.heading) * (this.speed * speedMult) * dt;
+          this.y += Math.sin(this.heading) * (this.speed * speedMult) * dt;
+        }
+      } else {
+        // Latched onto city: stick to rotating city coordinate and siphon 2.5 Core HP/sec
+        this.x = targetX;
+        this.y = targetY;
+        this.heading = cityAngle;
+        if (planet && planet.coreHp !== undefined) {
+          planet.coreHp = Math.max(0, planet.coreHp - this.leechDps * dt);
+        }
+      }
+    } else if (this.classKey === 'BEACON') {
+      // v2.8 Warp Ambush Beacon: Slow outer orbit with 12s countdown
+      this.beaconTimer -= dt;
+      if (this.beaconTimer <= 0) {
+        this.alive = false;
+        this.escaped = true; // Despawns peacefully if unattacked
+      }
+      this.orbitAngle += (this.speed / (this.orbitDistance || 260)) * dt;
+      this.x = planetX + Math.cos(this.orbitAngle) * (this.orbitDistance || 260);
+      this.y = planetY + Math.sin(this.orbitAngle) * (this.orbitDistance || 260);
+      this.heading = this.orbitAngle + Math.PI * 0.5;
     }
   }
 
@@ -499,6 +586,133 @@ export class Alien {
       ctx.shadowBlur = 15;
       ctx.fill();
       ctx.shadowBlur = 0;
+    } else if (this.classKey === 'LEECH') {
+      // v2.8 Invasion Leech Pod: Spider-drone hull with 4 animated legs and red ocular core
+      ctx.fillStyle = '#2d0536';
+      ctx.strokeStyle = '#d946ef';
+      ctx.lineWidth = 2.2;
+
+      // 4 animated spider legs
+      const legPhase = Math.sin(this.pulsePhase * 3);
+      ctx.beginPath();
+      ctx.moveTo(-r * 0.4, -r * 0.6); ctx.lineTo(-r * 1.1, -r * 1.2 + legPhase * 2); ctx.lineTo(-r * 1.4, -r * 0.8);
+      ctx.moveTo(r * 0.4, -r * 0.6); ctx.lineTo(r * 1.1, -r * 1.2 - legPhase * 2); ctx.lineTo(r * 1.4, -r * 0.8);
+      ctx.moveTo(-r * 0.4, r * 0.6); ctx.lineTo(-r * 1.1, r * 1.2 - legPhase * 2); ctx.lineTo(-r * 1.4, r * 0.8);
+      ctx.moveTo(r * 0.4, r * 0.6); ctx.lineTo(r * 1.1, r * 1.2 + legPhase * 2); ctx.lineTo(r * 1.4, r * 0.8);
+      ctx.stroke();
+
+      // Spider pod body
+      ctx.beginPath();
+      ctx.ellipse(0, 0, r * 1.0, r * 0.7, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      // Pulsing red ocular core
+      ctx.beginPath();
+      ctx.arc(r * 0.35, 0, r * 0.35, 0, Math.PI * 2);
+      ctx.fillStyle = this.latched ? '#ff1744' : '#e879f9';
+      ctx.shadowColor = '#ff1744';
+      ctx.shadowBlur = 12;
+      ctx.fill();
+      ctx.shadowBlur = 0;
+
+      // Hot center
+      ctx.beginPath();
+      ctx.arc(r * 0.35, 0, r * 0.15, 0, Math.PI * 2);
+      ctx.fillStyle = '#ffffff';
+      ctx.fill();
+
+      // Latched siphon tether to planet
+      if (this.latched) {
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(-r * 1.8, 0);
+        ctx.strokeStyle = '#ff1744';
+        ctx.lineWidth = 2.5;
+        ctx.setLineDash([3, 2]);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+    } else if (this.classKey === 'BEACON') {
+      // v2.8 Warp Ambush Beacon: Neon purple halo, resonance rings, and 12s countdown timer
+      const haloPulse = 1.0 + Math.sin(this.pulsePhase * 2) * 0.15;
+      ctx.beginPath();
+      ctx.arc(0, 0, r * 1.8 * haloPulse, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(168, 85, 247, 0.4)';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([5, 4]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Diamond Beacon Core
+      ctx.beginPath();
+      ctx.moveTo(r * 1.2, 0);
+      ctx.lineTo(0, -r * 1.2);
+      ctx.lineTo(-r * 1.2, 0);
+      ctx.lineTo(0, r * 1.2);
+      ctx.closePath();
+      ctx.fillStyle = '#2a0845';
+      ctx.fill();
+      ctx.strokeStyle = '#c084fc';
+      ctx.lineWidth = 2.5;
+      ctx.shadowColor = '#c084fc';
+      ctx.shadowBlur = 15;
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+
+      // Center resonant orb
+      ctx.beginPath();
+      ctx.arc(0, 0, r * 0.5, 0, Math.PI * 2);
+      ctx.fillStyle = '#e879f9';
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(0, 0, r * 0.22, 0, Math.PI * 2);
+      ctx.fillStyle = '#ffffff';
+      ctx.fill();
+
+      // Countdown prompt text above beacon
+      ctx.save();
+      ctx.rotate(-this.heading); // Keep text horizontal
+      ctx.font = 'bold 9px Orbitron, sans-serif';
+      ctx.fillStyle = '#ffd700';
+      ctx.textAlign = 'center';
+      const timeLeft = Math.max(0, this.beaconTimer).toFixed(1);
+      ctx.fillText(`⚠️ AMBUSH: ${timeLeft}s`, 0, -r - 12);
+      ctx.restore();
+    }
+
+    // Glowing Enemy Reactor Core Weak-Spot (Boss, Dreadnought, Dropship, Weaver)
+    if (this.hasWeakSpot) {
+      const wsDist = this.radius * 0.85;
+      const wsX = Math.cos(this.weakSpotAngle) * wsDist;
+      const wsY = Math.sin(this.weakSpotAngle) * wsDist;
+      const isExposed = this.weakSpotExposedTimer > 0;
+      const wsR = this.weakSpotRadius * (isExposed ? 1.25 : 1.0);
+      const wsPulse = 1.0 + Math.sin(this.pulsePhase * 3) * 0.2;
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(wsX, wsY, wsR * wsPulse, 0, Math.PI * 2);
+      ctx.fillStyle = isExposed ? 'rgba(255, 23, 68, 0.9)' : 'rgba(255, 145, 0, 0.75)';
+      ctx.shadowColor = isExposed ? '#ff1744' : '#ffd700';
+      ctx.shadowBlur = isExposed ? 16 : 10;
+      ctx.fill();
+
+      // Hot center
+      ctx.beginPath();
+      ctx.arc(wsX, wsY, wsR * 0.45, 0, Math.PI * 2);
+      ctx.fillStyle = '#ffffff';
+      ctx.fill();
+
+      // Reticle dashed ring
+      ctx.beginPath();
+      ctx.arc(wsX, wsY, (wsR + 4) * wsPulse, 0, Math.PI * 2);
+      ctx.strokeStyle = isExposed ? '#ff1744' : '#ffd700';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([3, 3]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.restore();
     }
 
     // Health Bar for Heavy and Boss ships

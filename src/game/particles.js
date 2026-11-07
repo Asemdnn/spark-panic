@@ -33,6 +33,21 @@ export class ParticleEngine {
     });
   }
 
+  spawnNovaRing(x, y, color = '#00e5ff', maxRadius = 100) {
+    this.novas.push({
+      x,
+      y,
+      radius: 6,
+      maxRadius,
+      speed: 360,
+      color,
+      damage: 0,
+      isPlayer: false,
+      alpha: 1.0,
+      hitAliens: new Set()
+    });
+  }
+
   spawnDebris(x, y, color, count = 12) {
     const settings = saveSystem?.getSettings ? saveSystem.getSettings() : null;
     let actualCount = count;

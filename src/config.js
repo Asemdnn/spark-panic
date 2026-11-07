@@ -465,6 +465,34 @@ export const ALIEN_CLASSES = {
     role: 'Elusive Jackpot Target',
     behaviorDesc: 'Flies a fast tangential outer orbit for 9 seconds before warping away. Does not attack. Destroying it awards +65 Shards, +25% Cataclysm, and 1 Supply Pod!',
     deathPayload: '💎 ASTRAL JACKPOT: +65 ✦ Shards, +25% Cataclysm, +1 Supply Pod!'
+  },
+  LEECH: {
+    type: 'LEECH',
+    name: 'Invasion Leech Pod',
+    color: '#d946ef',
+    hp: 45,
+    speed: 210,
+    radius: 12,
+    score: 80,
+    damage: 0,
+    novaRadius: 70,
+    role: 'Surface City Infiltrator',
+    behaviorDesc: 'Bypasses planetary shields to latch onto surface cyber-cities and siphon Core HP directly (2.5 HP/s). Vaporize with Phase-Parry or Overcharge Shot!',
+    deathPayload: 'City Liberated (+25 ✦ Shards)'
+  },
+  BEACON: {
+    type: 'BEACON',
+    name: 'Warp Ambush Beacon',
+    color: '#a855f7',
+    hp: 85,
+    speed: 15,
+    radius: 18,
+    score: 150,
+    damage: 0,
+    novaRadius: 100,
+    role: 'Optional Risk/Reward Objective',
+    behaviorDesc: 'Outer-rim alien beacon active for 12 seconds. Destroying it summons an Elite Ambush Squadron rewarding 2x Star Shards, 2x Score, and +30% Cataclysm charge!',
+    deathPayload: '⚠️ ELITE AMBUSH TRIGGERED!'
   }
 };
 
@@ -1082,3 +1110,66 @@ export const DEFAULT_SETTINGS = {
   threatRings: true, // boolean
   floatingText: 'all' // 'all' | 'combos' | 'off'
 };
+
+export const TACTICAL_DRAFT_PERKS = [
+  {
+    id: 'splitNova',
+    name: 'Split-Nova Catalyst',
+    icon: '💥',
+    desc: 'Spark Nova splits into 4 homing mini-plasmas on detonation dealing 45 damage each.'
+  },
+  {
+    id: 'explosiveParry',
+    name: 'Explosive Aegis Parry',
+    icon: '🛡️',
+    desc: 'Perfect Parries trigger an additional 120px concussive shockwave dealing 60 damage.'
+  },
+  {
+    id: 'overclockedBarrels',
+    name: 'Overclocked Barrels',
+    icon: '⚡',
+    desc: 'Orbital Turret fire rate increased by +35% for the rest of the battle.'
+  },
+  {
+    id: 'gravityWell',
+    name: 'Orbital Gravity Well',
+    icon: '🌀',
+    desc: 'Slain enemies pull adjacent aliens 40px closer into nova explosions.'
+  },
+  {
+    id: 'cryoRounds',
+    name: 'Cryo-Shrapnel Rounds',
+    icon: '❄️',
+    desc: 'Plasma bolts apply a 40% chill slow to hit targets for 2.2 seconds.'
+  },
+  {
+    id: 'naniteSurge',
+    name: 'Emergency Nanite Surge',
+    icon: '💉',
+    desc: 'Once per mission, when Shield drops to 0%, instantly restore 40% Core HP & Shield.'
+  },
+  {
+    id: 'wingmanOverdrive',
+    name: 'Wingman Squadron Overdrive',
+    icon: '🚀',
+    desc: 'AI Wingmen gain +50% fire rate and +1 max bullet pierce.'
+  },
+  {
+    id: 'chainMomentum',
+    name: 'Chain-Reaction Momentum',
+    icon: '🔥',
+    desc: 'Killing an alien within 1.0s of another grants +15% damage (stacks up to 5x).'
+  },
+  {
+    id: 'volatileCores',
+    name: 'Volatile Plasma Cores',
+    icon: '☢️',
+    desc: 'Overcharge Shot blast radius doubled with lingering plasma fire pool.'
+  },
+  {
+    id: 'bountyProtocol',
+    name: 'Bounty Hunter Protocol',
+    icon: '💎',
+    desc: 'Elite and heavy enemies drop +100% Star Shards and +500 bonus score.'
+  }
+];

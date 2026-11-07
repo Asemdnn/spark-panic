@@ -1,6 +1,6 @@
 // Spark Panic: Planetary Invasion Defense 2.5 - Core Game Engine Coordinator
 
-import { PLANETS, SECTORS, ALIEN_CLASSES, ARMORY_CONFIG, TROPHIES, GUARDIAN_RANKS, getDailyAnomalyConfig, DAILY_MUTATORS, TITAN_PROTOCOL_CONFIG, WINGMAN_CONFIG, ASCENSION_CONFIG, TURRET_SKINS, COSMIC_RELICS, STRUCTURE_CONFIG, DEFAULT_SETTINGS } from '../config.js';
+import { PLANETS, SECTORS, ALIEN_CLASSES, ARMORY_CONFIG, TROPHIES, GUARDIAN_RANKS, getDailyAnomalyConfig, DAILY_MUTATORS, TITAN_PROTOCOL_CONFIG, WINGMAN_CONFIG, ASCENSION_CONFIG, TURRET_SKINS, COSMIC_RELICS, STRUCTURE_CONFIG, DEFAULT_SETTINGS, TACTICAL_DRAFT_PERKS } from '../config.js';
 import { audio } from '../engine/audio.js';
 import { saveSystem } from '../engine/storage.js';
 import { Planet } from './planet.js';
@@ -31,6 +31,7 @@ export class GameEngine {
 
     // Subsystems
     this.planet = new Planet(this);
+    this.planet.engine = this;
     this.turret = new GuardianTurret();
     this.satellites = [];
     this.wingman = new WingmanFighter(this);
@@ -127,6 +128,26 @@ export class GameEngine {
     this.cataclysmDysonBeams = null;
     this.cataclysmFlashAlpha = 0;
     this.galleonSpawnedThisMission = false;
+
+    // v2.8 Tactical Combat Mastery Systems
+    this.parryTimer = 0;
+    this.parryCooldown = 2.2;
+    this.parryCooldownTimer = 0;
+    this.isPointerDown = false;
+    this.pointerDownTime = 0;
+    this.isChargingOvercharge = false;
+    this.chargeProgress = 0;
+    this.activeDraftPerks = [];
+    this.waveDraftPending = false;
+    this.currentDraftOptions = [];
+    this.beaconSpawnedThisMission = false;
+    this.naniteSurgeTriggered = false;
+    this.chainMomentumStacks = 0;
+    this.lastKillTime = 0;
+    this.onShowWaveDraftModal = null;
+    this.onHideWaveDraftModal = null;
+    this.onUpdateDraftBadges = null;
+
     this.initStars();
 
     this.resize = this.resize.bind(this);
@@ -370,6 +391,16 @@ export class GameEngine {
       this.particles.spawnNovaRing(this.planet.x, this.planet.y, '#00e5ff', 240);
       this.particles.addFloater(this.planet.x, this.planet.y - 30, '⏱️ CHRONO STASIS TRIGGERED!', '#00e5ff', 16);
       audio.playTimeWarp();
+    }
+
+    // v2.8 Emergency Nanite Surge: Restore 40% Core HP & Shield on shield break once per mission
+    if (this.hasPerk('naniteSurge') && !this.naniteSurgeTriggered) {
+      this.naniteSurgeTriggered = true;
+      this.planet.shield = Math.round(this.planet.maxShield * 0.40);
+      this.planet.coreHp = Math.min(this.planet.maxCoreHp, Math.round(this.planet.coreHp + this.planet.maxCoreHp * 0.40));
+      this.particles.spawnNovaRing(this.planet.x, this.planet.y, '#00e676', 180);
+      this.particles.addFloater(this.planet.x, this.planet.y - 50, '💉 EMERGENCY NANITE SURGE! +40% HP & SHIELD', '#00e676', 18);
+      audio.playSkill('E');
     }
   }
 
@@ -649,6 +680,24 @@ export class GameEngine {
     this.cataclysmDysonBeams = null;
     this.cataclysmFlashAlpha = 0;
     this.galleonSpawnedThisMission = false;
+
+    // v2.8 Tactical Mastery states
+    this.parryTimer = 0;
+    this.parryCooldownTimer = 0;
+    this.isPointerDown = false;
+    this.pointerDownTime = 0;
+    this.isChargingOvercharge = false;
+    this.chargeProgress = 0;
+    this.activeDraftPerks = [];
+    this.waveDraftPending = false;
+    this.currentDraftOptions = [];
+    this.beaconSpawnedThisMission = false;
+    this.naniteSurgeTriggered = false;
+    this.chainMomentumStacks = 0;
+    this.lastKillTime = 0;
+    if (this.onUpdateDraftBadges) {
+      this.onUpdateDraftBadges(this.activeDraftPerks);
+    }
   }
 
   setupWaveSpawns() {
@@ -741,14 +790,24 @@ export class GameEngine {
       let classKey = 'SCOUT';
       const roll = Math.random();
 
-      if (this.currentPlanetId >= 2 && roll < 0.25) classKey = 'INTERCEPTOR';
-      else if (this.currentPlanetId >= 3 && roll < 0.38) classKey = 'JAMMER';
-      else if (this.currentPlanetId >= 4 && roll < 0.48) classKey = 'CRYO';
-      else if (this.currentPlanetId >= 7 && roll < 0.60) classKey = (roll < 0.54 ? 'PHASE' : 'WEAVER');
-      else if (this.currentPlanetId >= 10 && roll < 0.74) classKey = 'DROPSHIP';
-      else if (this.currentPlanetId >= 13 && roll < 0.88) classKey = 'DREADNOUGHT';
+      if (this.currentPlanetId >= 2 && roll < 0.22) classKey = 'INTERCEPTOR';
+      else if (this.currentPlanetId >= 3 && roll < 0.32) classKey = 'JAMMER';
+      else if (this.currentPlanetId >= 4 && roll < 0.42) classKey = 'CRYO';
+      else if (this.currentPlanetId >= 5 && roll < 0.52) classKey = (roll < 0.47 ? 'PHASE' : 'LEECH');
+      else if (this.currentPlanetId >= 7 && roll < 0.65) classKey = (roll < 0.58 ? 'WEAVER' : 'LEECH');
+      else if (this.currentPlanetId >= 10 && roll < 0.78) classKey = 'DROPSHIP';
+      else if (this.currentPlanetId >= 13 && roll < 0.90) classKey = 'DREADNOUGHT';
 
       this.waveSpawnQueue.push({ classKey, delay: i * (1.1 - Math.min(0.6, this.currentWave * 0.08)) });
+    }
+
+    // v2.8 Warp Ambush Beacon (Outer orbit in Wave 2+ or Endless Wave 3+)
+    if (!this.beaconSpawnedThisMission && (this.currentWave >= 2 || (this.isEndlessMode && this.currentWave >= 3))) {
+      this.waveSpawnQueue.push({
+        classKey: 'BEACON',
+        delay: 2.5
+      });
+      this.beaconSpawnedThisMission = true;
     }
 
     // Astral Treasure Galleon mid-wave encounter (once per mission from wave 2+, or every 2 waves in Endless/Daily)
@@ -835,6 +894,25 @@ export class GameEngine {
     }
 
     this.particles.spawnNova(targetX, targetY, blastRadius, color, damage, true);
+
+    // v2.8 Split-Nova Catalyst Draft Perk: Splits into 4 homing mini-plasmas
+    if (this.hasPerk('splitNova')) {
+      for (let i = 0; i < 4; i++) {
+        const a = (i / 4) * Math.PI * 2;
+        this.projectiles.addPlasmaBolt({
+          x: targetX,
+          y: targetY,
+          angle: a,
+          speed: 520,
+          damage: 45,
+          color: '#ffd700',
+          isRocket: true,
+          splashRadius: 35,
+          source: 'nova'
+        });
+      }
+    }
+
     this.addScreenShake(inNebula ? 9 : 6, 0.2);
     return true;
   }
@@ -1021,6 +1099,60 @@ export class GameEngine {
       this.particles.addFloater(alien.x, alien.y - 65, '💎 ASTRAL JACKPOT! +65 ✦ SHARDS! +25% CATACLYSM!', '#ffd700', 20);
       this.particles.spawnDebris(alien.x, alien.y, '#ffd700', 24);
       audio.playVictory();
+    }
+
+    // v2.8 Leech Pod defeat: City Saved (+25 Star Shards)
+    if (alien.classKey === 'LEECH') {
+      saveSystem.addShards(25);
+      this.particles.addFloater(alien.x, alien.y - 45, '+25 ✦ City Saved!', '#00e676', 17);
+    }
+
+    // v2.8 Warp Ambush Beacon defeat: Trigger Reinforced Elite Ambush Squadron
+    if (alien.classKey === 'BEACON') {
+      this.triggerEliteAmbush(alien.x, alien.y);
+    }
+
+    // v2.8 Ambush Squadron Reward: 2x Shards, 2x Score, +30% Cataclysm
+    if (alien.isAmbushReward) {
+      saveSystem.addShards(15);
+      this.score += pts;
+      this.coreCharge = Math.min(100, this.coreCharge + 30.0);
+      this.particles.addFloater(alien.x, alien.y - 40, '⚠️ AMBUSH REWARD: 2x ✦ & +30% CATACLYSM!', '#ffd700', 16);
+    }
+
+    // v2.8 Orbital Gravity Well Draft Perk: Pull adjacent enemies 40px closer
+    if (this.hasPerk('gravityWell')) {
+      for (const other of this.aliens) {
+        if (other !== alien && other.alive) {
+          const da = Math.hypot(other.x - alien.x, other.y - alien.y);
+          if (da <= 140) {
+            const pullAngle = Math.atan2(alien.y - other.y, alien.x - other.x);
+            other.x += Math.cos(pullAngle) * 40;
+            other.y += Math.sin(pullAngle) * 40;
+          }
+        }
+      }
+    }
+
+    // v2.8 Chain-Reaction Momentum Draft Perk: +15% damage per rapid kill (up to 5x)
+    if (this.hasPerk('chainMomentum')) {
+      const now = performance.now();
+      if (now - (this.lastKillTime || 0) <= 1000) {
+        this.chainMomentumStacks = Math.min(5, (this.chainMomentumStacks || 0) + 1);
+      } else {
+        this.chainMomentumStacks = 1;
+      }
+      this.lastKillTime = now;
+      if (this.chainMomentumStacks >= 2) {
+        this.particles.addFloater(this.planet.x, this.planet.y - 135, `🔥 MOMENTUM x${this.chainMomentumStacks} (+${this.chainMomentumStacks * 15}% DMG)`, '#ff9100', 14);
+      }
+    }
+
+    // v2.8 Bounty Hunter Protocol Draft Perk: +100% Shards & +500 score on Elites/Bosses
+    if (this.hasPerk('bountyProtocol') && ['DREADNOUGHT', 'BOSS', 'DROPSHIP', 'JAMMER', 'WEAVER'].includes(alien.classKey)) {
+      saveSystem.addShards(20);
+      this.score += 500;
+      this.particles.addFloater(alien.x, alien.y - 50, '💎 BOUNTY: +500 PTS & +20 ✦', '#ffd700', 15);
     }
 
     // Vampiric Core Relic: Heal Core HP + Shield on x8+ Combo
@@ -1333,6 +1465,20 @@ export class GameEngine {
       }
     }
 
+    // v2.8 Tactical Mastery timers & charging
+    if (this.parryTimer > 0) this.parryTimer = Math.max(0, this.parryTimer - dt);
+    if (this.parryCooldownTimer > 0) this.parryCooldownTimer = Math.max(0, this.parryCooldownTimer - dt);
+    this.updateParryUI();
+
+    if (this.isPointerDown && this.state === 'PLAYING') {
+      const heldSec = (performance.now() - this.pointerDownTime) / 1000;
+      if (heldSec >= 0.25) {
+        this.isChargingOvercharge = true;
+        this.chargeProgress = Math.min(1.0, (heldSec - 0.25) / 0.40);
+        this.turret.angle = Math.atan2(this.pointerY - this.planet.y, this.pointerX - this.planet.x);
+      }
+    }
+
     // Poll connected Gamepad
     this.pollGamepad();
 
@@ -1379,6 +1525,17 @@ export class GameEngine {
       this.planet.y,
       isOverdrive,
       (bolts, angle) => {
+        // While charging Overcharge Lance, pause standard auto-fire bursts
+        if (this.isChargingOvercharge) return;
+
+        // v2.8 Chain-Reaction Momentum perk: bonus damage per rapid kill
+        if (this.hasPerk('chainMomentum') && this.chainMomentumStacks > 0) {
+          const mult = 1.0 + this.chainMomentumStacks * 0.15;
+          for (const b of bolts) {
+            b.damage = Math.round(b.damage * mult);
+          }
+        }
+
         if (this.hasRelic('overchargedCoil')) {
           this.turretShotCount++;
           if (this.turretShotCount % 4 === 0) {
@@ -1647,21 +1804,23 @@ export class GameEngine {
         this.planet.y,
         this.planet.shieldRadius,
         (sx, sy) => {
-          // Dropship scout spawn callback
-          const scout = new Alien(sx, sy, 'SCOUT');
-          this.aliens.push(scout);
+          // Dropship scout / leech spawn callback
+          const cls = Math.random() < 0.35 ? 'LEECH' : 'SCOUT';
+          const spawned = new Alien(sx, sy, cls);
+          this.aliens.push(spawned);
         },
         (tx, ty, angle, speed, dmg, color) => {
           // Torpedo fire callback
           this.projectiles.spawnTorpedo(tx, ty, angle, speed, dmg, color);
-        }
+        },
+        this.planet
       );
 
-      // Check collision with planet shield/core
+      // Check collision with planet shield/core (Leech and Beacon do not suicide-ram into shields)
       const dist = Math.hypot(this.planet.x - alien.x, this.planet.y - alien.y);
       const hitRadius = this.planet.shield > 0 ? this.planet.shieldRadius : this.planet.planetRadius;
 
-      if (dist <= hitRadius + alien.radius) {
+      if (!alien.isLeech && !alien.isBeacon && dist <= hitRadius + alien.radius) {
         this.planet.damage(alien.damage, alien.x, alien.y);
         this.addScreenShake(alien.classKey === 'BOSS' ? 18 : 8, 0.25);
         this.particles.spawnDebris(alien.x, alien.y, alien.color, 10);
@@ -1672,6 +1831,7 @@ export class GameEngine {
 
       if (!alien.alive) {
         this.aliens.splice(i, 1);
+        continue;
       }
     }
 
@@ -1699,29 +1859,10 @@ export class GameEngine {
     );
 
     // 9. Wave Progression / Victory Check
-    if (this.waveSpawnQueue.length === 0 && this.aliens.length === 0 && this.warpPortals.length === 0 && !this.isTitanPitStop) {
-      if (this.currentWave < this.totalWaves) {
-        if (this.isTitanProtocolMode) {
-          // Inter-wave Tactical Pit-Stop (4s)
-          this.isTitanPitStop = true;
-          this.titanPitStopTimer = TITAN_PROTOCOL_CONFIG.pitStop.duration;
-
-          const p = this.planet;
-          const shieldHeal = Math.round(p.maxShield * TITAN_PROTOCOL_CONFIG.pitStop.shieldRestorePct);
-          const coreHeal = Math.round(p.maxCoreHp * TITAN_PROTOCOL_CONFIG.pitStop.coreRestorePct);
-          p.shield = Math.min(p.maxShield, p.shield + shieldHeal);
-          p.coreHp = Math.min(p.maxCoreHp, p.coreHp + coreHeal);
-          this.novaCharges = Math.min(this.maxNovaCharges, this.novaCharges + TITAN_PROTOCOL_CONFIG.pitStop.novaChargesBonus);
-
-          this.particles.addFloater(this.planet.x, this.planet.y - 140, '👑 TITAN NEUTRALIZED!', '#ffd700', 30);
-          this.particles.addFloater(this.planet.x, this.planet.y - 105, `ORBITAL REPAIR: +${shieldHeal} SHIELD, +${coreHeal} CORE`, '#00e676', 20);
-          this.showToast(TITAN_PROTOCOL_CONFIG.pitStop.bannerText, '#ffd700');
-          audio.playVictory();
-        } else {
-          this.currentWave++;
-          this.particles.addFloater(this.planet.x, this.planet.y - 120, `WAVE ${this.currentWave}!`, '#ffd700', 32);
-          this.setupWaveSpawns();
-        }
+    if (this.waveSpawnQueue.length === 0 && this.aliens.length === 0 && this.warpPortals.length === 0 && !this.isTitanPitStop && !this.waveDraftPending) {
+      if (this.currentWave < this.totalWaves || this.isEndlessMode) {
+        // v2.8 Mid-Mission Roguelike Tactical Command Draft between waves
+        this.triggerWaveDraft();
       } else {
         this.onMissionVictory();
       }
@@ -2115,6 +2256,48 @@ export class GameEngine {
     // 5. Render Laser Targeting Sight (only during PLAYING state)
     if (this.state === 'PLAYING') {
       this.turret.renderLaserSight(ctx, this.planet.x, this.planet.y, this.pointerX, this.pointerY, isOverdrive);
+    }
+
+    // v2.8 Overcharge Shot Converging Ring & Narrowing Reticle
+    if (this.isChargingOvercharge && this.state === 'PLAYING') {
+      const nozzleDist = this.planet.planetRadius + 18;
+      const nozzleX = this.planet.x + Math.cos(this.turret.angle) * nozzleDist;
+      const nozzleY = this.planet.y + Math.sin(this.turret.angle) * nozzleDist;
+      const ringRadius = (1.0 - this.chargeProgress) * 22 + 6;
+
+      ctx.save();
+      // Converging cyan-gold energy ring around nozzle
+      ctx.beginPath();
+      ctx.arc(nozzleX, nozzleY, ringRadius, 0, Math.PI * 2);
+      ctx.strokeStyle = this.chargeProgress >= 1.0 ? '#ffd700' : '#00e5ff';
+      ctx.lineWidth = 3.5;
+      ctx.shadowColor = this.chargeProgress >= 1.0 ? '#ffd700' : '#00e5ff';
+      ctx.shadowBlur = 16;
+      ctx.stroke();
+
+      // Narrowing twin-line laser target sight extending to cursor
+      const spread = (1.0 - this.chargeProgress) * 14 + 2;
+      const sightAngle = this.turret.angle;
+      const normX = -Math.sin(sightAngle);
+      const normY = Math.cos(sightAngle);
+
+      ctx.strokeStyle = this.chargeProgress >= 1.0 ? 'rgba(255, 215, 0, 0.75)' : 'rgba(0, 229, 255, 0.55)';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([6, 4]);
+
+      // Left sight line
+      ctx.beginPath();
+      ctx.moveTo(nozzleX + normX * spread, nozzleY + normY * spread);
+      ctx.lineTo(this.pointerX + normX * spread * 0.4, this.pointerY + normY * spread * 0.4);
+      ctx.stroke();
+
+      // Right sight line
+      ctx.beginPath();
+      ctx.moveTo(nozzleX - normX * spread, nozzleY - normY * spread);
+      ctx.lineTo(this.pointerX - normX * spread * 0.4, this.pointerY - normY * spread * 0.4);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.restore();
     }
 
     // 6. Render Autonomous Satellites
@@ -2716,6 +2899,295 @@ export class GameEngine {
       if (titleText) titleText.textContent = '⚡ TACTICAL PLANETARY ABILITIES';
       if (promptText) promptText.textContent = 'Use [Q] Ion Beam, [W] EMP Shockwave, and [E] Aegis Overdrive at the bottom deck when swarmed—and shoot glowing cyan Supply Pods for instant buffs!';
       if (btnComplete) btnComplete.classList.remove('hidden');
+    }
+  }
+
+  // ==========================================
+  // v2.8 TACTICAL COMBAT MASTERY SYSTEMS
+  // ==========================================
+
+  hasPerk(perkId) {
+    return this.activeDraftPerks && this.activeDraftPerks.some(p => p.id === perkId);
+  }
+
+  triggerPhaseParry() {
+    if (this.state !== 'PLAYING') return false;
+    if (this.parryCooldownTimer > 0) return false;
+
+    this.parryCooldownTimer = this.parryCooldown;
+    this.parryTimer = 0.38;
+
+    const turretAngle = this.turret ? this.turret.angle : -Math.PI * 0.5;
+    const halfArc = (110 * Math.PI) / 360; // 55° (110° total arc)
+    const knockbackDist = (this.planet.shieldRadius || 97) + 35;
+
+    // Close-Range Alien Knockback: Blasted backward 90px, stunned 1.8s, takes 45 shock damage
+    for (let i = this.aliens.length - 1; i >= 0; i--) {
+      const a = this.aliens[i];
+      if (!a.alive) continue;
+      const d = Math.hypot(a.x - this.planet.x, a.y - this.planet.y);
+      const aAng = Math.atan2(a.y - this.planet.y, a.x - this.planet.x);
+      let diff = Math.abs(aAng - turretAngle);
+      while (diff > Math.PI) diff = Math.abs(diff - Math.PI * 2);
+
+      if (d <= knockbackDist && diff <= halfArc) {
+        a.x += Math.cos(aAng) * 90;
+        a.y += Math.sin(aAng) * 90;
+        a.freeze(1.8);
+
+        // Unlatch any latched Leech Pods
+        if (a.isLeech && a.latched) {
+          a.latched = false;
+          this.particles.addFloater(a.x, a.y, 'LEECH DETACHED!', '#ffd700', 14);
+        }
+
+        const destroyed = a.takeDamage(45, a.x, a.y, true);
+        this.particles.spawnDebris(a.x, a.y, '#00e5ff', 8);
+        if (destroyed) {
+          this.onAlienDestroyed(a);
+        }
+      }
+    }
+
+    // v2.8 Explosive Aegis Parry Draft Perk: Trigger 120px concussive shockwave dealing 60 damage
+    if (this.hasPerk('explosiveParry')) {
+      const parryX = this.planet.x + Math.cos(turretAngle) * (this.planet.shieldRadius + 8);
+      const parryY = this.planet.y + Math.sin(turretAngle) * (this.planet.shieldRadius + 8);
+      this.particles.spawnNovaRing(parryX, parryY, '#ffd700', 120);
+      for (let i = this.aliens.length - 1; i >= 0; i--) {
+        const a = this.aliens[i];
+        if (!a.alive) continue;
+        if (Math.hypot(a.x - parryX, a.y - parryY) <= 120) {
+          const k = a.takeDamage(60, parryX, parryY, true);
+          if (k) this.onAlienDestroyed(a);
+        }
+      }
+    }
+
+    this.particles.spawnNovaRing(this.planet.x, this.planet.y, '#00e5ff', this.planet.shieldRadius + 14);
+    audio.playParry();
+    this.updateParryUI();
+    return true;
+  }
+
+  onPerfectParry(torpX, torpY, torpDmg = 15) {
+    // Cooldown reduced to 0.5s on successful Perfect Parry!
+    this.parryCooldownTimer = Math.min(this.parryCooldownTimer, 0.5);
+
+    // Reflected back as friendly Homing Super-Missile
+    let target = null;
+    let minDist = 99999;
+    for (const a of this.aliens) {
+      if (!a.alive) continue;
+      const d = Math.hypot(a.x - torpX, a.y - torpY);
+      if (d < minDist) {
+        minDist = d;
+        target = a;
+      }
+    }
+
+    const refAngle = target ? Math.atan2(target.y - torpY, target.x - torpX) : (this.turret ? this.turret.angle : -Math.PI * 0.5);
+    this.projectiles.addPlasmaBolt({
+      x: torpX,
+      y: torpY,
+      angle: refAngle,
+      speed: 480,
+      damage: 85 * (this.novaMultiplier || 1.0),
+      color: '#ffd700',
+      isReflectedMissile: true,
+      isRocket: true,
+      splashRadius: 65,
+      isDirectPierce: true,
+      source: 'parry'
+    });
+
+    // Award floating combat text, micro hit-stop flash, +20% Nova, +8% Cataclysm, +5% Shield
+    this.particles.addFloater(torpX, torpY - 20, '⚡ PERFECT PARRY! +20% NOVA', '#ffd700', 16);
+    this.hitStopTimer = 0.08;
+    this.timeScale = 0.4;
+    audio.playParry();
+
+    this.novaProgress += 0.20;
+    if (this.novaProgress >= 1.0 && this.novaCharges < this.maxNovaCharges) {
+      this.novaCharges++;
+      this.novaProgress -= 1.0;
+    }
+
+    this.coreCharge = Math.min(100, this.coreCharge + 8.0);
+    this.planet.shield = Math.min(this.planet.maxShield, this.planet.shield + Math.round(this.planet.maxShield * 0.05));
+
+    // Explosive Aegis Parry Perk check
+    if (this.hasPerk('explosiveParry')) {
+      this.particles.spawnNovaRing(torpX, torpY, '#ffd700', 120);
+      for (let i = this.aliens.length - 1; i >= 0; i--) {
+        const a = this.aliens[i];
+        if (!a.alive) continue;
+        if (Math.hypot(a.x - torpX, a.y - torpY) <= 120) {
+          const k = a.takeDamage(60, torpX, torpY, true);
+          if (k) this.onAlienDestroyed(a);
+        }
+      }
+    }
+
+    this.updateParryUI();
+  }
+
+  triggerOverchargeLance() {
+    if (this.state !== 'PLAYING') return false;
+    if (this.chargeProgress < 0.50) {
+      this.chargeProgress = 0;
+      this.isChargingOvercharge = false;
+      return false;
+    }
+
+    const baseDmg = (this.turret ? (this.turret.damage || 20) : 20);
+    const dmg = Math.round(baseDmg * (1.0 + this.chargeProgress * 2.2));
+
+    const nozzleDist = this.planet.planetRadius + 14;
+    const nozzleX = this.planet.x + Math.cos(this.turret.angle) * nozzleDist;
+    const nozzleY = this.planet.y + Math.sin(this.turret.angle) * nozzleDist;
+
+    this.projectiles.addPlasmaBolt({
+      x: nozzleX,
+      y: nozzleY,
+      angle: this.turret.angle,
+      speed: 820,
+      damage: dmg,
+      color: '#00e5ff',
+      pierce: 5,
+      isOverchargeLance: true,
+      isDirectPierce: true,
+      source: 'overcharge'
+    });
+
+    this.turretRecoil = 14;
+    this.addScreenShake(8, 0.2);
+    audio.playOverchargeFire();
+
+    this.chargeProgress = 0;
+    this.isChargingOvercharge = false;
+    return true;
+  }
+
+  onCritBreach(alien) {
+    this.spawnSparks(alien.x, alien.y, 2);
+    this.particles.addFloater(alien.x, alien.y - 25, '💥 CRITICAL BREACH! x2.5', '#ff9100', 17);
+    this.hitStopTimer = 0.08;
+    audio.playCritBreach();
+  }
+
+  triggerWaveDraft() {
+    this.waveDraftPending = true;
+
+    // Pick 3 random unique perks
+    const unpicked = TACTICAL_DRAFT_PERKS.filter(p => !this.activeDraftPerks.some(ap => ap.id === p.id));
+    const pool = unpicked.length >= 3 ? unpicked : TACTICAL_DRAFT_PERKS;
+    const shuffled = [...pool].sort(() => Math.random() - 0.5);
+    this.currentDraftOptions = shuffled.slice(0, 3);
+
+    if (this.onShowWaveDraftModal) {
+      this.onShowWaveDraftModal(this.currentDraftOptions, this.currentWave + 1);
+    }
+  }
+
+  selectDraftPerk(perkIndex) {
+    if (!this.waveDraftPending || !this.currentDraftOptions || !this.currentDraftOptions[perkIndex]) return;
+    const perk = this.currentDraftOptions[perkIndex];
+    this.activeDraftPerks.push(perk);
+
+    if (perk.id === 'overclockedBarrels') {
+      this.turret.fireIntervalMultiplier = (this.turret.fireIntervalMultiplier || 1.0) * 0.65;
+    }
+
+    this.particles.addFloater(this.planet.x, this.planet.y - 90, `REINFORCEMENT: ${perk.name}`, '#00e5ff', 22);
+    audio.playDraftSelect();
+    this.waveDraftPending = false;
+
+    if (this.onUpdateDraftBadges) {
+      this.onUpdateDraftBadges(this.activeDraftPerks);
+    }
+    if (this.onHideWaveDraftModal) {
+      this.onHideWaveDraftModal();
+    }
+
+    if (this.isTitanProtocolMode) {
+      // Inter-wave Tactical Pit-Stop (4s)
+      this.isTitanPitStop = true;
+      this.titanPitStopTimer = TITAN_PROTOCOL_CONFIG.pitStop.duration;
+      const p = this.planet;
+      const shieldHeal = Math.round(p.maxShield * TITAN_PROTOCOL_CONFIG.pitStop.shieldRestorePct);
+      const coreHeal = Math.round(p.maxCoreHp * TITAN_PROTOCOL_CONFIG.pitStop.coreRestorePct);
+      p.shield = Math.min(p.maxShield, p.shield + shieldHeal);
+      p.coreHp = Math.min(p.maxCoreHp, p.coreHp + coreHeal);
+      this.novaCharges = Math.min(this.maxNovaCharges, this.novaCharges + TITAN_PROTOCOL_CONFIG.pitStop.novaChargesBonus);
+      this.particles.addFloater(this.planet.x, this.planet.y - 140, '👑 TITAN NEUTRALIZED!', '#ffd700', 30);
+      this.particles.addFloater(this.planet.x, this.planet.y - 105, `ORBITAL REPAIR: +${shieldHeal} SHIELD, +${coreHeal} CORE`, '#00e676', 20);
+      this.showToast(TITAN_PROTOCOL_CONFIG.pitStop.bannerText, '#ffd700');
+      audio.playVictory();
+    } else {
+      this.currentWave++;
+      this.particles.addFloater(this.planet.x, this.planet.y - 120, `WAVE ${this.currentWave}!`, '#ffd700', 32);
+      this.setupWaveSpawns();
+    }
+  }
+
+  triggerEliteAmbush(originX, originY) {
+    this.particles.spawnNova(originX, originY, 140, '#a855f7', 0, false);
+    this.particles.addFloater(originX, originY - 30, '⚠️ ELITE AMBUSH TRIGGERED! 2X SHARDS!', '#a855f7', 22);
+    this.addScreenShake(12, 0.35);
+    audio.playSkill('W');
+
+    // Spawn 5 elite vanguard + 1 Weaver/Jammer
+    const ambushClasses = ['SCOUT', 'INTERCEPTOR', 'SCOUT', 'INTERCEPTOR', 'SCOUT', Math.random() < 0.5 ? 'JAMMER' : 'WEAVER'];
+    ambushClasses.forEach((cls, idx) => {
+      const ang = (idx / ambushClasses.length) * Math.PI * 2;
+      const dist = 280 + Math.random() * 40;
+      const ax = this.planet.x + Math.cos(ang) * dist;
+      const ay = this.planet.y + Math.sin(ang) * dist;
+      const a = new Alien(ax, ay, cls);
+      a.isAmbushReward = true;
+      this.aliens.push(a);
+      this.warpPortals.push({ x: ax, y: ay, timer: 0.6, maxTimer: 0.6, radius: 28, rot: 0, color: '#a855f7' });
+    });
+  }
+
+  spawnSparks(x, y, count = 2) {
+    saveSystem.addShards(count * 5);
+    for (let i = 0; i < count; i++) {
+      this.particles.spawnCosmicSpark(x + (Math.random() - 0.5) * 12, y + (Math.random() - 0.5) * 12, 1);
+    }
+    this.particles.addFloater(x, y - 15, `+${count * 5} ✦`, '#ffd700', 14);
+  }
+
+  spawnVolatilePlasmaPool(x, y) {
+    this.solarEmberZones.push({
+      x,
+      y,
+      radius: 65,
+      life: 3.5,
+      maxLife: 3.5,
+      dps: 45
+    });
+  }
+
+  updateParryUI() {
+    const btn = document.getElementById('btnParry');
+    const cdFill = document.getElementById('parryCdFill');
+    const cdText = document.getElementById('parryCdText');
+    if (!btn) return;
+
+    if (this.parryCooldownTimer > 0) {
+      const pct = (this.parryCooldownTimer / this.parryCooldown) * 100;
+      if (cdFill) cdFill.style.height = `${pct}%`;
+      if (cdText) {
+        cdText.classList.remove('hidden');
+        cdText.textContent = `${this.parryCooldownTimer.toFixed(1)}s`;
+      }
+      btn.classList.add('opacity-70');
+    } else {
+      if (cdFill) cdFill.style.height = '0%';
+      if (cdText) cdText.classList.add('hidden');
+      btn.classList.remove('opacity-70');
     }
   }
 }

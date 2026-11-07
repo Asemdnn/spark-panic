@@ -45,20 +45,14 @@ export class ProjectileManager {
 
   addPlasmaBolt(config) {
     this.bolts.push({
-      x: config.x,
-      y: config.y,
-      vx: Math.cos(config.angle) * config.speed,
-      vy: Math.sin(config.angle) * config.speed,
-      angle: config.angle,
-      damage: config.damage,
-      color: config.color || '#00e5ff',
-      pierce: config.pierce || 1,
-      isRocket: !!config.isRocket,
-      splashRadius: config.splashRadius || 0,
-      isOvercharged: !!config.isOvercharged,
-      speed: config.speed || 520,
-      source: config.source || 'turret',
-      alive: true
+      speed: 520,
+      color: '#00e5ff',
+      pierce: 1,
+      source: 'turret',
+      alive: true,
+      ...config,
+      vx: Math.cos(config.angle) * (config.speed || 520),
+      vy: Math.sin(config.angle) * (config.speed || 520)
     });
   }
 
@@ -133,6 +127,23 @@ export class ProjectileManager {
           maxTimer: 0.18,
           color: b.color || '#ffd700'
         });
+      }
+
+      // v2.8 Homing logic for Reflected Parry Super-Missiles
+      if (b.isReflectedMissile && b.alive) {
+        let nearest = null;
+        let minDist = 99999;
+        for (const a of aliens) {
+          if (!a.alive) continue;
+          const da = Math.hypot(a.x - b.x, a.y - b.y);
+          if (da < minDist) { minDist = da; nearest = a; }
+        }
+        if (nearest) {
+          const tgtAngle = Math.atan2(nearest.y - b.y, nearest.x - b.x);
+          b.vx = Math.cos(tgtAngle) * 480;
+          b.vy = Math.sin(tgtAngle) * 480;
+          b.angle = tgtAngle;
+        }
       }
 
       // Check laser refraction through Solar Prism Pylons
@@ -311,10 +322,48 @@ export class ProjectileManager {
                   color: '#00e5ff'
                 });
               }
+            } else if (b.isOverchargeLance) {
+              // v2.8 Focused Overcharge Plasma Lance: High velocity piercing, shatters Jammer barriers
+              const destroyed = alien.takeDamage(b.damage, b.x, b.y, true, onBossPhase2Callback, true);
+              if (onAlienHitCallback) onAlienHitCallback(alien, destroyed, b.x, b.y, b.damage, b.source || 'turret');
+              if (alien.lastHitWasCrit && planet?.engine) {
+                planet.engine.onCritBreach(alien);
+              }
+              if (planet?.engine?.hasPerk && planet.engine.hasPerk('volatileCores')) {
+                planet.engine.spawnVolatilePlasmaPool(b.x, b.y);
+              }
+              if (planet?.engine?.hasPerk && planet.engine.hasPerk('cryoRounds')) {
+                alien.slowTimer = Math.max(alien.slowTimer || 0, 2.2);
+                alien.speedMultiplier = 0.60;
+              }
+            } else if (b.isReflectedMissile) {
+              // v2.8 Homing Reflected Super-Missile: 65px micro-nova detonation
+              const destroyed = alien.takeDamage(b.damage, b.x, b.y, true, onBossPhase2Callback, true);
+              if (onAlienHitCallback) onAlienHitCallback(alien, destroyed, b.x, b.y, b.damage, b.source || 'parry');
+              if (alien.lastHitWasCrit && planet?.engine) {
+                planet.engine.onCritBreach(alien);
+              }
+              if (planet?.engine?.particles) {
+                planet.engine.particles.spawnNovaRing(b.x, b.y, '#ffd700', 65);
+              }
+              // Detonate splash damage
+              for (const other of aliens) {
+                if (other === alien || !other.alive) continue;
+                const splashDist = Math.hypot(other.x - b.x, other.y - b.y);
+                if (splashDist <= 65 + (other.radius || 16)) {
+                  const k = other.takeDamage(b.damage * 0.6, b.x, b.y, true, onBossPhase2Callback);
+                  if (onAlienHitCallback) onAlienHitCallback(other, k, b.x, b.y, b.damage * 0.6, 'parry');
+                }
+              }
             } else {
               // Standard Pulse Striker bolt or Wingman Bolt
               const destroyed = alien.takeDamage(b.damage, b.x, b.y, false, onBossPhase2Callback);
               if (onAlienHitCallback) onAlienHitCallback(alien, destroyed, b.x, b.y, b.damage, b.source || 'turret');
+
+              if (planet?.engine?.hasPerk && planet.engine.hasPerk('cryoRounds')) {
+                alien.slowTimer = Math.max(alien.slowTimer || 0, 2.2);
+                alien.speedMultiplier = 0.60;
+              }
 
               if (b.isRocket && b.splashRadius > 0) {
                 for (const other of aliens) {
@@ -378,6 +427,22 @@ export class ProjectileManager {
       // Check collision with planet shield/core
       if (planet) {
         const d = Math.hypot(planet.x - torp.x, planet.y - torp.y);
+
+        // v2.8 Active Aegis Phase-Parry Deflection Check (110° arc at shield perimeter)
+        if (planet.engine && planet.engine.parryTimer > 0 && d <= planet.shieldRadius + 24) {
+          const tAng = Math.atan2(torp.y - planet.y, torp.x - planet.x);
+          const pAng = planet.engine.turret.angle;
+          let diff = Math.abs(tAng - pAng);
+          while (diff > Math.PI) diff = Math.abs(diff - Math.PI * 2);
+          const halfArc = (110 * Math.PI) / 360; // 55° (110° total arc)
+          if (diff <= halfArc) {
+            torp.alive = false;
+            planet.engine.onPerfectParry(torp.x, torp.y, torp.damage);
+            this.torpedoes.splice(i, 1);
+            continue;
+          }
+        }
+
         const hitRadius = planet.shield > 0 ? planet.shieldRadius : planet.planetRadius;
         if (d <= hitRadius) {
           // Check aegisMirror relic: When shield > 50%, 40% chance to ricochet torpedoes back as homing missiles
@@ -505,10 +570,10 @@ export class ProjectileManager {
       ctx.lineCap = 'round';
       for (const b of this.bolts) {
         const angle = (b.vx !== 0 || b.vy !== 0) ? Math.atan2(b.vy, b.vx) : (b.angle || 0);
-        const r = b.r || (b.isOvercharged ? 5.5 : (b.isRailgun ? 5.0 : 4.5));
-        const trailLen = b.isOvercharged || b.isRailgun ? 26 : (b.isTesla ? 22 : 20);
-        const coreLen = 10;
-        const boltColor = b.isOvercharged ? '#ffd700' : (b.isRailgun ? '#ffd700' : (b.color || '#00e5ff'));
+        const r = b.r || (b.isOverchargeLance ? 7.0 : (b.isOvercharged ? 5.5 : (b.isRailgun ? 5.0 : 4.5)));
+        const trailLen = b.isOverchargeLance ? 38 : (b.isOvercharged || b.isRailgun ? 26 : (b.isTesla ? 22 : 20));
+        const coreLen = b.isOverchargeLance ? 18 : 10;
+        const boltColor = b.isOverchargeLance ? '#00e5ff' : (b.isReflectedMissile ? '#ffd700' : (b.isOvercharged ? '#ffd700' : (b.isRailgun ? '#ffd700' : (b.color || '#00e5ff'))));
 
         ctx.save();
         ctx.translate(b.x, b.y);
@@ -521,7 +586,7 @@ export class ProjectileManager {
         ctx.strokeStyle = boltColor;
         ctx.lineWidth = r * 2.4;
         ctx.shadowColor = boltColor;
-        ctx.shadowBlur = b.isOvercharged ? 20 : 14;
+        ctx.shadowBlur = b.isOverchargeLance ? 24 : (b.isOvercharged ? 20 : 14);
         ctx.stroke();
 
         // Pure white hot core
@@ -533,6 +598,17 @@ export class ProjectileManager {
         ctx.shadowColor = '#ffffff';
         ctx.shadowBlur = 8;
         ctx.stroke();
+
+        // For Overcharge Plasma Lance: electric distortion arcs
+        if (b.isOverchargeLance) {
+          ctx.strokeStyle = '#ffd700';
+          ctx.lineWidth = 2.0;
+          ctx.beginPath();
+          ctx.moveTo(-28, (Math.random() - 0.5) * 8);
+          ctx.lineTo(-10, (Math.random() - 0.5) * 12);
+          ctx.lineTo(10, (Math.random() - 0.5) * 8);
+          ctx.stroke();
+        }
 
         // For Railgun Lancer shots: tiny diamond shock-rings along trajectory
         if (b.isRailgun) {

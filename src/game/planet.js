@@ -20,6 +20,9 @@ export class Planet {
       if (maybeConfig) this.data = maybeConfig;
     } else {
       this.canvas = canvasOrWidth;
+      if (canvasOrWidth && (canvasOrWidth.particles || canvasOrWidth.state !== undefined)) {
+        this.engine = canvasOrWidth;
+      }
       const w = canvasOrWidth && canvasOrWidth.width ? canvasOrWidth.width : 800;
       const h = canvasOrWidth && canvasOrWidth.height ? canvasOrWidth.height : 600;
       this.x = w * 0.5;
@@ -750,6 +753,20 @@ export class Planet {
       }
       ctx.fill();
 
+      // v2.8 City Under Siege Warning Indicator (Leech Pod Latched)
+      const hasLatchedLeech = this.engine?.aliens?.some(a => a.alive && a.isLeech && a.latched && a.targetCityIndex === i);
+      if (hasLatchedLeech) {
+        ctx.save();
+        const flash = Math.sin(this.pulsePhase * 12) > 0;
+        ctx.fillStyle = flash ? '#ff1744' : '#ffd700';
+        ctx.shadowColor = '#ff1744';
+        ctx.shadowBlur = 10;
+        ctx.font = 'bold 8px Orbitron, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('⚠️ SIEGE', 16, 0);
+        ctx.restore();
+      }
+
       ctx.restore();
     }
 
@@ -830,6 +847,47 @@ export class Planet {
         ctx.stroke();
         ctx.globalAlpha = 1.0;
       }
+    }
+
+    // 4.5. v2.8 Active Aegis Phase-Parry 110° Deflector Arc
+    if (this.engine && this.engine.parryTimer > 0) {
+      const parryR = sr + 8;
+      const turretAngle = this.engine.turret ? this.engine.turret.angle : -Math.PI * 0.5;
+      const halfArc = (110 * Math.PI) / 360; // 55° (110° total arc)
+      const startAngle = turretAngle - halfArc;
+      const endAngle = turretAngle + halfArc;
+
+      ctx.save();
+      // Outer blazing cyan-gold energy glow
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, parryR, startAngle, endAngle);
+      ctx.strokeStyle = '#00e5ff';
+      ctx.lineWidth = 6.5;
+      ctx.shadowColor = '#00e5ff';
+      ctx.shadowBlur = 22;
+      ctx.stroke();
+
+      // White-hot pulsing core
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, parryR, startAngle, endAngle);
+      ctx.strokeStyle = '#ffd700';
+      ctx.lineWidth = 3.2;
+      ctx.shadowColor = '#ffd700';
+      ctx.shadowBlur = 12;
+      ctx.stroke();
+
+      // Deflector Arc Apex and End Emitters
+      [startAngle, turretAngle, endAngle].forEach((ang, idx) => {
+        const ex = this.x + Math.cos(ang) * parryR;
+        const ey = this.y + Math.sin(ang) * parryR;
+        ctx.beginPath();
+        ctx.arc(ex, ey, idx === 1 ? 5.0 : 3.8, 0, Math.PI * 2);
+        ctx.fillStyle = idx === 1 ? '#ffffff' : '#ffd700';
+        ctx.shadowColor = '#00e5ff';
+        ctx.shadowBlur = 14;
+        ctx.fill();
+      });
+      ctx.restore();
     }
 
     // 5. Celebratory Orbital Fireworks

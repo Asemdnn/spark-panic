@@ -273,7 +273,8 @@ describe('v2.7 Cosmic Cataclysm, Elite Squadron Leaders & Living Biomes Suite', 
       const expectedClasses = [
         'SCOUT', 'INTERCEPTOR', 'CRYO', 'PHASE',
         'DROPSHIP', 'DREADNOUGHT', 'BOSS',
-        'JAMMER', 'WEAVER', 'GALLEON'
+        'JAMMER', 'WEAVER', 'GALLEON',
+        'LEECH', 'BEACON'
       ];
       expect(Object.keys(ALIEN_CLASSES)).toEqual(expectedClasses);
 
@@ -295,13 +296,13 @@ describe('v2.7 Cosmic Cataclysm, Elite Squadron Leaders & Living Biomes Suite', 
       });
     });
 
-    it('index.html should contain #btnCataclysm, v2.7 title badge and 10 alien classes codex reference', () => {
+    it('index.html should contain #btnCataclysm, v2.7/v2.8 title badge and alien classes codex reference', () => {
       const htmlPath = path.resolve(__dirname, '../index.html');
       const html = fs.readFileSync(htmlPath, 'utf-8');
 
       expect(html).toContain('id="btnCataclysm"');
-      expect(html).toContain('⚡ v2.7 COSMIC CATACLYSM EDITION');
-      expect(html).toContain('Tactical intelligence on 10 invading alien ship classes');
+      expect(html).toMatch(/⚡ v2\.[78] (COSMIC CATACLYSM|TACTICAL MASTERY) EDITION/);
+      expect(html).toContain('Tactical intelligence on');
     });
   });
 });

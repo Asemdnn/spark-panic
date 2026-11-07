@@ -1,57 +1,56 @@
-# Spark Panic: Planetary Invasion Defense — Guardian of the Universe (v2.7 Cosmic Cataclysm Edition)
+# Spark Panic: Planetary Invasion Defense — Guardian of the Universe (v2.8 Tactical Combat Mastery Edition)
 
 [![Deploy to GitHub Pages](https://github.com/Asemdnn/spark-panic/actions/workflows/deploy.yml/badge.svg)](https://github.com/Asemdnn/spark-panic/actions/workflows/deploy.yml)
 [![Live Demo](https://img.shields.io/badge/Play_Live-GitHub_Pages-00e5ff?style=flat&logo=github)](https://asemdnn.github.io/spark-panic/)
 [![PWA Ready](https://img.shields.io/badge/PWA-Ready-00e676?style=flat&logo=pwa)](https://asemdnn.github.io/spark-panic/)
 
-**Spark Panic 2.7 ("Cosmic Cataclysm Edition")** is a high-octane, self-contained HTML5 Canvas + Tailwind CSS arcade strategy and action planetary defense game. You are the **Orbital Guardian**, defending living celestial worlds and their cyber-cities against 360° incoming waves of relentless alien invasion fleets.
+**Spark Panic 2.8 ("Tactical Combat Mastery Edition")** is a high-octane, self-contained HTML5 Canvas + Tailwind CSS arcade strategy and action planetary defense game. You are the **Orbital Guardian**, defending living celestial worlds and their cyber-cities against 360° incoming waves of relentless alien invasion fleets.
 
 - 🎮 **Play Online**: [https://asemdnn.github.io/spark-panic/](https://asemdnn.github.io/spark-panic/)
 - 📦 **GitHub Repository**: [https://github.com/Asemdnn/spark-panic](https://github.com/Asemdnn/spark-panic)
 
 ---
 
-## 🌟 What's New in v2.7: Cosmic Cataclysm Edition
+## 🌟 What's New in v2.8: Tactical Combat Mastery Edition
 
-1. **🌋 Chargeable Planetary Cataclysm Superweapons (`[F]` / Click Core / LB / D-pad Up)**:
-   - **Planetary Core Overcharge Gauge**: Charged to 100% via alien eliminations (+3.5%), high-chain combos (+6%), and magnetic cosmic spark pickups (+2%).
-   - **Sector I — ❄️ CRYO-TSUNAMI PULSE**: Emits an expanding 450px frost shockwave that freezes all enemies for 5.0s, shatters incoming torpedoes into restorative healing sparks, and deals 140 damage.
-   - **Sector II — 🌋 MAGMA METEOR ERUPTION**: Launches 12 homing molten volcanic fireballs seeking the highest-HP alien threats and detonating into 85px novas dealing 95 damage each.
-   - **Sector III — ⚙️ DYSON ORBITAL LASER CAGE**: Activates 4 golden orbital laser beams rotating 360° for 4.0s, dealing 220 continuous damage per second across the sector.
-   - **Sector IV — ☀️ GENESIS SUPERNOVA**: Blinding cosmic solar flash that instantly vaporizes all non-boss ships, inflicts 350 direct damage to Boss motherships, and restores +30% Aegis Shield integrity.
+1. **🛡️ Active "Aegis Phase-Parry" Deflection System (`Right-Click` / `[SHIFT]` / `[C]` / `#btnParry`)**:
+   - **Precision Timing Deflector Arc**: Activates a blazing golden-cyan 110° curved deflector energy barrier for `0.38s` along the shield perimeter (`shieldRadius + 8px`) facing the current turret aim vector.
+   - **Cooldown**: `2.2s` cooldown, dynamically reduced to **`0.5s`** on executing a **Perfect Parry**!
+   - **Torpedo Deflection into Homing Super-Missiles**: Incoming enemy torpedoes caught within the deflector arc reflect back as friendly radiant golden-white homing super-missiles (`480 px/s`, 85 damage, 65px nova) targeting the nearest invader.
+   - **Perfect Parry Rewards**: Grants `⚡ PERFECT PARRY! +20% NOVA`, a `0.08s` micro hit-stop flash, procedural metallic deflection chimes, +20% Nova energy, +8% Cataclysm charge, and +5% instant shield restoration.
+   - **Close-Range Alien Repulsion**: Point-blank invaders inside the 110° arc suffer a 90px concussive knockback, a 1.8s EMP stasis stun, 45 shock damage, and instant unlatching of Leech Pods.
 
-2. **🛸 Elite Squadron Leaders & Astral Treasure Galleon**:
-   - **🛡️ Aegis Jammer Frigate (`JAMMER`)**: Equipped with a curved 90° frontal energy barrier facing the planet; deflects frontal kinetic and plasma turret fire with spark clinks; vulnerable to rear/flank novas, prism lasers, and direct pierce weapons (Railgun Lancer / Ion Beam).
-   - **🕸️ Void Weaver Carrier (`WEAVER`)**: Orbits at mid-range and channels a magenta Graviton Web Beam to the turret, reducing turret fire rate by 30%; on defeat, unleashes an Overcharge Surge refunding 3.0s cooldown to skills Q, W, and E.
-   - **💎 Astral Treasure Galleon (`GALLEON`)**: High-speed golden vessel navigating tangential outer arcs with a 9-second escape timer; on destruction, awards an Astral Jackpot (+65 Star Shards, +25% Cataclysm charge, and a guaranteed Orbital Supply Pod).
-   - **📖 10-Class Codex Dossiers**: Updated Guardian Archives with stats and custom vector SVG ship diagrams for all 10 alien classes.
+2. **🎯 Manual "Hold-to-Charge Overcharge Shot" & Glowing Reactor Weak-Spot Crits**:
+   - **Hold-to-Charge Plasma Lance**: Tapping `< 0.25s` fires standard shots or Spark Novas. Holding `>= 0.25s` (up to `0.65s` for 100% charge) manually steers the turret toward cursor/touch coordinates, projecting a converging cyan-gold energy ring and narrowing twin-line laser sights.
+   - **Piercing Overcharge Lance**: Releasing at `>= 50%` charge unleashes a blinding high-velocity piercing bolt (`820 px/s`, `pierce: 5`, up to 3.2x base damage) that shatters Aegis Jammer and Void Weaver frontal shields in one hit (`isDirectPierce = true`).
+   - **Glowing Enemy Reactor Core Weak-Spots**: Bosses, Solar Dreadnoughts, Invasion Dropships, and Void Weavers feature rotating crimson/amber reactor cores with pulsating reticle rings. Hitting exposed weak-spots with an Overcharge Lance or Reflected Parry triggers `💥 CRITICAL BREACH! x2.5`, a 1.5s EMP stun, and 2 bonus Star Shards (`✦`).
 
-3. **🌍 Sector-Specific Living Biome Shaders & Atmospheric Weather**:
-   - **Sector I (Planets 1–5)**: Dual counter-rotating cloud layers and shimmering Cyan/Emerald Aurora Borealis ribbons dancing across the poles.
-   - **Sector II (Planets 6–10)**: Glowing molten magma veins and volcanic fissures pulsing on the surface alongside 3 drifting volumetric ionized nebula clouds.
-   - **Sector III (Planets 11–15)**: 4 rotating golden Dyson-Ring megastructure arc segments with glowing cyan circuit nodes and gravitational lensing distortion rings.
-   - **Sector IV (Planets 16–20 & Endless)**: 8 animated solar corona prominence loops / plasma flares arching from the planet limb with rising golden starlight embers.
+3. **🃏 Mid-Mission Roguelike "Tactical Command Draft" (Pick 1 of 3 Perks Between Waves)**:
+   - **Inter-Wave Command Draft**: Between waves (and every wave in Endless mode), wave spawning pauses to present `#modalWaveDraft` offering 3 random holographic perk cards selectable via hotkeys `[1]`, `[2]`, `[3]` or direct click.
+   - **10 Game-Changing Tactical Perks**:
+     - `Split-Nova Catalyst`: Spark Novas split into 4 homing mini-plasma charges on detonation.
+     - `Explosive Aegis Parry`: Phase-Parry unleashes a 120px concussive shockwave dealing 60 damage.
+     - `Overclocked Barrels`: Turret fire rate increased by +35%.
+     - `Orbital Gravity Well`: Alien destructions pull adjacent enemies 40px closer.
+     - `Cryo-Shrapnel Rounds`: Plasma bolts apply a 40% movement chill for 2.0s.
+     - `Emergency Nanite Surge`: First shield break per sector instantly restores 40% Core HP & Shield.
+     - `Wingman Squadron Overdrive`: AI Wingmen gain +50% fire rate and +25% flight speed.
+     - `Chain-Reaction Momentum`: Rapid alien kills grant stacking +15% damage (up to 5x).
+     - `Volatile Plasma Cores`: Overcharge Lance kills spawn lingering corrosive plasma pools.
+     - `Bounty Hunter Protocol`: Elite & Boss kills award +100% Star Shards and +500 bonus score.
+   - **Dynamic HUD Perks Dock**: Active drafts display compact glowing badge icons in the top HUD `#hudDraftPerks`.
 
-4. **🎵 Beat-Synced Audio-Reactive Halo & Aegis Node Resonance**:
-   - Audio-reactive `beatPulse` driven by procedural synthwave bass/kick steps and laser fire, pulsing atmospheric halo radius and hexagonal shield node luminosity.
-   - Dedicated `#btnCataclysm` in the tactical ability bar, gamepad trigger support (LB / D-pad Up), and updated `⚡ v2.7 COSMIC CATACLYSM EDITION` title and battle card badges.
+4. **🕷️ City-Latching "Invasion Leech Pods" & Optional Risk/Reward "Warp Ambush Beacons"**:
+   - **🕷️ Invasion Leech Pods (`LEECH`)**: Deployed by Dropships and Motherships directly targeting the 4 living surface cities, bypassing outer shields. When latched, they siphon 2.5 Core HP/s directly with crimson energy drains until unlatched by Phase-Parry, Overcharge Lance, EMP, or Nova blast (`+25 ✦ City Saved`).
+   - **⚠️ Warp Ambush Beacon (`BEACON`)**: Drifts in outer orbit for 12s with a floating countdown timer. If destroyed by the player, it summons an Elite Ambush Squadron (4–6 ships + Jammer/Weaver) dropping 2x Star Shards, 2x score, and +30% instant Cataclysm charge. If unattacked, it despawns safely.
+   - **UI Polish & Badges**: Hero badge updated to `⚡ v2.8 TACTICAL MASTERY EDITION` and Battle Card exporter updated with v2.8 branding.
 
 ---
 
 ## 🌟 Previous Update Highlights
 
+- **🌋 Planetary Cataclysm Superweapons & Elite Leaders (v2.7)**: Chargeable `[F]` superweapons (Cryo-Tsunami, Magma Meteor, Dyson Cage, Genesis Supernova), Aegis Jammer Frigate (90° barrier), Void Weaver Carrier (graviton web), Astral Treasure Galleon (+65 shards jackpot), sector living biome shaders, and audio-reactive beat-synced halos.
 - **⚡ Arcade Juice & Next-Gen VFX (v2.6)**: Directional plasma bolts, turret recoil & muzzle star-flares, helical Ion Beam, pointed tactical warheads with trailing exhaust smoke ribbons, chain-lightning tethers, hull debris shards, 3-layer parallax starfield, and Boss subspace warp rifts.
-- **🏺 Ancient Cosmic Relics (v2.5)**: 8 collectible artifacts and 3-slot passive loadout (Chrono-Stasis, Vampiric Core, Singularity Lens, Twin Wingman, Overcharged Coil, Aegis Mirror, Starlight Synth, Supernova Echo).
-- **🛰️ Deployable Orbital Defense Structures (`[R]`, v2.5)**: Solar Prism Pylon, Grav-Well Anchor, and Aegis Flak Battery.
-- **📸 Holographic Commander Battle Card (v2.5)**: 1200×630 canvas exporter for social sharing.
-- **🎮 Gamepad / Controller Support & Settings (v2.5)**: Dual-stick controls and custom accessibility settings.
-- **👑 Titan Protocol (4-Boss Rush Gauntlet Mode, v2.4)**: Back-to-back mothership encounters with 4-second orbital repair pit-stops.
-- **🤖 Autonomous AI Wingman Fighter (`WING-01`, v2.4)**: Interceptor, Vanguard, and Harvester doctrines.
-- **🌌 Galactic Prestige ("Hyperdrive Ascension", v2.4)**: Ascend up to Tier V for permanent shard & score multipliers with custom turret skins.
-- **📊 Post-Battle Tactical Telemetry**: Real-time integrity curve and damage attribution breakdown.
-- **⚡ Daily Cosmic Anomaly**: Deterministic daily invasion challenges with unique tactical mutators.
-- **🎵 Procedural Synthwave Web Audio BGM**: Dynamic chord progressions, basslines, and boss wave tempo boosts.
-
 - **🏺 Ancient Cosmic Relics (v2.5)**: 8 collectible artifacts and 3-slot passive loadout (Chrono-Stasis, Vampiric Core, Singularity Lens, Twin Wingman, Overcharged Coil, Aegis Mirror, Starlight Synth, Supernova Echo).
 - **🛰️ Deployable Orbital Defense Structures (`[R]`, v2.5)**: Solar Prism Pylon, Grav-Well Anchor, and Aegis Flak Battery.
 - **📸 Holographic Commander Battle Card (v2.5)**: 1200×630 canvas exporter for social sharing.
@@ -125,6 +124,11 @@
 | **Invasion Dropship** | Crimson | 75 | 34 px/s | Heavy Siege Lander | Heavy Shrapnel Cascade + spawns Scouts |
 | **Solar Dreadnought** | Gold | 135 | 26 px/s | Capital Battleship | **Solar Super-Nova** (135px blast) |
 | **Sector Mothership** | Red | 950–1800 | 20 px/s | Armada Command Flagship | **Galaxy Super-Nova** (210px screen blast) |
+| **Aegis Jammer Frigate** | Emerald | 90 | 38 px/s | 90° Shield Barrier Escort | Kinetic Clink Ricochet |
+| **Void Weaver Carrier** | Magenta | 110 | 32 px/s | Graviton Matrix Support | Graviton Web Cooldown Overcharge |
+| **Astral Treasure Galleon** | Gold | 160 | 68 px/s | Tangential Outer Orbit | Astral Shard Jackpot & Supply Pod |
+| **Invasion Leech Pod** | Purple | 45 | 58 px/s | Surface City Infiltrator | Drains 2.5 Core HP/s directly |
+| **Warp Ambush Beacon** | Violet | 85 | 18 px/s | Outer Space Ambush Catalyst | Summons 2x Shard Elite Squadron |
 
 ---
 
@@ -134,15 +138,19 @@
 |---|---|
 | **Aim Orbital Turret** | Move Mouse / Touch Drag |
 | **Detonate Spark Nova** | Left Click / Tap Deep Space / `[Space]` |
-| **Orbital Ion Beam** | `[Q]` or `[1]` |
-| **Planetary EMP Shockwave** | `[W]` or `[2]` |
-| **Aegis Overdrive** | `[E]` or `[3]` |
+| **Aegis Phase-Parry** | **Right-Click** / `[SHIFT]` / `[C]` / `#btnParry` |
+| **Hold-to-Charge Overcharge Lance** | Hold Click/Touch `>= 0.25s`, Release `>= 50%` |
+| **Select Tactical Draft Perk** | `[1]`, `[2]`, `[3]` or Click Perk Card |
+| **Orbital Ion Beam** | `[Q]` or `[1]` (outside draft) |
+| **Planetary EMP Shockwave** | `[W]` or `[2]` (outside draft) |
+| **Aegis Overdrive** | `[E]` or `[3]` (outside draft) |
+| **Planetary Cataclysm Superweapon** | `[F]` / Click Planet Core / LB / D-pad Up |
+| **Deploy Orbital Structure** | `[R]` (Pylon, Anchor, Flak) |
 | **Toggle Auto-Fire** | `[T]` |
 | **Toggle Synthwave BGM** | `[B]` |
 | **Toggle Sound Effects Mute** | `[M]` |
 | **Replay Tactical Tutorial** | `[H]` |
 | **Tactical Pause / Resume** | `[P]` or `[Escape]` |
-| **Quick Restart Mission** | `[R]` |
 
 ---
 
@@ -159,7 +167,7 @@
 # Install dependencies
 npm install
 
-# Run automated test suite (122 tests across 15 suites)
+# Run automated test suite (198 tests across 20 suites)
 npm test
 
 # Start local Vite development server

@@ -30,30 +30,54 @@ window.addEventListener('DOMContentLoaded', () => {
     engine.pointerY = e.clientY;
   });
 
-  // Canvas Tap/Click: Spark Nova or Manual Fire
+  // Prevent browser context menu on game canvas for zero-latency Right-Click Phase-Parry
+  canvas.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    if (engine.state === 'PLAYING') {
+      engine.triggerPhaseParry();
+    }
+  });
+
+  // Canvas Pointer Events: Quick Tap (Nova/Cataclysm), Hold (Overcharge Lance), or Right-Click (Parry)
   canvas.addEventListener('pointerdown', (e) => {
     audio.init();
     if (engine.state === 'PLAYING') {
-      const dx = e.clientX - engine.planet.x;
-      const dy = e.clientY - engine.planet.y;
-      const dist = Math.hypot(dx, dy);
-
-      // If clicked inside planet core when Cataclysm is ready (100%), unleash Planetary Cataclysm!
-      if (dist <= engine.planet.planetRadius * 0.7 && engine.coreCharge >= 100) {
-        engine.triggerPlanetaryCataclysm();
+      // Right-Click: Aegis Phase-Parry Deflection
+      if (e.button === 2) {
+        engine.triggerPhaseParry();
         return;
       }
 
-      // If clicked inside planet shield, don't waste nova
-      if (dist > engine.planet.shieldRadius + 8) {
-        engine.triggerSparkNova(e.clientX, e.clientY);
-      }
+      engine.pointerDownTime = performance.now();
+      engine.isPointerDown = true;
+      engine.chargeProgress = 0;
       engine.turret.isFiring = true;
     }
   });
 
-  window.addEventListener('pointerup', () => {
-    engine.turret.isFiring = false;
+  window.addEventListener('pointerup', (e) => {
+    if (engine.state === 'PLAYING' && engine.isPointerDown) {
+      if (engine.isChargingOvercharge && engine.chargeProgress >= 0.50) {
+        engine.triggerOverchargeLance();
+      } else {
+        // Quick Click/Tap (< 0.25s)
+        const dx = e.clientX - engine.planet.x;
+        const dy = e.clientY - engine.planet.y;
+        const dist = Math.hypot(dx, dy);
+
+        // If clicked inside planet core when Cataclysm is ready (100%), unleash Planetary Cataclysm!
+        if (dist <= engine.planet.planetRadius * 0.7 && engine.coreCharge >= 100) {
+          engine.triggerPlanetaryCataclysm();
+        } else if (dist > engine.planet.shieldRadius + 8) {
+          engine.triggerSparkNova(e.clientX, e.clientY);
+        }
+      }
+
+      engine.isChargingOvercharge = false;
+      engine.chargeProgress = 0;
+      engine.isPointerDown = false;
+      engine.turret.isFiring = false;
+    }
   });
 
   // Keyboard Hotkeys
@@ -66,16 +90,26 @@ window.addEventListener('DOMContentLoaded', () => {
       if (engine.state === 'PLAYING') {
         engine.triggerSparkNova(engine.pointerX, engine.pointerY);
       }
-    } else if (key === 'Q' || key === '1') {
+    } else if (e.code === 'ShiftLeft' || e.code === 'ShiftRight' || key === 'C') {
       if (engine.state === 'PLAYING') {
+        engine.triggerPhaseParry();
+      }
+    } else if (key === 'Q' || key === '1') {
+      if (engine.waveDraftPending) {
+        engine.selectDraftPerk(0);
+      } else if (engine.state === 'PLAYING') {
         engine.skills.useSkillQ(engine.turret.angle);
       }
     } else if (key === 'W' || key === '2') {
-      if (engine.state === 'PLAYING') {
+      if (engine.waveDraftPending) {
+        engine.selectDraftPerk(1);
+      } else if (engine.state === 'PLAYING') {
         engine.skills.useSkillW(engine.planet.x, engine.planet.y);
       }
     } else if (key === 'E' || key === '3') {
-      if (engine.state === 'PLAYING') {
+      if (engine.waveDraftPending) {
+        engine.selectDraftPerk(2);
+      } else if (engine.state === 'PLAYING') {
         engine.skills.useSkillE(engine.planet, (gained) => {
           engine.novaCharges = Math.min(engine.maxNovaCharges, engine.novaCharges + gained);
         });
@@ -154,6 +188,12 @@ window.addEventListener('DOMContentLoaded', () => {
       engine.deployStructure();
     }
   });
+  document.getElementById('btnParry')?.addEventListener('click', () => {
+    audio.init();
+    if (engine.state === 'PLAYING') {
+      engine.triggerPhaseParry();
+    }
+  });
   document.getElementById('btnCataclysm')?.addEventListener('click', () => {
     if (engine.state === 'PLAYING') {
       engine.triggerPlanetaryCataclysm();
@@ -162,6 +202,54 @@ window.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btnAutoFire')?.addEventListener('click', () => {
     engine.turret.autoFire = !engine.turret.autoFire;
   });
+
+  // v2.8 Tactical Command Draft Modal Wiring
+  const modalWaveDraft = document.getElementById('modalWaveDraft');
+  const draftCardsContainer = document.getElementById('draftCardsContainer');
+  const hudDraftPerks = document.getElementById('hudDraftPerks');
+
+  engine.onShowWaveDraftModal = (options, nextWaveNum) => {
+    if (!modalWaveDraft || !draftCardsContainer) return;
+    const waveNumEl = document.getElementById('draftWaveNum');
+    if (waveNumEl) waveNumEl.textContent = `WAVE ${nextWaveNum}`;
+
+    draftCardsContainer.innerHTML = options.map((perk, idx) => `
+      <button class="draft-card group relative p-4 rounded-2xl glass-card border border-cosmic-cyan/40 hover:border-cosmic-cyan hover:shadow-[0_0_25px_rgba(0,229,255,0.4)] transition-all cursor-pointer flex flex-col items-center text-center text-white" data-draft-idx="${idx}">
+        <div class="absolute top-2.5 left-2.5 text-[10px] font-orbitron font-extrabold px-2 py-0.5 rounded-full bg-cosmic-cyan/20 text-cosmic-cyan border border-cosmic-cyan/40">
+          [${idx + 1}]
+        </div>
+        <div class="text-3xl md:text-4xl my-2 group-hover:scale-110 transition duration-200">${perk.icon}</div>
+        <h4 class="font-orbitron font-black text-sm md:text-base text-cosmic-cyan mb-1.5">${perk.name}</h4>
+        <p class="text-xs text-slate-300 leading-relaxed">${perk.desc}</p>
+        <div class="mt-3.5 w-full py-1.5 rounded-xl font-orbitron font-extrabold text-[10px] tracking-wider bg-cosmic-cyan/15 text-cosmic-cyan border border-cosmic-cyan/30 group-hover:bg-cosmic-cyan group-hover:text-slate-950 transition">
+          SELECT REINFORCEMENT
+        </div>
+      </button>
+    `).join('');
+
+    draftCardsContainer.querySelectorAll('.draft-card').forEach(card => {
+      card.addEventListener('click', () => {
+        const idx = parseInt(card.dataset.draftIdx, 10);
+        engine.selectDraftPerk(idx);
+      });
+    });
+
+    modalWaveDraft.classList.remove('hidden');
+  };
+
+  engine.onHideWaveDraftModal = () => {
+    if (modalWaveDraft) modalWaveDraft.classList.add('hidden');
+  };
+
+  engine.onUpdateDraftBadges = (perks) => {
+    if (!hudDraftPerks) return;
+    hudDraftPerks.innerHTML = perks.map(p => `
+      <div class="glass-panel px-2.5 py-1 rounded-xl flex items-center gap-1.5 border-cosmic-cyan/35 text-xs font-orbitron shadow-[0_0_8px_rgba(0,229,255,0.25)]" title="${p.name}: ${p.desc}">
+        <span class="text-sm">${p.icon}</span>
+        <span class="text-[9px] font-bold text-cosmic-cyan hidden sm:inline">${p.name.split(' ')[0]}</span>
+      </div>
+    `).join('');
+  };
 
   // Top HUD Controls
   document.getElementById('btnSettings')?.addEventListener('click', () => {

@@ -42,9 +42,9 @@ describe('Configuration & Universe Data (v2.0)', () => {
     expect(PLANETS[19].bossName).toBe('The Apex Leviathan');
   });
 
-  it('should define 10 unique Alien Classes with exact combat stats and death payloads', () => {
+  it('should define 12 unique Alien Classes with exact combat stats and death payloads', () => {
     const keys = Object.keys(ALIEN_CLASSES);
-    expect(keys).toEqual(['SCOUT', 'INTERCEPTOR', 'CRYO', 'PHASE', 'DROPSHIP', 'DREADNOUGHT', 'BOSS', 'JAMMER', 'WEAVER', 'GALLEON']);
+    expect(keys).toEqual(['SCOUT', 'INTERCEPTOR', 'CRYO', 'PHASE', 'DROPSHIP', 'DREADNOUGHT', 'BOSS', 'JAMMER', 'WEAVER', 'GALLEON', 'LEECH', 'BEACON']);
 
     // Scout
     const scout = ALIEN_CLASSES.SCOUT;

@@ -89,7 +89,7 @@ export class BattleCardGenerator {
     ctx.font = '700 12px Orbitron, sans-serif';
     ctx.fillStyle = '#ffd700';
     ctx.textAlign = 'left';
-    ctx.fillText("⚡ v2.7 COSMIC CATACLYSM EDITION", 48, 76);
+    ctx.fillText("⚡ v2.8 TACTICAL MASTERY EDITION", 48, 76);
 
     // Top Divider
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
