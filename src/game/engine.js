@@ -291,7 +291,7 @@ export class GameEngine {
       // Sector II — 🌋 MAGMA METEOR ERUPTION
       this.cataclysmMeteors = [];
       const count = 12;
-      const targets = [...this.aliens].filter(a => a.alive).sort((a, b) => b.hp - a.hp);
+      const targets = this.aliens.filter(a => a.alive).sort((a, b) => b.hp - a.hp);
 
       for (let m = 0; m < count; m++) {
         const mAngle = (m / count) * Math.PI * 2;
@@ -2247,24 +2247,23 @@ export class GameEngine {
       ctx.restore();
     }
 
-    // Cataclysm Sector II: Magma Meteors
+    // Cataclysm Sector II: Magma Meteors (Batched coordinate rendering without per-meteor translate)
     if (this.cataclysmMeteors && this.cataclysmMeteors.length > 0) {
       ctx.save();
+      ctx.fillStyle = '#ff3d00';
+      ctx.shadowColor = '#ff6d00';
+      ctx.shadowBlur = 18;
       for (const m of this.cataclysmMeteors) {
-        ctx.save();
-        ctx.translate(m.x, m.y);
         ctx.beginPath();
-        ctx.arc(0, 0, 8, 0, Math.PI * 2);
-        ctx.fillStyle = '#ff3d00';
-        ctx.shadowColor = '#ff6d00';
-        ctx.shadowBlur = 20;
+        ctx.arc(m.x, m.y, 8, 0, Math.PI * 2);
         ctx.fill();
-
+      }
+      ctx.fillStyle = '#fff3e0';
+      ctx.shadowBlur = 6;
+      for (const m of this.cataclysmMeteors) {
         ctx.beginPath();
-        ctx.arc(0, 0, 4, 0, Math.PI * 2);
-        ctx.fillStyle = '#fff3e0';
+        ctx.arc(m.x, m.y, 4, 0, Math.PI * 2);
         ctx.fill();
-        ctx.restore();
       }
       ctx.restore();
     }

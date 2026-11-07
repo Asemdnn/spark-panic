@@ -208,49 +208,52 @@ export class ParticleEngine {
       ctx.restore();
     }
 
-    // 2. Render Debris
-    for (const p of this.debris) {
+    // 2. Render Debris (Batched state execution without per-particle save/restore)
+    if (this.debris.length > 0) {
       ctx.save();
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-      ctx.fillStyle = p.color;
-      ctx.globalAlpha = Math.max(0, p.alpha);
-      ctx.shadowColor = p.color;
-      ctx.shadowBlur = 8;
-      ctx.fill();
+      for (const p of this.debris) {
+        ctx.globalAlpha = Math.max(0, p.alpha);
+        ctx.fillStyle = p.color;
+        ctx.shadowColor = p.color;
+        ctx.shadowBlur = 6;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+      }
       ctx.restore();
     }
 
-    // 3. Render Magnetic Cosmic Sparks
-    for (const s of this.sparks) {
+    // 3. Render Magnetic Cosmic Sparks (Direct coordinates without translate overhead)
+    if (this.sparks.length > 0) {
       ctx.save();
-      ctx.translate(s.x, s.y);
-      const pulseSize = 4 + Math.sin(s.pulse) * 1.5;
-
-      ctx.beginPath();
-      ctx.moveTo(0, -pulseSize);
-      ctx.lineTo(pulseSize, 0);
-      ctx.lineTo(0, pulseSize);
-      ctx.lineTo(-pulseSize, 0);
-      ctx.closePath();
       ctx.fillStyle = '#ffd700';
       ctx.shadowColor = '#ffd700';
       ctx.shadowBlur = 10;
-      ctx.fill();
-
+      for (const s of this.sparks) {
+        const pulseSize = 4 + Math.sin(s.pulse) * 1.5;
+        ctx.beginPath();
+        ctx.moveTo(s.x, s.y - pulseSize);
+        ctx.lineTo(s.x + pulseSize, s.y);
+        ctx.lineTo(s.x, s.y + pulseSize);
+        ctx.lineTo(s.x - pulseSize, s.y);
+        ctx.closePath();
+        ctx.fill();
+      }
       ctx.restore();
     }
 
-    // 4. Render Floating Text
-    for (const f of this.floaters) {
+    // 4. Render Floating Text (Batched text alignment)
+    if (this.floaters.length > 0) {
       ctx.save();
-      ctx.font = `bold ${f.size}px Orbitron, sans-serif`;
-      ctx.fillStyle = f.color;
-      ctx.globalAlpha = f.alpha;
-      ctx.shadowColor = f.color;
-      ctx.shadowBlur = 8;
       ctx.textAlign = 'center';
-      ctx.fillText(f.text, f.x, f.y);
+      for (const f of this.floaters) {
+        ctx.font = `bold ${f.size}px Orbitron, sans-serif`;
+        ctx.fillStyle = f.color;
+        ctx.globalAlpha = f.alpha;
+        ctx.shadowColor = f.color;
+        ctx.shadowBlur = 8;
+        ctx.fillText(f.text, f.x, f.y);
+      }
       ctx.restore();
     }
   }

@@ -20,6 +20,7 @@ export class AudioEngine {
     this.nextNoteTime = 0;
     this.isBgmPlaying = false;
     this.beatPulse = 0;
+    this.lastLaserTime = 0;
   }
 
   update(dt = 0.016) {
@@ -180,6 +181,10 @@ export class AudioEngine {
     if (this.isMuted || !this.ctx) return;
     this.init();
     const t = this.ctx.currentTime;
+    // Voice throttling: prevent audio node pileup on multi-barrel simultaneous fire (< 25ms)
+    if (t - this.lastLaserTime < 0.025) return;
+    this.lastLaserTime = t;
+
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
 

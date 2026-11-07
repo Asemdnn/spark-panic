@@ -357,12 +357,20 @@ export class ProjectileManager {
       if (trail.timer <= 0) this.railgunTrails.splice(i, 1);
     }
 
-    // 2. Update Enemy Torpedoes (affected by Cryo Time-Warp speedScale)
+    // 2. Update Enemy Torpedoes (affected by Cryo Time-Warp speedScale; warm-up + in-place mutation)
     for (let i = this.torpedoes.length - 1; i >= 0; i--) {
       const torp = this.torpedoes[i];
       if (!torp.trail) torp.trail = [];
-      torp.trail.push({ x: torp.x, y: torp.y });
-      if (torp.trail.length > 5) torp.trail.shift();
+      if (torp.trail.length < 5) {
+        torp.trail.push({ x: torp.x, y: torp.y });
+      } else {
+        for (let t = 0; t < torp.trail.length - 1; t++) {
+          torp.trail[t].x = torp.trail[t + 1].x;
+          torp.trail[t].y = torp.trail[t + 1].y;
+        }
+        torp.trail[torp.trail.length - 1].x = torp.x;
+        torp.trail[torp.trail.length - 1].y = torp.y;
+      }
 
       torp.x += torp.vx * dt * speedScale;
       torp.y += torp.vy * dt * speedScale;
@@ -491,59 +499,60 @@ export class ProjectileManager {
     }
 
     // 4. Render Directional Glowing Plasma Capsules & Railgun Bolts (Additive Blending)
-    ctx.save();
-    ctx.globalCompositeOperation = 'lighter';
-    for (const b of this.bolts) {
-      const angle = (b.vx !== 0 || b.vy !== 0) ? Math.atan2(b.vy, b.vx) : (b.angle || 0);
-      const r = b.r || (b.isOvercharged ? 5.5 : (b.isRailgun ? 5.0 : 4.5));
-      const trailLen = b.isOvercharged || b.isRailgun ? 26 : (b.isTesla ? 22 : 20);
-      const coreLen = 10;
-      const boltColor = b.isOvercharged ? '#ffd700' : (b.isRailgun ? '#ffd700' : (b.color || '#00e5ff'));
-
+    if (this.bolts.length > 0) {
       ctx.save();
-      ctx.translate(b.x, b.y);
-      ctx.rotate(angle);
-
-      // Outer glowing plasma capsule trail
-      ctx.beginPath();
+      ctx.globalCompositeOperation = 'lighter';
       ctx.lineCap = 'round';
-      ctx.moveTo(-trailLen, 0);
-      ctx.lineTo(coreLen * 0.5, 0);
-      ctx.strokeStyle = boltColor;
-      ctx.lineWidth = r * 2.4;
-      ctx.shadowColor = boltColor;
-      ctx.shadowBlur = b.isOvercharged ? 20 : 14;
-      ctx.stroke();
+      for (const b of this.bolts) {
+        const angle = (b.vx !== 0 || b.vy !== 0) ? Math.atan2(b.vy, b.vx) : (b.angle || 0);
+        const r = b.r || (b.isOvercharged ? 5.5 : (b.isRailgun ? 5.0 : 4.5));
+        const trailLen = b.isOvercharged || b.isRailgun ? 26 : (b.isTesla ? 22 : 20);
+        const coreLen = 10;
+        const boltColor = b.isOvercharged ? '#ffd700' : (b.isRailgun ? '#ffd700' : (b.color || '#00e5ff'));
 
-      // Pure white hot core
-      ctx.beginPath();
-      ctx.lineCap = 'round';
-      ctx.moveTo(-coreLen, 0);
-      ctx.lineTo(coreLen * 0.5, 0);
-      ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = r * 0.9;
-      ctx.shadowColor = '#ffffff';
-      ctx.shadowBlur = 8;
-      ctx.stroke();
+        ctx.save();
+        ctx.translate(b.x, b.y);
+        ctx.rotate(angle);
 
-      // For Railgun Lancer shots: tiny diamond shock-rings along trajectory
-      if (b.isRailgun) {
-        ctx.strokeStyle = '#ffd700';
-        ctx.lineWidth = 1.5;
-        for (const dx of [-6, -14, -22]) {
-          ctx.beginPath();
-          ctx.moveTo(dx, -3.5);
-          ctx.lineTo(dx + 3, 0);
-          ctx.lineTo(dx, 3.5);
-          ctx.lineTo(dx - 3, 0);
-          ctx.closePath();
-          ctx.stroke();
+        // Outer glowing plasma capsule trail
+        ctx.beginPath();
+        ctx.moveTo(-trailLen, 0);
+        ctx.lineTo(coreLen * 0.5, 0);
+        ctx.strokeStyle = boltColor;
+        ctx.lineWidth = r * 2.4;
+        ctx.shadowColor = boltColor;
+        ctx.shadowBlur = b.isOvercharged ? 20 : 14;
+        ctx.stroke();
+
+        // Pure white hot core
+        ctx.beginPath();
+        ctx.moveTo(-coreLen, 0);
+        ctx.lineTo(coreLen * 0.5, 0);
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = r * 0.9;
+        ctx.shadowColor = '#ffffff';
+        ctx.shadowBlur = 8;
+        ctx.stroke();
+
+        // For Railgun Lancer shots: tiny diamond shock-rings along trajectory
+        if (b.isRailgun) {
+          ctx.strokeStyle = '#ffd700';
+          ctx.lineWidth = 1.5;
+          for (const dx of [-6, -14, -22]) {
+            ctx.beginPath();
+            ctx.moveTo(dx, -3.5);
+            ctx.lineTo(dx + 3, 0);
+            ctx.lineTo(dx, 3.5);
+            ctx.lineTo(dx - 3, 0);
+            ctx.closePath();
+            ctx.stroke();
+          }
         }
-      }
 
+        ctx.restore();
+      }
       ctx.restore();
     }
-    ctx.restore();
 
     // 5. Render High-Visibility Enemy Warheads & Close-Orbit Trajectories
     for (const torp of this.torpedoes) {

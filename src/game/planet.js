@@ -2,6 +2,15 @@
 
 import { audio } from '../engine/audio.js';
 
+// Pre-allocated normalized constant arrays for zero-allocation rendering in hot paths
+const CRACK_NORMALIZED_PATHS = [
+  [-0.65, -0.2, -0.35, -0.4, -0.1, -0.12, 0, -0.3],
+  [-0.25, 0.1, 0.1, 0.32, 0.45, 0.2, 0.62, 0.5],
+  [0.1, -0.55, 0.3, -0.25, 0.5, -0.32, 0.65, 0]
+];
+const DYSON_NODE_PCTS = [0.15, 0.5, 0.85];
+const POLE_FACTORS = [-1, 1];
+
 export class Planet {
   constructor(canvasOrWidth, maybeHeight, maybeConfig) {
     if (typeof canvasOrWidth === 'number') {
@@ -482,16 +491,11 @@ export class Planet {
       ctx.lineWidth = 2.4;
       ctx.shadowColor = '#ff9100';
       ctx.shadowBlur = 10 + mPulse * 8;
-      const cracks = [
-        [-r * 0.65, -r * 0.2, -r * 0.35, -r * 0.4, -r * 0.1, -r * 0.12, 0, -r * 0.3],
-        [-r * 0.25, r * 0.1, r * 0.1, r * 0.32, r * 0.45, r * 0.2, r * 0.62, r * 0.5],
-        [r * 0.1, -r * 0.55, r * 0.3, -r * 0.25, r * 0.5, -r * 0.32, r * 0.65, 0]
-      ];
-      for (const path of cracks) {
+      for (const path of CRACK_NORMALIZED_PATHS) {
         ctx.beginPath();
-        ctx.moveTo(path[0], path[1]);
+        ctx.moveTo(path[0] * r, path[1] * r);
         for (let pt = 2; pt < path.length; pt += 2) {
-          ctx.lineTo(path[pt], path[pt + 1]);
+          ctx.lineTo(path[pt] * r, path[pt + 1] * r);
         }
         ctx.stroke();
       }
@@ -514,9 +518,9 @@ export class Planet {
     // Sector I: Shimmering Cyan/Emerald Aurora Borealis Ribbons at North & South Poles
     if (sector === 1) {
       ctx.save();
-      const poles = [-r, r];
-      for (const poleY of poles) {
-        const isNorth = poleY < 0;
+      for (const factor of POLE_FACTORS) {
+        const isNorth = factor < 0;
+        const poleY = factor * r;
         ctx.save();
         ctx.translate(this.x, this.y + poleY);
         ctx.globalCompositeOperation = 'lighter';
@@ -575,7 +579,7 @@ export class Planet {
         ctx.stroke();
 
         // Glowing cyan circuit nodes on plate joints & midpoints
-        for (const pct of [0.15, 0.5, 0.85]) {
+        for (const pct of DYSON_NODE_PCTS) {
           const nodeA = startA + (endA - startA) * pct;
           const nx = Math.cos(nodeA) * dysonR;
           const ny = Math.sin(nodeA) * dysonR;
