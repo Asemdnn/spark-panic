@@ -19,6 +19,7 @@ export class ProjectileManager {
 
   spawnTurretBolts(planetX, planetY, turretRadius, boltConfigs) {
     for (const b of boltConfigs) {
+      if (this.bolts.length >= 250) break;
       const startX = planetX + Math.cos(b.angle) * (turretRadius + 6);
       const startY = planetY + Math.sin(b.angle) * (turretRadius + 6);
       this.bolts.push({
@@ -38,18 +39,23 @@ export class ProjectileManager {
         speed: b.speed || 520,
         chassis: b.chassis || 'striker',
         source: 'turret',
+        refracted: !!b.refracted,
+        warped: !!b.warped,
         alive: true
       });
     }
   }
 
   addPlasmaBolt(config) {
+    if (this.bolts.length >= 250) return null;
     this.bolts.push({
       speed: 520,
       color: '#00e5ff',
       pierce: 1,
       source: 'turret',
       alive: true,
+      refracted: !!config.refracted,
+      warped: !!config.warped,
       ...config,
       vx: Math.cos(config.angle) * (config.speed || 520),
       vy: Math.sin(config.angle) * (config.speed || 520)
@@ -93,6 +99,7 @@ export class ProjectileManager {
       (7 * Math.PI) / 4
     ];
     for (const a of angles) {
+      if (this.bolts.length >= 250) break;
       this.bolts.push({
         x,
         y,
@@ -102,6 +109,8 @@ export class ProjectileManager {
         damage: damage * 0.9,
         color: color || '#e040fb',
         pierce: 2,
+        refracted: true,
+        warped: false,
         alive: true
       });
     }
@@ -109,8 +118,11 @@ export class ProjectileManager {
 
   update(dt, canvasWidth, canvasHeight, aliens, planet, onAlienHitCallback, onTorpedoDestroyedCallback, onBossPhase2Callback = null, hazardManager = null, supplyPodManager = null, speedScale = 1.0, onAsteroidShatterCallback = null, onPodDestroyedCallback = null, structureManager = null) {
     // 1. Update Player Plasma Bolts
-    for (let i = this.bolts.length - 1; i >= 0; i--) {
+    const initialBulletCount = this.bolts.length;
+    for (let i = initialBulletCount - 1; i >= 0; i--) {
+      if (i >= this.bolts.length) continue;
       const b = this.bolts[i];
+      if (!b) continue;
       const prevX = b.x;
       const prevY = b.y;
       b.x += b.vx * dt;
@@ -147,12 +159,12 @@ export class ProjectileManager {
       }
 
       // Check laser refraction through Solar Prism Pylons
-      if (b.alive && structureManager) {
+      if (b.alive && !b.refracted && !b.isSatellite && structureManager) {
         structureManager.checkRefractPylons(b);
       }
 
       // v2.9 Twin Wormhole Portals Teleportation (+45% Hyper-Warp DMG, +2 Pierce)
-      if (b.alive && !b.hasTeleported && planet?.engine?.wormholes) {
+      if (b.alive && !b.warped && !b.hasTeleported && planet?.engine?.wormholes) {
         const wh = planet.engine.wormholes;
         const da = Math.hypot(b.x - wh.a.x, b.y - wh.a.y);
         const db = Math.hypot(b.x - wh.b.x, b.y - wh.b.y);
@@ -161,19 +173,20 @@ export class ProjectileManager {
           const toPort = da <= wh.a.radius ? wh.b : wh.a;
           b.x = toPort.x;
           b.y = toPort.y;
+          b.warped = true;
           b.hasTeleported = true;
           b.damage = Math.round(b.damage * 1.45);
           b.pierce = (b.pierce || 1) + 2;
           b.color = '#ffd700';
 
           // Automatically angle towards nearest enemy or behind Jammer frontal barrier
-          let bestAngle = b.angle;
-          const jammer = aliens.find(a => a.alive && a.classKey === 'JAMMER');
+          let bestAngle = (b.angle !== undefined) ? b.angle : ((b.vx || b.vy) ? Math.atan2(b.vy || 0, b.vx || 0) : 0);
+          const jammer = aliens && aliens.find ? aliens.find(a => a.alive && a.classKey === 'JAMMER') : null;
           if (jammer) {
             const tx = jammer.x - Math.cos(jammer.heading) * 35;
             const ty = jammer.y - Math.sin(jammer.heading) * 35;
             bestAngle = Math.atan2(ty - b.y, tx - b.x);
-          } else {
+          } else if (aliens && aliens.length) {
             let nearestDist = Infinity;
             let targetX = null, targetY = null;
             for (const a of aliens) {
@@ -190,7 +203,7 @@ export class ProjectileManager {
             }
           }
           b.angle = bestAngle;
-          const spd = b.speed || 520;
+          const spd = b.speed || Math.hypot(b.vx || 0, b.vy || 0) || 520;
           b.vx = Math.cos(bestAngle) * spd;
           b.vy = Math.sin(bestAngle) * spd;
 

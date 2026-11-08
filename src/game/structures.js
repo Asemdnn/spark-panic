@@ -11,6 +11,7 @@ export class DeployableStructure {
     this.angle = angle;
     this.engine = engine;
     this.cfg = STRUCTURE_CONFIG.types[type] || STRUCTURE_CONFIG.types.pylon;
+    this.radius = this.cfg?.prismRadius || (this.type === 'anchor' ? 110 : (this.type === 'battery' ? 80 : 28));
     this.life = STRUCTURE_CONFIG.duration;
     this.maxLife = STRUCTURE_CONFIG.duration;
     this.alive = true;
@@ -310,28 +311,35 @@ export class StructureManager {
   }
 
   checkRefractPylons(bullet) {
-    if (!bullet || bullet.refracted) return;
+    if (!bullet || bullet.refracted || bullet.isSatellite) return;
     for (const struct of this.structures) {
       if (struct.type !== 'pylon' || !struct.alive) continue;
+      const pylonRadius = struct.radius || struct.cfg?.prismRadius || 28;
       const d = Math.hypot(bullet.x - struct.x, bullet.y - struct.y);
-      if (d <= (struct.cfg.prismRadius || 28)) {
+      if (d <= pylonRadius) {
         bullet.refracted = true;
-        bullet.damage = Math.round(bullet.damage * (1 + (struct.cfg.beamBonus || 0.30)));
+        bullet.damage = Math.round(bullet.damage * (1 + (struct.cfg?.beamBonus || 0.30)));
         bullet.color = '#ffffff';
 
-        // Spawn 2 refracted fan beams (+/- 16 degrees)
+        // Spawn 2 refracted fan beams (-0.26 rad and +0.26 rad) forward outside pylon radius
         if (this.engine?.projectiles?.addPlasmaBolt) {
-          const spreadAngles = [bullet.angle - 0.28, bullet.angle + 0.28];
-          for (const a of spreadAngles) {
+          const spreadAngles = [bullet.angle - 0.26, bullet.angle + 0.26];
+          const spawnDist = pylonRadius + 6; // ~34px forward outside pylon radius
+          for (const newAngle of spreadAngles) {
+            if (this.engine.projectiles.bolts && this.engine.projectiles.bolts.length >= 250) {
+              break;
+            }
             this.engine.projectiles.addPlasmaBolt({
-              x: struct.x,
-              y: struct.y,
-              angle: a,
+              x: struct.x + Math.cos(newAngle) * spawnDist,
+              y: struct.y + Math.sin(newAngle) * spawnDist,
+              angle: newAngle,
               speed: bullet.speed || 520,
               color: '#00e5ff',
               damage: Math.round(bullet.damage * 0.9),
               radius: (bullet.radius || 4),
-              source: 'turret'
+              source: bullet.source || 'turret',
+              refracted: true,
+              warped: !!bullet.warped
             });
           }
         }

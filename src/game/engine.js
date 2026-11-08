@@ -162,6 +162,17 @@ export class GameEngine {
     this.plasmaBarrels = [];
     this.plasmaBarrelSpawnTimer = 15.0;
 
+    // Bullet and battle aliases for compatibility
+    Object.defineProperty(this, 'bullets', {
+      get: () => this.projectiles ? this.projectiles.bolts : []
+    });
+    Object.defineProperty(this, 'battle', {
+      get: () => ({
+        bullets: this.projectiles ? this.projectiles.bolts : [],
+        wormholes: this.wormholes
+      })
+    });
+
     this.initStars();
 
     this.resize = this.resize.bind(this);
@@ -3204,6 +3215,7 @@ export class GameEngine {
       }
       const aliveAliens = this.aliens.filter(a => a.alive).sort((a, b) => b.hp - a.hp);
       for (let i = 0; i < 3; i++) {
+        if (this.projectiles.bolts.length >= 250) break;
         let missileAng = (i / 3) * Math.PI * 2;
         if (aliveAliens.length > 0) {
           const threat = aliveAliens[i % aliveAliens.length];
@@ -3850,6 +3862,7 @@ export class GameEngine {
           }
         }
         if (nearest) {
+          if (this.projectiles.bolts.length >= 250) continue;
           const fireAng = Math.atan2(nearest.y - dy, nearest.x - dx);
           this.projectiles.addPlasmaBolt({
             x: dx,

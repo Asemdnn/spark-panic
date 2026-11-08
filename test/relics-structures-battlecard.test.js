@@ -168,19 +168,24 @@ describe('v2.5 Commander\'s Ultimate Edition Suite', () => {
       expect(sm.structures.length).toBe(2);
     });
 
-    it('should refract player turret lasers passing through Solar Prism Pylons', () => {
+    it('should refract player turret lasers passing through Solar Prism Pylons and safeguard against infinite loops', () => {
       const mockEngine = {
         planet: { x: 400, y: 300, shieldRadius: 90, planetRadius: 75 },
         turret: { chassisId: 'striker' },
         skills: { cooldownReduction: 0 },
         projectiles: {
           bolts: [],
-          addPlasmaBolt: (b) => mockEngine.projectiles.bolts.push(b)
+          addPlasmaBolt: (b) => {
+            if (mockEngine.projectiles.bolts.length >= 250) return null;
+            mockEngine.projectiles.bolts.push(b);
+            return b;
+          }
         }
       };
       const sm = new StructureManager(mockEngine);
       const pylon = sm.deploy(0);
       expect(pylon.type).toBe('pylon');
+      expect(pylon.radius).toBeDefined();
 
       // Create a bullet passing through pylon's position
       const bullet = {
@@ -195,7 +200,39 @@ describe('v2.5 Commander\'s Ultimate Edition Suite', () => {
       sm.checkRefractPylons(bullet);
       expect(bullet.refracted).toBe(true);
       expect(bullet.damage).toBe(130); // +30% damage
-      expect(mockEngine.projectiles.bolts.length).toBe(2); // 2 refracted fan beams
+      expect(mockEngine.projectiles.bolts.length).toBe(2); // exactly 2 refracted fan beams
+
+      // 1. Check refracted beams have refracted: true explicitly set
+      const b1 = mockEngine.projectiles.bolts[0];
+      const b2 = mockEngine.projectiles.bolts[1];
+      expect(b1.refracted).toBe(true);
+      expect(b2.refracted).toBe(true);
+
+      // 2. Check refracted beams are spawned forward outside pylon radius (>= 32px)
+      const d1 = Math.hypot(b1.x - pylon.x, b1.y - pylon.y);
+      const d2 = Math.hypot(b2.x - pylon.x, b2.y - pylon.y);
+      expect(d1).toBeGreaterThanOrEqual(32);
+      expect(d2).toBeGreaterThanOrEqual(32);
+
+      // 3. Passing already refracted bullet again must do nothing
+      sm.checkRefractPylons(b1);
+      expect(mockEngine.projectiles.bolts.length).toBe(2); // no new bolts spawned
+
+      // 4. Satellite bullets must not be refracted
+      const satBullet = { x: pylon.x, y: pylon.y, angle: 0, damage: 50, isSatellite: true };
+      sm.checkRefractPylons(satBullet);
+      expect(satBullet.refracted).toBeUndefined();
+      expect(mockEngine.projectiles.bolts.length).toBe(2);
+
+      // 5. Hard cap at 250 active bolts must prevent spawning beyond 250
+      for (let i = 0; i < 248; i++) {
+        mockEngine.projectiles.bolts.push({ x: 0, y: 0, alive: true });
+      }
+      expect(mockEngine.projectiles.bolts.length).toBe(250);
+
+      const bulletCapTest = { x: pylon.x, y: pylon.y, angle: 0, damage: 100, refracted: false };
+      sm.checkRefractPylons(bulletCapTest);
+      expect(mockEngine.projectiles.bolts.length).toBe(250); // Did not exceed 250
     });
   });
 

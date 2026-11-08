@@ -32,6 +32,78 @@ describe('Projectiles & Particle FX Engine (v2.0)', () => {
     expect(pm.torpedoes.length).toBe(0);
   });
 
+  it('should strictly enforce the 250 active projectile hard cap across all spawning methods', () => {
+    const pm = new ProjectileManager();
+    // Pre-fill to 248 bolts
+    for (let i = 0; i < 248; i++) {
+      pm.addPlasmaBolt({ x: 0, y: 0, angle: 0, damage: 10 });
+    }
+    expect(pm.bolts.length).toBe(248);
+
+    // Quad burst attempts to spawn 4 bolts, should cap at 250
+    pm.spawnQuadBurst(100, 100, 20);
+    expect(pm.bolts.length).toBe(250);
+
+    // Additional addPlasmaBolt should return null and not exceed 250
+    const res = pm.addPlasmaBolt({ x: 100, y: 100, angle: 0, damage: 10 });
+    expect(res).toBeNull();
+    expect(pm.bolts.length).toBe(250);
+
+    // spawnTurretBolts should break at 250
+    pm.spawnTurretBolts(400, 300, 90, [
+      { angle: 0, speed: 500, damage: 10 },
+      { angle: 0.5, speed: 500, damage: 10 }
+    ]);
+    expect(pm.bolts.length).toBe(250);
+  });
+
+  it('should safeguard Twin Wormhole Portals against ping-pong infinite warping', () => {
+    const pm = new ProjectileManager();
+    const wormholes = {
+      life: 10,
+      a: { x: 200, y: 200, radius: 28, color: '#00e5ff' },
+      b: { x: 600, y: 400, radius: 28, color: '#e040fb' }
+    };
+    const mockPlanet = {
+      x: 400,
+      y: 300,
+      engine: {
+        wormholes,
+        particles: null
+      }
+    };
+
+    // Spawn a bullet inside portal A's radius
+    pm.addPlasmaBolt({
+      x: 200,
+      y: 200,
+      angle: 0,
+      speed: 400,
+      damage: 20
+    });
+    expect(pm.bolts.length).toBe(1);
+    const bolt = pm.bolts[0];
+    expect(bolt.warped).toBe(false);
+
+    // Run first update: bullet should teleport to portal B and be marked warped: true
+    pm.update(0.016, 800, 600, [], mockPlanet);
+    expect(bolt.warped).toBe(true);
+    expect(bolt.hasTeleported).toBe(true);
+    expect(bolt.damage).toBe(29); // 20 * 1.45 = 29
+    expect(bolt.pierce).toBe(3);  // 1 + 2 = 3
+
+    // Manually place the already-warped bullet back into portal A or B
+    bolt.x = wormholes.b.x;
+    bolt.y = wormholes.b.y;
+    const dmgBefore = bolt.damage;
+    const pierceBefore = bolt.pierce;
+
+    // Run second update: warped bullet MUST NOT teleport again
+    pm.update(0.016, 800, 600, [], mockPlanet);
+    expect(bolt.damage).toBe(dmgBefore);
+    expect(bolt.pierce).toBe(pierceBefore);
+  });
+
   it('should spawn expanding Chain Novas and trigger hit callback on alive aliens', () => {
     const pe = new ParticleEngine();
     const mockHitNova = vi.fn();
