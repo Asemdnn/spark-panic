@@ -1,13 +1,46 @@
-# Spark Panic: Planetary Invasion Defense — Guardian of the Universe (v2.8 Tactical Combat Mastery Edition)
+# Spark Panic: Planetary Invasion Defense — Guardian of the Universe (v2.9 Synergy Overdrive Edition)
 
 [![Deploy to GitHub Pages](https://github.com/Asemdnn/spark-panic/actions/workflows/deploy.yml/badge.svg)](https://github.com/Asemdnn/spark-panic/actions/workflows/deploy.yml)
 [![Live Demo](https://img.shields.io/badge/Play_Live-GitHub_Pages-00e5ff?style=flat&logo=github)](https://asemdnn.github.io/spark-panic/)
 [![PWA Ready](https://img.shields.io/badge/PWA-Ready-00e676?style=flat&logo=pwa)](https://asemdnn.github.io/spark-panic/)
 
-**Spark Panic 2.8 ("Tactical Combat Mastery Edition")** is a high-octane, self-contained HTML5 Canvas + Tailwind CSS arcade strategy and action planetary defense game. You are the **Orbital Guardian**, defending living celestial worlds and their cyber-cities against 360° incoming waves of relentless alien invasion fleets.
+**Spark Panic 2.9 ("Synergy Overdrive Edition")** is a high-octane, self-contained HTML5 Canvas + Tailwind CSS arcade strategy and action planetary defense game. You are the **Orbital Guardian**, defending living celestial worlds and their cyber-cities against 360° incoming waves of relentless alien invasion fleets.
 
 - 🎮 **Play Online**: [https://asemdnn.github.io/spark-panic/](https://asemdnn.github.io/spark-panic/)
 - 📦 **GitHub Repository**: [https://github.com/Asemdnn/spark-panic](https://github.com/Asemdnn/spark-panic)
+
+---
+
+## 🌟 What's New in v2.9: Synergy Overdrive Edition
+
+1. **🌟 Golden "Synergy Evolution Cards" in Tactical Draft (`#modalWaveDraft`)**:
+   - **Vampire Survivors-Style Synergies**: Between waves (Wave 2+), the Roguelike Draft guarantees at least 1 god-tier Golden Synergy Card if the player meets chassis, relic, or perk prerequisites:
+     - **🌩️ Thunderstorm Singularity** *(Tesla Arc Cannon OR Split-Nova Catalyst)*: Spark Novas leave a 4.0s Ionized Storm Cloud (115px) continuously zapping up to 4 enemies every 0.4s for 40 chain lightning damage!
+     - **🪞 Supernova Counter-Matrix** *(Explosive Aegis Parry OR Aegis Mirror Plating OR Pulse Striker)*: Phase-Parry triggers a 360° Mini-EMP Shockwave (220px) and launches 3 Golden Homing Counter-Missiles at highest-HP threats for 85 damage!
+     - **☄️ Hyper-Velocity Plasma Rail-Wall** *(Railgun Lancer OR Overclocked Barrels)*: Overcharge Shot leaves a blazing 2.5s Laser Firewall Line across space—enemies and missiles crossing it take 90 dmg/s and are slowed 60%!
+     - **❄️ Absolute Zero Shatter-Core** *(Cryo-Shrapnel Rounds OR Chrono-Stasis Prism)*: Chilled/Stasis enemies take +50% critical damage from all sources and shatter into 6 piercing ice-plasma shards upon defeat!
+     - **🛸 Omega Drone Swarm** *(Wingman Squadron Overdrive OR Twin-Wingman Transponder)*: Spawns 4 Autonomous Micro-Interceptor Drones in diamond formation orbiting the planet that auto-fire rapid plasma darts (18 dmg, 3.5 rps) and launch cluster mini-novas every 6s!
+   - **Holographic Gold UI Cards**: Features glowing amber borders, animated `🌟 SYNERGY` badges, and dedicated `🌟 EVOLVE WEAPON` draft buttons.
+
+2. **⚔️ Multi-Part Destructible Boss Sub-Systems**:
+   - **Destructible Boss Modules**: Sector Motherships spawn with 2 destructible subsystems, each with ~30% max HP and individual health bars in the Boss HUD:
+     - **🔴 Port Torpedo Battery (`[WPN]`)**: Destroying it triggers a 110px explosion, deals 12% bleed damage to the Boss hull, and permanently reduces salvos from 3 torpedoes to 1!
+     - **🟣 Starboard Drone Hangar (`[HGR]`)**: Destroying it triggers a 110px explosion, deals 12% bleed damage to the Boss hull, spawns 2 instant Orbital Supply Pods, and permanently halts reinforcement dropship/leech spawns!
+   - **⚠️ Core Exposed Mode**: Destroying both subsystems strips the Mothership's armor, exposing the reactor core with crackling golden electrical arcs and dealing **+50% bonus hull damage** from all incoming attacks!
+
+3. **🌀 Interactive Battlefield Space Anomalies**:
+   - **Twin Subspace Wormholes (`PORTAL α` & `PORTAL β`)**: Spawns every 16–20s in outer orbital space and lasts 14.0s. Any player bolt entering Portal A instantly teleports out of Portal B (and vice-versa) with **+45% Warp Damage**, **+2 Pierce**, and auto-angles toward the highest-threat enemy. If an Aegis Jammer Frigate is active, warped bolts automatically angle behind its 90° frontal shield!
+   - **🌀 Spark Nova Portal Echo**: Detonating a Spark Nova within 45px of Portal A triggers an instantaneous twin shockwave echo at Portal B!
+   - **☣️ Volatile Plasma Fuel Barrels**: Drifting hazard canisters appear in outer lanes. Shooting a barrel breaches it, detonating a free 115px 95-damage chain reaction explosion.
+
+4. **🔥 "Overdrive Frenzy Meter" & Double-Time Synthwave**:
+   - **Dynamic Battle Momentum**: Tactical actions fill the top-right Frenzy Gauge: +4% per kill, +3% per chain combo step, +18% on Perfect Parry, and +15% on weak-spot Critical Breaches.
+   - **Vulnerability Checks**: Taking Core HP damage drops Frenzy by -35%; shield hits pause gain for 1.5s.
+   - **🔥 8.0s Hyper-Frenzy Overdrive**: Reaching 100% unleashes maximum battle intensity:
+     - **Double-Time Synthwave Audio**: BGM tempo accelerates +15% dynamically!
+     - **+40% Rapid-Fire Boost**: Turret and AI Wingmen fire rate increases by 40%.
+     - **🌈 Chromatic Rainbow Plasma Lances**: Bolts fired during Frenzy deal +25% damage with chromatic shifting rainbow hues.
+     - **⚡ 2x Nova Recharge Rate**: Doubles nova kill recharge energy (+28% per kill vs 14%).
 
 ---
 

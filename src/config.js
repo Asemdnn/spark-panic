@@ -1173,3 +1173,52 @@ export const TACTICAL_DRAFT_PERKS = [
     desc: 'Elite and heavy enemies drop +100% Star Shards and +500 bonus score.'
   }
 ];
+
+// v2.9 Golden Synergy Evolution Cards (Vampire Survivors-style evolved god-tier upgrades)
+export const SYNERGY_EVOLUTIONS = [
+  {
+    id: 'thunderstormSingularity',
+    name: 'Thunderstorm Singularity',
+    icon: '🌩️',
+    isSynergy: true,
+    badge: '🌟 SYNERGY EVOLUTION',
+    synergyWith: 'Tesla Arc Cannon OR Split-Nova Catalyst',
+    desc: 'Spark Novas leave a 4.0s Ionized Storm Cloud (115px) continuously zapping up to 4 enemies every 0.4s for 32 chain lightning damage!'
+  },
+  {
+    id: 'supernovaCounterMatrix',
+    name: 'Supernova Counter-Matrix',
+    icon: '🪞',
+    isSynergy: true,
+    badge: '🌟 SYNERGY EVOLUTION',
+    synergyWith: 'Explosive Aegis Parry OR Aegis Mirror Plating',
+    desc: 'Phase Parry triggers a 360° Mini-EMP Shockwave (220px) and launches 3 Golden Homing Counter-Missiles at highest-HP threats!'
+  },
+  {
+    id: 'hyperVelocityRailWall',
+    name: 'Hyper-Velocity Plasma Rail-Wall',
+    icon: '☄️',
+    isSynergy: true,
+    badge: '🌟 SYNERGY EVOLUTION',
+    synergyWith: 'Railgun Lancer OR Overclocked Barrels',
+    desc: 'Overcharge Shot leaves a blazing 2.5s Laser Firewall Line across space—enemies and missiles crossing it take 90 dmg/s and are slowed 60%!'
+  },
+  {
+    id: 'absoluteZeroShatterCore',
+    name: 'Absolute Zero Shatter-Core',
+    icon: '❄️',
+    isSynergy: true,
+    badge: '🌟 SYNERGY EVOLUTION',
+    synergyWith: 'Cryo-Shrapnel Rounds OR Chrono-Stasis Prism',
+    desc: 'Chilled/Stasis enemies take +50% critical damage from all sources and shatter into 6 piercing ice-plasma shards upon defeat!'
+  },
+  {
+    id: 'omegaDroneSwarm',
+    name: 'Omega Drone Swarm',
+    icon: '🛸',
+    isSynergy: true,
+    badge: '🌟 SYNERGY EVOLUTION',
+    synergyWith: 'Wingman Squadron Overdrive OR Twin-Wingman Transponder',
+    desc: 'Spawns 2 additional Autonomous Micro-Interceptor Drones that orbit alongside WING-01 and launch mini Spark Novas at clusters every 6s!'
+  }
+];

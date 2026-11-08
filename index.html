@@ -222,6 +222,23 @@
         <div class="w-full h-2.5 bg-slate-900/80 rounded-full overflow-hidden border border-cosmic-crimson/40">
           <div id="bossHealthFill" class="h-full bg-gradient-to-r from-rose-500 via-red-600 to-amber-500 rounded-full transition-all duration-150 shadow-[0_0_14px_#ff1744]" style="width: 100%;"></div>
         </div>
+        <!-- v2.9 Destructible Sub-Systems -->
+        <div id="bossSubsystemsContainer" class="flex gap-2 mt-1.5 hidden">
+          <div class="flex-1 bg-slate-950/70 rounded px-1.5 py-0.5 border border-rose-500/30 flex items-center gap-1">
+            <span class="text-[8px] font-orbitron font-bold text-rose-400">WPN</span>
+            <div class="flex-1 h-1.5 bg-slate-900 rounded-full overflow-hidden">
+              <div id="bossWpnSubsystemBar" class="h-full bg-rose-500 transition-all duration-100" style="width: 100%;"></div>
+            </div>
+            <span id="bossWpnSubsystemText" class="text-[7px] font-mono text-rose-300">100%</span>
+          </div>
+          <div class="flex-1 bg-slate-950/70 rounded px-1.5 py-0.5 border border-purple-500/30 flex items-center gap-1">
+            <span class="text-[8px] font-orbitron font-bold text-purple-400">HGR</span>
+            <div class="flex-1 h-1.5 bg-slate-900 rounded-full overflow-hidden">
+              <div id="bossHgrSubsystemBar" class="h-full bg-purple-500 transition-all duration-100" style="width: 100%;"></div>
+            </div>
+            <span id="bossHgrSubsystemText" class="text-[7px] font-mono text-purple-300">100%</span>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -245,6 +262,17 @@
       <!-- Combo Indicator -->
       <div id="hudCombo" class="glass-panel px-2.5 py-1.5 rounded-xl text-center font-orbitron font-black text-xs md:text-sm text-cosmic-magenta border-cosmic-magenta/40 transition-transform duration-200 scale-95 opacity-80">
         x1
+      </div>
+
+      <!-- v2.9 Overdrive Frenzy Gauge -->
+      <div id="hudFrenzy" class="glass-panel px-2.5 py-1 rounded-xl flex flex-col justify-center min-w-[76px] border-amber-500/40 transition-all duration-200">
+        <div class="flex justify-between items-center text-[7px] font-orbitron font-bold text-amber-400">
+          <span>🔥 FRENZY</span>
+          <span id="hudFrenzyVal" class="text-[8px] font-bold text-slate-300">0%</span>
+        </div>
+        <div class="w-full h-1.5 bg-slate-900/80 rounded-full overflow-hidden border border-amber-500/30 mt-0.5">
+          <div id="hudFrenzyFill" class="h-full bg-gradient-to-r from-amber-500 to-rose-500 rounded-full transition-all duration-100 shadow-[0_0_8px_#f59e0b]" style="width: 0%;"></div>
+        </div>
       </div>
 
       <button id="btnTutorial" class="glass-panel w-9 h-9 rounded-xl flex items-center justify-center hover:border-cosmic-cyan text-cosmic-cyan transition cursor-pointer text-sm" title="Replay Tactical Tutorial (H)">
@@ -429,7 +457,7 @@
           <div class="absolute inset-0 bg-gradient-to-t from-[#050814] via-transparent to-transparent opacity-80"></div>
           <div class="absolute bottom-3 left-3 right-3 text-center">
             <span class="inline-block px-3 py-1 rounded-full text-[10px] font-orbitron font-extrabold tracking-widest bg-cosmic-cyan/20 text-cosmic-cyan border border-cosmic-cyan/40">
-              ⚡ v2.8 TACTICAL MASTERY EDITION
+              ⚡ v2.9 SYNERGY OVERDRIVE EDITION
             </span>
           </div>
         </div>

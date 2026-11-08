@@ -127,6 +127,9 @@ export class Planet {
     if (this.shield > 0) {
       if (this.shield >= amount) {
         this.shield -= amount;
+        if (this.engine?.onShieldHit) {
+          this.engine.onShieldHit();
+        }
         audio.playShieldHit();
       } else {
         const overflow = amount - this.shield;
@@ -135,11 +138,17 @@ export class Planet {
           this.engine.onShieldBroken();
         }
         this.coreHp = Math.max(0, this.coreHp - overflow);
+        if (this.engine?.onCoreDamageTaken) {
+          this.engine.onCoreDamageTaken();
+        }
         this.addCrater(angle);
         audio.playShieldHit();
       }
     } else {
       this.coreHp = Math.max(0, this.coreHp - amount);
+      if (this.engine?.onCoreDamageTaken) {
+        this.engine.onCoreDamageTaken();
+      }
       this.addCrater(angle);
       audio.playShieldHit();
     }

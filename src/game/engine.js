@@ -1,6 +1,6 @@
 // Spark Panic: Planetary Invasion Defense 2.5 - Core Game Engine Coordinator
 
-import { PLANETS, SECTORS, ALIEN_CLASSES, ARMORY_CONFIG, TROPHIES, GUARDIAN_RANKS, getDailyAnomalyConfig, DAILY_MUTATORS, TITAN_PROTOCOL_CONFIG, WINGMAN_CONFIG, ASCENSION_CONFIG, TURRET_SKINS, COSMIC_RELICS, STRUCTURE_CONFIG, DEFAULT_SETTINGS, TACTICAL_DRAFT_PERKS } from '../config.js';
+import { PLANETS, SECTORS, ALIEN_CLASSES, ARMORY_CONFIG, TROPHIES, GUARDIAN_RANKS, getDailyAnomalyConfig, DAILY_MUTATORS, TITAN_PROTOCOL_CONFIG, WINGMAN_CONFIG, ASCENSION_CONFIG, TURRET_SKINS, COSMIC_RELICS, STRUCTURE_CONFIG, DEFAULT_SETTINGS, TACTICAL_DRAFT_PERKS, SYNERGY_EVOLUTIONS } from '../config.js';
 import { audio } from '../engine/audio.js';
 import { saveSystem } from '../engine/storage.js';
 import { Planet } from './planet.js';
@@ -93,6 +93,7 @@ export class GameEngine {
     this.maxNovaCharges = 3;
     this.novaProgress = 0;
     this.novaMultiplier = 1.0;
+    this.killRechargeRate = 0.14;
 
     // Mission counters
     this.enemiesVaporized = 0;
@@ -147,6 +148,19 @@ export class GameEngine {
     this.onShowWaveDraftModal = null;
     this.onHideWaveDraftModal = null;
     this.onUpdateDraftBadges = null;
+
+    // v2.9 Synergy Evolutions, Space Anomalies & Frenzy Overdrive Systems
+    this.frenzy = 0;
+    this.frenzyActive = false;
+    this.frenzyTimer = 0;
+    this.frenzyPauseTimer = 0;
+    this.stormClouds = [];
+    this.laserFirewalls = [];
+    this.omegaDrones = [];
+    this.wormholes = null;
+    this.wormholeSpawnTimer = 18.0;
+    this.plasmaBarrels = [];
+    this.plasmaBarrelSpawnTimer = 15.0;
 
     this.initStars();
 
@@ -698,6 +712,21 @@ export class GameEngine {
     if (this.onUpdateDraftBadges) {
       this.onUpdateDraftBadges(this.activeDraftPerks);
     }
+
+    // v2.9 Synergy Evolutions, Space Anomalies & Frenzy Overdrive states
+    this.frenzy = 0;
+    this.frenzyActive = false;
+    this.frenzyTimer = 0;
+    this.frenzyPauseTimer = 0;
+    this.stormClouds = [];
+    this.laserFirewalls = [];
+    this.omegaDrones = [];
+    this.wormholes = null;
+    this.wormholeSpawnTimer = 18.0;
+    this.plasmaBarrels = [];
+    this.plasmaBarrelSpawnTimer = 15.0;
+    audio.setBgmTempoMultiplier(1.0);
+    this.updateFrenzyUI();
   }
 
   setupWaveSpawns() {
@@ -913,6 +942,33 @@ export class GameEngine {
       }
     }
 
+    // v2.9 Thunderstorm Singularity Synergy: Spawns 4.0s Ionized Storm Cloud (115px) zapping 4 aliens every 0.4s
+    if (this.hasPerk('thunderstormSingularity')) {
+      this.stormClouds.push({
+        x: targetX,
+        y: targetY,
+        radius: 115,
+        life: 4.0,
+        maxLife: 4.0,
+        zapTimer: 0.4
+      });
+      this.particles.addFloater(targetX, targetY - 40, '🌩️ THUNDERSTORM SINGULARITY!', '#00e5ff', 18);
+    }
+
+    // v2.9 Spark Nova Portal Echo: detonating within 45px of Portal A triggers twin echo at Portal B (and vice-versa)
+    if (this.wormholes) {
+      const wh = this.wormholes;
+      const distA = Math.hypot(targetX - wh.a.x, targetY - wh.a.y);
+      const distB = Math.hypot(targetX - wh.b.x, targetY - wh.b.y);
+      if (distA <= 45) {
+        this.particles.spawnNova(wh.b.x, wh.b.y, blastRadius, '#e040fb', damage, true);
+        this.particles.addFloater(wh.b.x, wh.b.y - 30, '🌀 NOVA PORTAL ECHO!', '#e040fb', 18);
+      } else if (distB <= 45) {
+        this.particles.spawnNova(wh.a.x, wh.a.y, blastRadius, '#00e5ff', damage, true);
+        this.particles.addFloater(wh.a.x, wh.a.y - 30, '🌀 NOVA PORTAL ECHO!', '#00e5ff', 18);
+      }
+    }
+
     this.addScreenShake(inNebula ? 9 : 6, 0.2);
     return true;
   }
@@ -956,6 +1012,7 @@ export class GameEngine {
       const ex = boss.x + Math.cos(boss.heading + e.angleOffset) * e.dist;
       const ey = boss.y + Math.sin(boss.heading + e.angleOffset) * e.dist;
       const escortShip = new Alien(ex, ey, e.classKey);
+      escortShip.engine = this;
       this.aliens.push(escortShip);
       this.particles.spawnDebris(ex, ey, escortShip.color, 8);
     }
@@ -1155,6 +1212,32 @@ export class GameEngine {
       this.particles.addFloater(alien.x, alien.y - 50, '💎 BOUNTY: +500 PTS & +20 ✦', '#ffd700', 15);
     }
 
+    // v2.9 Frenzy Overdrive Gauge: +4% per kill, +3% per chain combo step
+    this.addFrenzy(4.0);
+    if (this.combo > 1) {
+      this.addFrenzy(3.0);
+    }
+
+    // v2.9 Absolute Zero Shatter-Core Synergy: Shatters into 6 piercing ice-plasma shards when destroyed while chilled/frozen
+    if (this.hasPerk('absoluteZeroShatterCore') && (alien.frozenTimer > 0 || alien.slowTimer > 0)) {
+      for (let i = 0; i < 6; i++) {
+        const shardAngle = (i / 6) * Math.PI * 2;
+        this.projectiles.addPlasmaBolt({
+          x: alien.x,
+          y: alien.y,
+          angle: shardAngle,
+          speed: 420,
+          damage: 28,
+          color: '#00e5ff',
+          pierce: 2,
+          isIceShard: true,
+          source: 'shatter'
+        });
+      }
+      this.particles.spawnNovaRing(alien.x, alien.y, '#00e5ff', 45);
+      this.particles.addFloater(alien.x, alien.y - 25, '❄️ ICE SHATTER!', '#00e5ff', 14);
+    }
+
     // Vampiric Core Relic: Heal Core HP + Shield on x8+ Combo
     if (this.hasRelic('vampiricCore') && this.combo >= 8) {
       this.planet.coreHp = Math.min(this.planet.maxCoreHp, this.planet.coreHp + 15);
@@ -1163,9 +1246,9 @@ export class GameEngine {
       this.particles.addFloater(this.planet.x, this.planet.y - 25, 'VAMPIRIC DRAIN +HP/SHIELD!', '#00e676', 13);
     }
 
-    // Nova kill recharge energy (+14% per kill, +15% bonus for Pulse Striker)
+    // Nova kill recharge energy (+14% per kill, +15% bonus for Pulse Striker, 2x during Frenzy)
     const isStriker = this.turret && this.turret.chassis === 'striker';
-    this.novaProgress += this.killRechargeRate * (isStriker ? 1.15 : 1.0);
+    this.novaProgress += this.killRechargeRate * (isStriker ? 1.15 : 1.0) * (this.frenzyActive ? 2.0 : 1.0);
     if (this.novaProgress >= 1.0) {
       this.novaProgress -= 1.0;
       this.novaCharges = Math.min(this.maxNovaCharges, this.novaCharges + 1);
@@ -1514,11 +1597,12 @@ export class GameEngine {
       return;
     }
 
-    // 2. Update Guardian Turret (+2 barrels & +35% fire rate when Overclock is active; Weaver web slows by 30%)
+    // 2. Update Guardian Turret (+2 barrels & +35% fire rate when Overclock is active; Weaver web slows by 30%; +40% fire rate during Frenzy)
     const isOverclock = this.supplyPods.isQuadPulseActive();
     const isWeaverSlowed = this.aliens.some(a => a.alive && a.classKey === 'WEAVER');
+    const turretDt = this.frenzyActive ? dt * 1.4 : dt;
     this.turret.update(
-      dt,
+      turretDt,
       this.pointerX,
       this.pointerY,
       this.planet.x,
@@ -1527,6 +1611,14 @@ export class GameEngine {
       (bolts, angle) => {
         // While charging Overcharge Lance, pause standard auto-fire bursts
         if (this.isChargingOvercharge) return;
+
+        // v2.9 Frenzy Overdrive: Chromatic Rainbow Plasma Lances (+25% damage)
+        if (this.frenzyActive) {
+          for (const b of bolts) {
+            b.isChromatic = true;
+            b.damage = Math.round(b.damage * 1.25);
+          }
+        }
 
         // v2.8 Chain-Reaction Momentum perk: bonus damage per rapid kill
         if (this.hasPerk('chainMomentum') && this.chainMomentumStacks > 0) {
@@ -1586,12 +1678,13 @@ export class GameEngine {
       );
     }
 
-    // 3.5. Update Autonomous AI Wingman Fighters (WING-01 & WING-02)
+    // 3.5. Update Autonomous AI Wingman Fighters (WING-01 & WING-02, +40% fire rate during Frenzy)
+    const wingmanDt = this.frenzyActive ? dt * 1.4 : dt;
     if (this.wingmanActive && this.wingman) {
-      this.wingman.update(dt, this);
+      this.wingman.update(wingmanDt, this);
     }
     if (this.wingmanActive && this.wingman2 && this.hasRelic('twinWingman')) {
-      this.wingman2.update(dt, this);
+      this.wingman2.update(wingmanDt, this);
     }
 
     // Deployable Orbital Structures Update
@@ -1620,6 +1713,29 @@ export class GameEngine {
     if (this.relicChronoStasisCooldown > 0) {
       this.relicChronoStasisCooldown = Math.max(0, this.relicChronoStasisCooldown - dt);
     }
+
+    // v2.9 Update Frenzy Overdrive Timers
+    if (this.frenzyPauseTimer > 0) {
+      this.frenzyPauseTimer = Math.max(0, this.frenzyPauseTimer - dt);
+    }
+    if (this.frenzyActive) {
+      this.frenzyTimer -= dt;
+      this.frenzy = Math.max(0, (this.frenzyTimer / 8.0) * 100);
+      if (this.frenzyTimer <= 0) {
+        this.frenzyActive = false;
+        this.frenzy = 0;
+        audio.setBgmTempoMultiplier(1.0);
+        this.particles.addFloater(this.planet.x, this.planet.y - 60, 'FRENZY COOLDOWN', '#94a3b8', 16);
+      }
+      this.updateFrenzyUI();
+    }
+
+    // v2.9 Update Battlefield Anomalies & Synergies
+    this.updateWormholes(dt);
+    this.updatePlasmaBarrels(dt);
+    this.updateStormClouds(dt);
+    this.updateLaserFirewalls(dt);
+    this.updateOmegaDrones(dt);
 
     // 4. Update Tactical Skills
     this.skills.update(
@@ -1692,6 +1808,7 @@ export class GameEngine {
       wp.rot += dt * 8;
       if (wp.timer <= 0) {
         const alien = new Alien(wp.x, wp.y, wp.item.classKey, wp.item.bossCustomName);
+        alien.engine = this;
         if (wp.item.bossCustomHp) {
           alien.hp = wp.item.bossCustomHp;
           alien.maxHp = wp.item.bossCustomHp;
@@ -1777,6 +1894,7 @@ export class GameEngine {
           });
         }
         const alien = new Alien(ax, ay, item.classKey, item.bossCustomName);
+        alien.engine = this;
         if (item.bossCustomHp) {
           alien.hp = item.bossCustomHp;
           alien.maxHp = item.bossCustomHp;
@@ -1807,6 +1925,7 @@ export class GameEngine {
           // Dropship scout / leech spawn callback
           const cls = Math.random() < 0.35 ? 'LEECH' : 'SCOUT';
           const spawned = new Alien(sx, sy, cls);
+          spawned.engine = this;
           this.aliens.push(spawned);
         },
         (tx, ty, angle, speed, dmg, color) => {
@@ -2341,6 +2460,13 @@ export class GameEngine {
     // Render Mid-Battle Orbital Supply Pods
     this.supplyPods.render(ctx);
 
+    // v2.9 Render Battlefield Anomalies & Synergies
+    this.renderStormClouds(ctx);
+    this.renderLaserFirewalls(ctx);
+    this.renderWormholes(ctx);
+    this.renderPlasmaBarrels(ctx);
+    this.renderOmegaDrones(ctx);
+
     // 8. Render Aliens
     for (const alien of this.aliens) {
       alien.render(ctx);
@@ -2675,16 +2801,41 @@ export class GameEngine {
     document.getElementById('hudCoreText').textContent = `${corePct}%`;
     document.getElementById('hudCoreBar').style.width = `${corePct}%`;
 
-    // Boss Bar
+    // Boss Bar & v2.9 Destructible Sub-Systems
     const bossHudBar = document.getElementById('bossHudBar');
+    const bossSubsContainer = document.getElementById('bossSubsystemsContainer');
     if (this.activeBoss && this.activeBoss.alive) {
       bossHudBar.classList.remove('hidden');
-      document.getElementById('bossNameLabel').textContent = this.activeBoss.name.toUpperCase();
+      const bossName = this.activeBoss.coreExposed ? `${this.activeBoss.name.toUpperCase()} (CORE EXPOSED +50%)` : this.activeBoss.name.toUpperCase();
+      document.getElementById('bossNameLabel').textContent = bossName;
       const bPct = Math.max(0, Math.round((this.activeBoss.hp / this.activeBoss.maxHp) * 100));
       document.getElementById('bossHealthText').textContent = `${bPct}%`;
       document.getElementById('bossHealthFill').style.width = `${bPct}%`;
+
+      if (bossSubsContainer && this.activeBoss.subsystems) {
+        bossSubsContainer.classList.remove('hidden');
+        const wpnSub = this.activeBoss.subsystems.find(s => s.id === 'portTorpedoBattery');
+        const hgrSub = this.activeBoss.subsystems.find(s => s.id === 'starboardDroneHangar');
+
+        const wpnFill = document.getElementById('bossWpnSubsystemBar');
+        const wpnText = document.getElementById('bossWpnSubsystemText');
+        if (wpnSub && wpnFill) {
+          const wPct = wpnSub.destroyed ? 0 : Math.round((wpnSub.hp / wpnSub.maxHp) * 100);
+          wpnFill.style.width = `${wPct}%`;
+          if (wpnText) wpnText.textContent = wpnSub.destroyed ? 'OFFLINE' : `${wPct}%`;
+        }
+
+        const hgrFill = document.getElementById('bossHgrSubsystemBar');
+        const hgrText = document.getElementById('bossHgrSubsystemText');
+        if (hgrSub && hgrFill) {
+          const hPct = hgrSub.destroyed ? 0 : Math.round((hgrSub.hp / hgrSub.maxHp) * 100);
+          hgrFill.style.width = `${hPct}%`;
+          if (hgrText) hgrText.textContent = hgrSub.destroyed ? 'OFFLINE' : `${hPct}%`;
+        }
+      }
     } else {
       bossHudBar.classList.add('hidden');
+      if (bossSubsContainer) bossSubsContainer.classList.add('hidden');
     }
 
     // Shards & Score
@@ -2702,6 +2853,9 @@ export class GameEngine {
       comboEl.style.opacity = '0.5';
       comboEl.style.transform = 'scale(0.95)';
     }
+
+    // v2.9 Overdrive Frenzy UI
+    this.updateFrenzyUI();
 
     // Nova Charges Dots & Recharge progress
     document.getElementById('hudNovaCount').textContent = `${this.novaCharges} / ${this.maxNovaCharges}`;
@@ -3016,6 +3170,9 @@ export class GameEngine {
     this.coreCharge = Math.min(100, this.coreCharge + 8.0);
     this.planet.shield = Math.min(this.planet.maxShield, this.planet.shield + Math.round(this.planet.maxShield * 0.05));
 
+    // v2.9 Frenzy Overdrive: +18% on Perfect Parry
+    this.addFrenzy(18.0);
+
     // Explosive Aegis Parry Perk check
     if (this.hasPerk('explosiveParry')) {
       this.particles.spawnNovaRing(torpX, torpY, '#ffd700', 120);
@@ -3026,6 +3183,45 @@ export class GameEngine {
           const k = a.takeDamage(60, torpX, torpY, true);
           if (k) this.onAlienDestroyed(a);
         }
+      }
+    }
+
+    // v2.9 Supernova Counter-Matrix Synergy: 360° Mini-EMP (220px) + 3 Golden Homing Counter-Missiles
+    if (this.hasPerk('supernovaCounterMatrix')) {
+      this.particles.spawnNova(this.planet.x, this.planet.y, 220, '#ffd700', 50, true);
+      this.particles.addFloater(this.planet.x, this.planet.y - 30, '🪞 SUPERNOVA COUNTER-MATRIX!', '#ffd700', 20);
+      for (const a of this.aliens) {
+        if (!a.alive) continue;
+        const dist = Math.hypot(a.x - this.planet.x, a.y - this.planet.y);
+        if (dist <= 220) {
+          a.freeze(1.5);
+          const pushAng = Math.atan2(a.y - this.planet.y, a.x - this.planet.x);
+          a.x += Math.cos(pushAng) * 60;
+          a.y += Math.sin(pushAng) * 60;
+          const destroyed = a.takeDamage(50, this.planet.x, this.planet.y, true);
+          if (destroyed) this.onAlienDestroyed(a);
+        }
+      }
+      const aliveAliens = this.aliens.filter(a => a.alive).sort((a, b) => b.hp - a.hp);
+      for (let i = 0; i < 3; i++) {
+        let missileAng = (i / 3) * Math.PI * 2;
+        if (aliveAliens.length > 0) {
+          const threat = aliveAliens[i % aliveAliens.length];
+          missileAng = Math.atan2(threat.y - torpY, threat.x - torpX) + (i - 1) * 0.15;
+        }
+        this.projectiles.addPlasmaBolt({
+          x: torpX,
+          y: torpY,
+          angle: missileAng,
+          speed: 480,
+          damage: 85 * (this.novaMultiplier || 1.0),
+          color: '#ffd700',
+          isReflectedMissile: true,
+          isRocket: true,
+          splashRadius: 65,
+          isDirectPierce: true,
+          source: 'parry'
+        });
       }
     }
 
@@ -3060,6 +3256,22 @@ export class GameEngine {
       source: 'overcharge'
     });
 
+    // v2.9 Hyper-Velocity Plasma Rail-Wall Synergy: 2.5s laser firewall line across space (90 dmg/s, 60% slow)
+    if (this.hasPerk('hyperVelocityRailWall')) {
+      const angle = this.turret.angle;
+      const x1 = nozzleX;
+      const y1 = nozzleY;
+      const x2 = nozzleX + Math.cos(angle) * 750;
+      const y2 = nozzleY + Math.sin(angle) * 750;
+      this.laserFirewalls.push({
+        x1, y1, x2, y2, angle,
+        life: 2.5,
+        maxLife: 2.5,
+        dps: 90
+      });
+      this.particles.addFloater(nozzleX + Math.cos(angle) * 120, nozzleY + Math.sin(angle) * 120, '☄️ LASER FIREWALL ENGAGED!', '#f97316', 16);
+    }
+
     this.turretRecoil = 14;
     this.addScreenShake(8, 0.2);
     audio.playOverchargeFire();
@@ -3074,16 +3286,61 @@ export class GameEngine {
     this.particles.addFloater(alien.x, alien.y - 25, '💥 CRITICAL BREACH! x2.5', '#ff9100', 17);
     this.hitStopTimer = 0.08;
     audio.playCritBreach();
+    // v2.9 Frenzy Overdrive: +15% on Critical Weak-Spot Breach
+    this.addFrenzy(15.0);
+  }
+
+  getEligibleSynergyEvolutions() {
+    const eligible = [];
+    const currentChassis = this.turret ? this.turret.chassis : 'standard';
+
+    for (const syn of SYNERGY_EVOLUTIONS) {
+      if (this.hasPerk(syn.id)) continue;
+
+      let canEvolve = false;
+      if (syn.id === 'thunderstormSingularity') {
+        canEvolve = currentChassis === 'tesla' || this.hasPerk('splitNova') || this.hasRelic('overchargedCoil');
+      } else if (syn.id === 'supernovaCounterMatrix') {
+        canEvolve = this.hasPerk('explosiveParry') || this.hasRelic('aegisMirror') || currentChassis === 'striker';
+      } else if (syn.id === 'hyperVelocityRailWall') {
+        canEvolve = currentChassis === 'railgun' || this.hasPerk('overclockedBarrels') || this.hasPerk('chainMomentum');
+      } else if (syn.id === 'absoluteZeroShatterCore') {
+        canEvolve = this.hasPerk('cryoShrapnel') || this.hasRelic('chronoStasisPrism');
+      } else if (syn.id === 'omegaDroneSwarm') {
+        canEvolve = this.hasPerk('wingmanOverdrive') || this.hasRelic('twinWingman');
+      }
+
+      if (canEvolve) {
+        eligible.push(syn);
+      }
+    }
+    return eligible;
   }
 
   triggerWaveDraft() {
     this.waveDraftPending = true;
 
-    // Pick 3 random unique perks
+    // Synergy Evolution guarantee check (starting from Wave 2+, or Titan Protocol / Endless)
+    const eligibleSynergies = this.getEligibleSynergyEvolutions();
+    let guaranteedSynergy = null;
+    if (eligibleSynergies.length > 0) {
+      guaranteedSynergy = eligibleSynergies[Math.floor(Math.random() * eligibleSynergies.length)];
+    }
+
+    // Pick remaining from unpicked standard perks
     const unpicked = TACTICAL_DRAFT_PERKS.filter(p => !this.activeDraftPerks.some(ap => ap.id === p.id));
     const pool = unpicked.length >= 3 ? unpicked : TACTICAL_DRAFT_PERKS;
     const shuffled = [...pool].sort(() => Math.random() - 0.5);
-    this.currentDraftOptions = shuffled.slice(0, 3);
+
+    if (guaranteedSynergy) {
+      this.currentDraftOptions = [
+        guaranteedSynergy,
+        shuffled[0],
+        shuffled[1]
+      ].sort(() => Math.random() - 0.5);
+    } else {
+      this.currentDraftOptions = shuffled.slice(0, 3);
+    }
 
     if (this.onShowWaveDraftModal) {
       this.onShowWaveDraftModal(this.currentDraftOptions, this.currentWave + 1);
@@ -3098,8 +3355,13 @@ export class GameEngine {
     if (perk.id === 'overclockedBarrels') {
       this.turret.fireIntervalMultiplier = (this.turret.fireIntervalMultiplier || 1.0) * 0.65;
     }
+    if (perk.id === 'omegaDroneSwarm') {
+      this.omegaDrones = [];
+    }
 
-    this.particles.addFloater(this.planet.x, this.planet.y - 90, `REINFORCEMENT: ${perk.name}`, '#00e5ff', 22);
+    const floaterColor = perk.isSynergy ? '#ffd700' : '#00e5ff';
+    const floaterPrefix = perk.isSynergy ? '🌟 SYNERGY EVOLVED: ' : 'REINFORCEMENT: ';
+    this.particles.addFloater(this.planet.x, this.planet.y - 90, `${floaterPrefix}${perk.name}`, floaterColor, 22);
     audio.playDraftSelect();
     this.waveDraftPending = false;
 
@@ -3145,6 +3407,7 @@ export class GameEngine {
       const ax = this.planet.x + Math.cos(ang) * dist;
       const ay = this.planet.y + Math.sin(ang) * dist;
       const a = new Alien(ax, ay, cls);
+      a.engine = this;
       a.isAmbushReward = true;
       this.aliens.push(a);
       this.warpPortals.push({ x: ax, y: ay, timer: 0.6, maxTimer: 0.6, radius: 28, rot: 0, color: '#a855f7' });
@@ -3188,6 +3451,482 @@ export class GameEngine {
       if (cdFill) cdFill.style.height = '0%';
       if (cdText) cdText.classList.add('hidden');
       btn.classList.remove('opacity-70');
+    }
+  }
+
+  // v2.9 Frenzy Overdrive Mechanics
+  addFrenzy(amount) {
+    if (this.frenzyActive) return;
+    if (this.frenzyPauseTimer > 0) return;
+    this.frenzy = Math.min(100, this.frenzy + amount);
+    this.updateFrenzyUI();
+    if (this.frenzy >= 100) {
+      this.triggerHyperFrenzy();
+    }
+  }
+
+  triggerHyperFrenzy() {
+    this.frenzy = 100;
+    this.frenzyActive = true;
+    this.frenzyTimer = 8.0;
+    audio.setBgmTempoMultiplier(1.15);
+    audio.playSkill('Q');
+    this.addScreenShake(12, 0.35);
+    this.particles.addFloater(this.planet.x, this.planet.y - 75, '🔥 HYPER-FRENZY OVERDRIVE! 🔥', '#ff0055', 26);
+    this.showToast('🔥 HYPER-FRENZY OVERDRIVE! +40% FIRE RATE & RAINBOW PLASMA!', '#ff0055');
+    this.updateFrenzyUI();
+  }
+
+  onCoreDamageTaken() {
+    if (this.frenzyActive) {
+      this.frenzyTimer = Math.max(0, this.frenzyTimer - 2.8);
+    }
+    this.frenzy = Math.max(0, this.frenzy - 35.0);
+    this.updateFrenzyUI();
+  }
+
+  onShieldHit() {
+    this.frenzyPauseTimer = 1.5;
+  }
+
+  updateFrenzyUI() {
+    const frenzyFill = document.getElementById('hudFrenzyFill');
+    const frenzyVal = document.getElementById('hudFrenzyVal');
+    const frenzyContainer = document.getElementById('hudFrenzy');
+    if (frenzyFill) {
+      frenzyFill.style.width = `${Math.min(100, Math.round(this.frenzy))}%`;
+    }
+    if (frenzyVal) {
+      if (this.frenzyActive) {
+        frenzyVal.textContent = `OVERDRIVE: ${this.frenzyTimer.toFixed(1)}s`;
+        frenzyVal.className = 'text-xs font-black tracking-wider text-amber-300 animate-pulse';
+      } else {
+        frenzyVal.textContent = `${Math.round(this.frenzy)}%`;
+        frenzyVal.className = 'text-xs font-bold text-slate-300';
+      }
+    }
+    if (frenzyContainer) {
+      if (this.frenzyActive) {
+        frenzyContainer.classList.add('ring-2', 'ring-amber-400', 'shadow-[0_0_15px_rgba(251,191,36,0.5)]');
+      } else {
+        frenzyContainer.classList.remove('ring-2', 'ring-amber-400', 'shadow-[0_0_15px_rgba(251,191,36,0.5)]');
+      }
+    }
+  }
+
+  // v2.9 Space Anomalies: Twin Wormholes
+  updateWormholes(dt) {
+    if (this.wormholes) {
+      this.wormholes.life -= dt;
+      this.wormholes.a.rot += dt * 4;
+      this.wormholes.b.rot -= dt * 4;
+      if (this.wormholes.life <= 0) {
+        this.wormholes = null;
+        this.wormholeSpawnTimer = 18.0;
+      }
+    } else {
+      this.wormholeSpawnTimer -= dt;
+      if (this.wormholeSpawnTimer <= 0) {
+        const angA = Math.random() * Math.PI * 2;
+        const angB = angA + Math.PI * (0.65 + Math.random() * 0.7);
+        const distA = 220 + Math.random() * 80;
+        const distB = 220 + Math.random() * 80;
+        this.wormholes = {
+          life: 14.0,
+          maxLife: 14.0,
+          a: {
+            x: this.planet.x + Math.cos(angA) * distA,
+            y: this.planet.y + Math.sin(angA) * distA,
+            radius: 28,
+            rot: 0,
+            label: 'PORTAL α',
+            color: '#00e5ff'
+          },
+          b: {
+            x: this.planet.x + Math.cos(angB) * distB,
+            y: this.planet.y + Math.sin(angB) * distB,
+            radius: 28,
+            rot: 0,
+            label: 'PORTAL β',
+            color: '#e040fb'
+          }
+        };
+        this.particles.addFloater(this.wormholes.a.x, this.wormholes.a.y - 30, '🌀 PORTAL α OPENED', '#00e5ff', 16);
+        this.particles.addFloater(this.wormholes.b.x, this.wormholes.b.y - 30, '🌀 PORTAL β OPENED', '#e040fb', 16);
+        audio.playSkill('W');
+      }
+    }
+  }
+
+  renderWormholes(ctx) {
+    if (!this.wormholes) return;
+    const wh = this.wormholes;
+    const pulse = 1 + Math.sin(this.gameTime * 6) * 0.12;
+    for (const p of [wh.a, wh.b]) {
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rot);
+
+      ctx.globalCompositeOperation = 'lighter';
+      const grad = ctx.createRadialGradient(0, 0, 4, 0, 0, p.radius * pulse);
+      grad.addColorStop(0, '#ffffff');
+      grad.addColorStop(0.4, p.color);
+      grad.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(0, 0, p.radius * pulse, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = p.color;
+      ctx.lineWidth = 2.5;
+      for (let i = 0; i < 3; i++) {
+        ctx.beginPath();
+        const start = (i * Math.PI * 2) / 3;
+        ctx.arc(0, 0, p.radius * 0.75, start, start + 1.2);
+        ctx.stroke();
+      }
+
+      ctx.fillStyle = '#050814';
+      ctx.beginPath();
+      ctx.arc(0, 0, p.radius * 0.35, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.restore();
+
+      ctx.save();
+      ctx.font = '700 10px Orbitron, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = p.color;
+      ctx.shadowColor = p.color;
+      ctx.shadowBlur = 6;
+      ctx.fillText(p.label, p.x, p.y + p.radius + 14);
+      ctx.restore();
+    }
+  }
+
+  // v2.9 Space Anomalies: Volatile Plasma Fuel Barrels
+  updatePlasmaBarrels(dt) {
+    this.plasmaBarrelSpawnTimer -= dt;
+    if (this.plasmaBarrelSpawnTimer <= 0 && this.plasmaBarrels.length < 2) {
+      this.plasmaBarrelSpawnTimer = 16.0;
+      const angle = Math.random() * Math.PI * 2;
+      const dist = 320 + Math.random() * 80;
+      const driftAng = angle + Math.PI * 0.5 + (Math.random() - 0.5) * 0.4;
+      const speed = 25 + Math.random() * 15;
+      this.plasmaBarrels.push({
+        x: this.planet.x + Math.cos(angle) * dist,
+        y: this.planet.y + Math.sin(angle) * dist,
+        vx: Math.cos(driftAng) * speed,
+        vy: Math.sin(driftAng) * speed,
+        radius: 14,
+        rot: 0,
+        vRot: (Math.random() - 0.5) * 1.5,
+        life: 25.0,
+        hp: 20,
+        maxHp: 20,
+        alive: true
+      });
+    }
+
+    for (let i = this.plasmaBarrels.length - 1; i >= 0; i--) {
+      const b = this.plasmaBarrels[i];
+      b.x += b.vx * dt;
+      b.y += b.vy * dt;
+      b.rot += b.vRot * dt;
+      b.life -= dt;
+      if (b.life <= 0 || !b.alive) {
+        this.plasmaBarrels.splice(i, 1);
+      }
+    }
+  }
+
+  renderPlasmaBarrels(ctx) {
+    for (const b of this.plasmaBarrels) {
+      ctx.save();
+      ctx.translate(b.x, b.y);
+      ctx.rotate(b.rot);
+
+      const pulse = 0.6 + Math.sin(this.gameTime * 8) * 0.4;
+      ctx.fillStyle = `rgba(249, 115, 22, ${0.25 * pulse})`;
+      ctx.beginPath();
+      ctx.arc(0, 0, b.radius + 8, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#1e293b';
+      ctx.strokeStyle = '#f97316';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.roundRect ? ctx.roundRect(-10, -13, 20, 26, 4) : ctx.rect(-10, -13, 20, 26);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = '#f59e0b';
+      ctx.fillRect(-8, -4, 16, 8);
+
+      ctx.font = '900 9px Orbitron, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText('☣', 0, 0);
+
+      ctx.restore();
+    }
+  }
+
+  // v2.9 Thunderstorm Singularity Clouds
+  updateStormClouds(dt) {
+    for (let i = this.stormClouds.length - 1; i >= 0; i--) {
+      const sc = this.stormClouds[i];
+      sc.life -= dt;
+      sc.zapTimer -= dt;
+      if (sc.zapTimer <= 0) {
+        sc.zapTimer = 0.4;
+        let targets = 0;
+        for (const a of this.aliens) {
+          if (!a.alive) continue;
+          if (Math.hypot(a.x - sc.x, a.y - sc.y) <= sc.radius) {
+            const destroyed = a.takeDamage(40, sc.x, sc.y, false);
+            this.chainTethers.push({
+              x1: sc.x,
+              y1: sc.y,
+              x2: a.x,
+              y2: a.y,
+              color: '#00e5ff',
+              life: 0.18,
+              maxLife: 0.18
+            });
+            this.damageSources.nova += 40;
+            if (destroyed) this.onAlienDestroyed(a, { x: sc.x, y: sc.y });
+            targets++;
+            if (targets >= 4) break;
+          }
+        }
+      }
+      if (sc.life <= 0) {
+        this.stormClouds.splice(i, 1);
+      }
+    }
+  }
+
+  renderStormClouds(ctx) {
+    for (const sc of this.stormClouds) {
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      const alpha = Math.min(1.0, sc.life / 0.5) * 0.45;
+      const grad = ctx.createRadialGradient(sc.x, sc.y, 10, sc.x, sc.y, sc.radius);
+      grad.addColorStop(0, `rgba(0, 229, 255, ${alpha * 1.5})`);
+      grad.addColorStop(0.6, `rgba(168, 85, 247, ${alpha})`);
+      grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(sc.x, sc.y, sc.radius, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = '#e0f2fe';
+      ctx.lineWidth = 1.8;
+      for (let k = 0; k < 3; k++) {
+        const a1 = Math.random() * Math.PI * 2;
+        const r1 = Math.random() * (sc.radius * 0.7);
+        const a2 = a1 + (Math.random() - 0.5) * 1.2;
+        const r2 = Math.random() * (sc.radius * 0.8);
+        ctx.beginPath();
+        ctx.moveTo(sc.x + Math.cos(a1) * r1, sc.y + Math.sin(a1) * r1);
+        ctx.lineTo(sc.x + Math.cos(a2) * r2, sc.y + Math.sin(a2) * r2);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+  }
+
+  // v2.9 Hyper-Velocity Laser Firewalls
+  updateLaserFirewalls(dt) {
+    for (let i = this.laserFirewalls.length - 1; i >= 0; i--) {
+      const wall = this.laserFirewalls[i];
+      wall.life -= dt;
+
+      const dx = wall.x2 - wall.x1;
+      const dy = wall.y2 - wall.y1;
+      const segLenSq = dx * dx + dy * dy;
+
+      for (const a of this.aliens) {
+        if (!a.alive) continue;
+        let t = ((a.x - wall.x1) * dx + (a.y - wall.y1) * dy) / (segLenSq || 1);
+        t = Math.max(0, Math.min(1, t));
+        const projX = wall.x1 + t * dx;
+        const projY = wall.y1 + t * dy;
+        const dist = Math.hypot(a.x - projX, a.y - projY);
+
+        if (dist <= a.radius + 18) {
+          const dmg = wall.dps * dt;
+          a.slowTimer = Math.max(a.slowTimer || 0, 0.4);
+          const destroyed = a.takeDamage(dmg, projX, projY, false);
+          this.damageSources.turret += dmg;
+          if (Math.random() < 0.25) {
+            this.particles.spawnCosmicSpark(projX, projY, 1);
+          }
+          if (destroyed) this.onAlienDestroyed(a, { x: projX, y: projY });
+        }
+      }
+
+      for (let tIdx = this.projectiles.torpedoes.length - 1; tIdx >= 0; tIdx--) {
+        const torp = this.projectiles.torpedoes[tIdx];
+        if (!torp.alive) continue;
+        let t = ((torp.x - wall.x1) * dx + (torp.y - wall.y1) * dy) / (segLenSq || 1);
+        t = Math.max(0, Math.min(1, t));
+        const projX = wall.x1 + t * dx;
+        const projY = wall.y1 + t * dy;
+        if (Math.hypot(torp.x - projX, torp.y - projY) <= 20) {
+          torp.alive = false;
+          this.particles.spawnDebris(projX, projY, '#f97316', 6);
+          this.particles.addFloater(projX, projY, 'FIREWALL INTERCEPT!', '#f97316', 13);
+        }
+      }
+
+      if (wall.life <= 0) {
+        this.laserFirewalls.splice(i, 1);
+      }
+    }
+  }
+
+  renderLaserFirewalls(ctx) {
+    for (const wall of this.laserFirewalls) {
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      const alpha = Math.min(1.0, wall.life / 0.4);
+
+      ctx.strokeStyle = `rgba(249, 115, 22, ${alpha * 0.7})`;
+      ctx.lineWidth = 14 + Math.sin(this.gameTime * 20) * 3;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(wall.x1, wall.y1);
+      ctx.lineTo(wall.x2, wall.y2);
+      ctx.stroke();
+
+      ctx.strokeStyle = `rgba(255, 255, 255, ${alpha * 0.95})`;
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(wall.x1, wall.y1);
+      ctx.lineTo(wall.x2, wall.y2);
+      ctx.stroke();
+
+      ctx.restore();
+    }
+  }
+
+  // v2.9 Omega Drone Swarm
+  updateOmegaDrones(dt) {
+    if (!this.hasPerk('omegaDroneSwarm')) return;
+    if (this.omegaDrones.length === 0) {
+      for (let i = 0; i < 4; i++) {
+        this.omegaDrones.push({
+          angle: (i / 4) * Math.PI * 2,
+          orbitRadius: 125,
+          orbitSpeed: 0.9,
+          fireTimer: 0.28 * i,
+          novaTimer: 3.0 + i * 1.5
+        });
+      }
+    }
+
+    const px = this.planet.x;
+    const py = this.planet.y;
+
+    for (const drone of this.omegaDrones) {
+      drone.angle += drone.orbitSpeed * dt;
+      const dx = px + Math.cos(drone.angle) * drone.orbitRadius;
+      const dy = py + Math.sin(drone.angle) * drone.orbitRadius;
+
+      drone.fireTimer -= dt;
+      if (drone.fireTimer <= 0) {
+        drone.fireTimer = 0.28;
+        let nearest = null;
+        let minDist = 380;
+        for (const a of this.aliens) {
+          if (!a.alive) continue;
+          const d = Math.hypot(a.x - dx, a.y - dy);
+          if (d < minDist) {
+            minDist = d;
+            nearest = a;
+          }
+        }
+        if (nearest) {
+          const fireAng = Math.atan2(nearest.y - dy, nearest.x - dx);
+          this.projectiles.addPlasmaBolt({
+            x: dx,
+            y: dy,
+            angle: fireAng,
+            speed: 550,
+            damage: 18,
+            color: '#ffd700',
+            pierce: 1,
+            source: 'wingman'
+          });
+        }
+      }
+
+      drone.novaTimer -= dt;
+      if (drone.novaTimer <= 0) {
+        drone.novaTimer = 6.0;
+        let clusterTarget = null;
+        let maxCluster = 0;
+        for (const a of this.aliens) {
+          if (!a.alive) continue;
+          let count = 0;
+          for (const o of this.aliens) {
+            if (o.alive && Math.hypot(o.x - a.x, o.y - a.y) <= 80) count++;
+          }
+          if (count > maxCluster) {
+            maxCluster = count;
+            clusterTarget = a;
+          }
+        }
+        if (clusterTarget) {
+          this.particles.spawnNova(clusterTarget.x, clusterTarget.y, 60, '#ffd700', 45, true);
+          this.particles.addFloater(clusterTarget.x, clusterTarget.y - 20, '🛸 OMEGA CLUSTER NOVA!', '#ffd700', 14);
+        }
+      }
+    }
+  }
+
+  renderOmegaDrones(ctx) {
+    if (!this.hasPerk('omegaDroneSwarm')) return;
+    const px = this.planet.x;
+    const py = this.planet.y;
+
+    for (const drone of this.omegaDrones) {
+      const dx = px + Math.cos(drone.angle) * drone.orbitRadius;
+      const dy = py + Math.sin(drone.angle) * drone.orbitRadius;
+
+      ctx.save();
+      ctx.translate(dx, dy);
+      ctx.rotate(drone.angle + Math.PI * 0.5);
+
+      ctx.fillStyle = '#00e5ff';
+      ctx.beginPath();
+      ctx.moveTo(-3, 8);
+      ctx.lineTo(3, 8);
+      ctx.lineTo(0, 14 + Math.sin(this.gameTime * 20) * 4);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = '#1e293b';
+      ctx.strokeStyle = '#ffd700';
+      ctx.lineWidth = 1.8;
+      ctx.beginPath();
+      ctx.moveTo(0, -9);
+      ctx.lineTo(7, 3);
+      ctx.lineTo(0, 8);
+      ctx.lineTo(-7, 3);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = '#00e5ff';
+      ctx.beginPath();
+      ctx.arc(0, 0, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.restore();
     }
   }
 }

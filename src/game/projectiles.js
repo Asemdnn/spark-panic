@@ -151,6 +151,81 @@ export class ProjectileManager {
         structureManager.checkRefractPylons(b);
       }
 
+      // v2.9 Twin Wormhole Portals Teleportation (+45% Hyper-Warp DMG, +2 Pierce)
+      if (b.alive && !b.hasTeleported && planet?.engine?.wormholes) {
+        const wh = planet.engine.wormholes;
+        const da = Math.hypot(b.x - wh.a.x, b.y - wh.a.y);
+        const db = Math.hypot(b.x - wh.b.x, b.y - wh.b.y);
+        if (da <= wh.a.radius || db <= wh.b.radius) {
+          const fromPort = da <= wh.a.radius ? wh.a : wh.b;
+          const toPort = da <= wh.a.radius ? wh.b : wh.a;
+          b.x = toPort.x;
+          b.y = toPort.y;
+          b.hasTeleported = true;
+          b.damage = Math.round(b.damage * 1.45);
+          b.pierce = (b.pierce || 1) + 2;
+          b.color = '#ffd700';
+
+          // Automatically angle towards nearest enemy or behind Jammer frontal barrier
+          let bestAngle = b.angle;
+          const jammer = aliens.find(a => a.alive && a.classKey === 'JAMMER');
+          if (jammer) {
+            const tx = jammer.x - Math.cos(jammer.heading) * 35;
+            const ty = jammer.y - Math.sin(jammer.heading) * 35;
+            bestAngle = Math.atan2(ty - b.y, tx - b.x);
+          } else {
+            let nearestDist = Infinity;
+            let targetX = null, targetY = null;
+            for (const a of aliens) {
+              if (!a.alive) continue;
+              const dist = Math.hypot(a.x - toPort.x, a.y - toPort.y);
+              if (dist < nearestDist) {
+                nearestDist = dist;
+                targetX = a.x;
+                targetY = a.y;
+              }
+            }
+            if (targetX !== null) {
+              bestAngle = Math.atan2(targetY - b.y, targetX - b.x);
+            }
+          }
+          b.angle = bestAngle;
+          const spd = b.speed || 520;
+          b.vx = Math.cos(bestAngle) * spd;
+          b.vy = Math.sin(bestAngle) * spd;
+
+          if (planet?.engine?.particles) {
+            planet.engine.particles.spawnNovaRing(toPort.x, toPort.y, toPort.color, 45);
+            planet.engine.particles.addFloater(toPort.x, toPort.y - 25, '🌀 HYPER-WARP! +45% DMG & +2 PIERCE', '#ffd700', 14);
+          }
+        }
+      }
+
+      // v2.9 Volatile Plasma Barrels Hit Check
+      if (b.alive && planet?.engine?.plasmaBarrels) {
+        for (const barrel of planet.engine.plasmaBarrels) {
+          if (!barrel.alive) continue;
+          const dBar = Math.hypot(b.x - barrel.x, b.y - barrel.y);
+          if (dBar <= barrel.radius + 6) {
+            barrel.hp -= b.damage;
+            if (barrel.hp <= 0 && barrel.alive) {
+              barrel.alive = false;
+              if (planet?.engine) {
+                planet.engine.particles.spawnNova(barrel.x, barrel.y, 115, '#ff3d00', 95, true);
+                planet.engine.particles.spawnDebris(barrel.x, barrel.y, '#ff9100', 16);
+                planet.engine.particles.addFloater(barrel.x, barrel.y - 25, '🛢️ VOLATILE BARREL EXPLOSION!', '#ff9100', 18);
+                planet.engine.addScreenShake(8, 0.2);
+              }
+            }
+            b.pierce--;
+            if (b.pierce <= 0) {
+              b.alive = false;
+              break;
+            }
+          }
+        }
+      }
+
       // Check collision with Torpedoes (shoot down torpedoes!)
       for (const torp of this.torpedoes) {
         if (!torp.alive) continue;
@@ -188,10 +263,28 @@ export class ProjectileManager {
         }
       }
 
-      // Check collision with Aliens
+      // Check collision with Aliens and Boss Sub-Systems
       if (b.alive) {
         for (const alien of aliens) {
           if (!alien.alive) continue;
+
+          // v2.9 Boss Destructible Sub-Systems Check
+          if (alien.isBoss && alien.subsystems) {
+            for (const sub of alien.subsystems) {
+              if (!sub.alive) continue;
+              const dSub = Math.hypot(sub.x - b.x, sub.y - b.y);
+              if (dSub <= (sub.radius || 14) + 6) {
+                alien.damageSubsystem(sub.id, b.damage, planet?.engine);
+                b.pierce--;
+                if (b.pierce <= 0) {
+                  b.alive = false;
+                  break;
+                }
+              }
+            }
+            if (!b.alive) break;
+          }
+
           const d = Math.hypot(alien.x - b.x, alien.y - b.y);
           if (d <= alien.radius + 6) {
             if (b.isOvercharged) {
@@ -573,7 +666,9 @@ export class ProjectileManager {
         const r = b.r || (b.isOverchargeLance ? 7.0 : (b.isOvercharged ? 5.5 : (b.isRailgun ? 5.0 : 4.5)));
         const trailLen = b.isOverchargeLance ? 38 : (b.isOvercharged || b.isRailgun ? 26 : (b.isTesla ? 22 : 20));
         const coreLen = b.isOverchargeLance ? 18 : 10;
-        const boltColor = b.isOverchargeLance ? '#00e5ff' : (b.isReflectedMissile ? '#ffd700' : (b.isOvercharged ? '#ffd700' : (b.isRailgun ? '#ffd700' : (b.color || '#00e5ff'))));
+        const isChrom = b.isChromatic || b.source === 'frenzy';
+        const chromColor = `hsl(${Math.floor((Date.now() / 4) % 360)}, 100%, 65%)`;
+        const boltColor = isChrom ? chromColor : (b.isOverchargeLance ? '#00e5ff' : (b.isReflectedMissile ? '#ffd700' : (b.isOvercharged ? '#ffd700' : (b.isRailgun ? '#ffd700' : (b.color || '#00e5ff')))));
 
         ctx.save();
         ctx.translate(b.x, b.y);

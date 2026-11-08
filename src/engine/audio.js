@@ -14,6 +14,7 @@ export class AudioEngine {
     this.initialized = false;
 
     // Procedural Synthwave BGM Sequencer state
+    this.baseBgmBpm = 118;
     this.bgmBpm = 118;
     this.bgmStep = 0;
     this.bgmTimer = null;
@@ -85,6 +86,11 @@ export class AudioEngine {
 
   setBgmTempo(bpm = 118) {
     this.bgmBpm = bpm;
+  }
+
+  setBgmTempoMultiplier(mult = 1.0) {
+    this.bgmTempoMultiplier = mult;
+    this.bgmBpm = Math.round((this.baseBgmBpm || 118) * mult);
   }
 
   startBgm() {

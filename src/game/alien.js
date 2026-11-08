@@ -33,6 +33,51 @@ export class Alien {
     this.shieldAngle = 0;
     this.shieldHitFlash = 0;
 
+    // v2.9 Multi-Part Destructible Boss Sub-Systems
+    if (this.isBoss) {
+      const subHp = Math.round(this.maxHp * 0.30);
+      this.subsystems = [
+        {
+          id: 'portTorpedoBattery',
+          name: 'Port Torpedo Battery',
+          shortName: 'WPN',
+          type: 'weapons',
+          angleOffset: Math.PI * 0.5,
+          dist: this.radius + 18,
+          radius: 14,
+          hp: subHp,
+          maxHp: subHp,
+          alive: true,
+          destroyed: false,
+          hitFlash: 0,
+          color: '#ff1744',
+          x: x,
+          y: y
+        },
+        {
+          id: 'starboardDroneHangar',
+          name: 'Starboard Drone Hangar',
+          shortName: 'HGR',
+          type: 'hangar',
+          angleOffset: -Math.PI * 0.5,
+          dist: this.radius + 18,
+          radius: 14,
+          hp: subHp,
+          maxHp: subHp,
+          alive: true,
+          destroyed: false,
+          hitFlash: 0,
+          color: '#c084fc',
+          x: x,
+          y: y
+        }
+      ];
+      this.coreExposed = false;
+    } else {
+      this.subsystems = [];
+      this.coreExposed = false;
+    }
+
     // v2.8 Reactor Weak-Spot for Capital and Elite Ships (Boss, Dreadnought, Dropship, Weaver)
     this.hasWeakSpot = ['BOSS', 'DREADNOUGHT', 'DROPSHIP', 'WEAVER'].includes(classKey);
     this.weakSpotRadius = (classKey === 'BOSS') ? 14 : (classKey === 'DREADNOUGHT' ? 12 : 10);
@@ -62,10 +107,67 @@ export class Alien {
     this.frozenTimer = Math.max(this.frozenTimer, duration);
   }
 
+  damageSubsystem(subId, amount, engine = null) {
+    if (!this.subsystems) return false;
+    const sub = this.subsystems.find(s => s.id === subId);
+    if (!sub || !sub.alive) return false;
+
+    sub.hp -= amount;
+    sub.hitFlash = 0.22;
+
+    if (sub.hp <= 0) {
+      sub.alive = false;
+      sub.destroyed = true;
+      sub.hp = 0;
+
+      // 12% bonus bleed damage to Boss hull
+      const bleedDmg = Math.round(this.maxHp * 0.12);
+      this.hp = Math.max(0, this.hp - bleedDmg);
+
+      if (engine) {
+        // Massive 110px chain Nova explosion
+        engine.particles.spawnNova(sub.x, sub.y, 110, sub.color, 65, true);
+        engine.particles.spawnDebris(sub.x, sub.y, sub.color, 16);
+        engine.addScreenShake(10, 0.25);
+
+        if (sub.type === 'weapons') {
+          engine.particles.addFloater(sub.x, sub.y - 25, '💥 BOSS WEAPONS CRIPPLED! (-65% TORPEDOES)', '#ff1744', 18);
+        } else if (sub.type === 'hangar') {
+          engine.particles.addFloater(sub.x, sub.y - 25, '💥 BOSS HANGAR DESTROYED! (NO MORE REINFORCEMENTS)', '#c084fc', 18);
+          // Drops 2 instant Orbital Supply Pods
+          if (engine.supplyPods) {
+            engine.supplyPods.spawnPod(sub.x - 24, sub.y, this.radius);
+            engine.supplyPods.spawnPod(sub.x + 24, sub.y, this.radius);
+          }
+        }
+
+        // Check if both subsystems are destroyed -> Core Exposed Mode!
+        const allDestroyed = this.subsystems.every(s => !s.alive);
+        if (allDestroyed && !this.coreExposed) {
+          this.coreExposed = true;
+          engine.particles.addFloater(this.x, this.y - 50, '💥 ARMOR STRIPPED — +50% CORE DAMAGE!', '#ffd700', 24);
+          engine.addScreenShake(14, 0.35);
+        }
+      }
+      return true; // Subsystem was destroyed
+    }
+    return false;
+  }
+
   takeDamage(amount, hitX = null, hitY = null, isDirectPierce = false, onBossPhase2 = null, canTriggerCrit = false) {
     if (!this.alive) return false;
 
     this.lastHitWasCrit = false;
+
+    // v2.9 Absolute Zero Shatter-Core (+50% critical damage to chilled/stasis enemies)
+    if ((this.frozenTimer > 0 || this.slowTimer > 0) && this.engine?.hasPerk && this.engine.hasPerk('absoluteZeroShatterCore')) {
+      amount *= 1.5;
+    }
+
+    // v2.9 Boss Core Exposed Mode (+50% bonus damage when both subsystems destroyed)
+    if (this.isBoss && this.coreExposed) {
+      amount *= 1.5;
+    }
 
     // Check Reactor Weak-Spot Hit (from Overcharge Lance or Reflected Parry)
     if (this.hasWeakSpot && canTriggerCrit) {
@@ -138,6 +240,15 @@ export class Alien {
     if (this.hasWeakSpot) {
       this.weakSpotAngle += dt * 1.5;
       if (this.weakSpotExposedTimer > 0) this.weakSpotExposedTimer -= dt;
+    }
+
+    // v2.9 Boss Sub-Systems coordinate updates
+    if (this.subsystems && this.subsystems.length > 0) {
+      for (const sub of this.subsystems) {
+        if (sub.hitFlash > 0) sub.hitFlash -= dt;
+        sub.x = this.x + Math.cos(this.heading + sub.angleOffset) * sub.dist;
+        sub.y = this.y + Math.sin(this.heading + sub.angleOffset) * sub.dist;
+      }
     }
 
     if (this.isBoss && this.isPhase2) {
@@ -234,7 +345,7 @@ export class Alien {
         }
       }
     } else if (this.classKey === 'BOSS') {
-      // Sector Mothership with 3-Spread Torpedo Salvo
+      // Sector Mothership with 2 Destructible Sub-Systems
       this.heading = angleToPlanet;
       this.x += Math.cos(this.heading) * (this.speed * speedMult) * dt;
       this.y += Math.sin(this.heading) * (this.speed * speedMult) * dt;
@@ -242,11 +353,30 @@ export class Alien {
       this.torpedoTimer -= dt * speedMult;
       if (this.torpedoTimer <= 0) {
         this.torpedoTimer = 3.5;
-        this.weakSpotExposedTimer = 2.5; // Expose reactor after 3-spread salvo
+        this.weakSpotExposedTimer = 2.5; // Expose reactor after salvo
         if (fireTorpedoCallback) {
-          fireTorpedoCallback(this.x, this.y, angleToPlanet - 0.22, 175, 18, '#ff1744');
-          fireTorpedoCallback(this.x, this.y, angleToPlanet, 190, 22, '#ff1744');
-          fireTorpedoCallback(this.x, this.y, angleToPlanet + 0.22, 175, 18, '#ff1744');
+          const wpnBattery = this.subsystems?.find(s => s.type === 'weapons');
+          const isWpnIntact = !wpnBattery || wpnBattery.alive;
+          if (isWpnIntact) {
+            // Full 3-torpedo barrage
+            fireTorpedoCallback(this.x, this.y, angleToPlanet - 0.22, 175, 18, '#ff1744');
+            fireTorpedoCallback(this.x, this.y, angleToPlanet, 190, 22, '#ff1744');
+            fireTorpedoCallback(this.x, this.y, angleToPlanet + 0.22, 175, 18, '#ff1744');
+          } else {
+            // Crippled: only 1 torpedo (-65% firepower)
+            fireTorpedoCallback(this.x, this.y, angleToPlanet, 180, 18, '#ff1744');
+          }
+        }
+      }
+
+      // Minion escort & leech deployment (disabled if Drone Hangar is destroyed)
+      this.spawnTimer -= dt * speedMult;
+      if (this.spawnTimer <= 0) {
+        this.spawnTimer = 6.0;
+        const hangar = this.subsystems?.find(s => s.type === 'hangar');
+        const isHangarIntact = !hangar || hangar.alive;
+        if (isHangarIntact && spawnDropshipScoutCallback) {
+          spawnDropshipScoutCallback(this.x, this.y);
         }
       }
     } else if (this.classKey === 'JAMMER') {
@@ -754,6 +884,103 @@ export class Alien {
       ctx.fill();
 
       ctx.restore();
+    }
+
+    // v2.9 Destructible Boss Sub-Systems & Core Exposed Electrical Arcs
+    if (this.isBoss && this.subsystems) {
+      for (const sub of this.subsystems) {
+        ctx.save();
+        // Energy tether to boss center
+        ctx.beginPath();
+        ctx.moveTo(this.x, this.y);
+        ctx.lineTo(sub.x, sub.y);
+        ctx.strokeStyle = sub.alive ? 'rgba(255, 255, 255, 0.25)' : 'rgba(100, 116, 139, 0.15)';
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([3, 3]);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        ctx.translate(sub.x, sub.y);
+        const subR = sub.radius || 14;
+
+        if (sub.alive) {
+          ctx.beginPath();
+          ctx.arc(0, 0, subR, 0, Math.PI * 2);
+          ctx.fillStyle = sub.hitFlash > 0 ? '#ffffff' : (sub.type === 'weapons' ? '#4a0812' : '#31063f');
+          ctx.fill();
+          ctx.strokeStyle = sub.hitFlash > 0 ? '#ffffff' : sub.color;
+          ctx.lineWidth = 2.2;
+          ctx.shadowColor = sub.color;
+          ctx.shadowBlur = 10;
+          ctx.stroke();
+          ctx.shadowBlur = 0;
+
+          // Inner icon / detail
+          if (sub.type === 'weapons') {
+            // Crimson Hex-turret with 3 barrels
+            ctx.fillStyle = '#ff1744';
+            ctx.beginPath();
+            ctx.arc(0, 0, subR * 0.45, 0, Math.PI * 2);
+            ctx.fill();
+            for (let a = -0.4; a <= 0.4; a += 0.4) {
+              const bx = Math.cos(this.heading + a) * (subR + 4);
+              const by = Math.sin(this.heading + a) * (subR + 4);
+              ctx.beginPath();
+              ctx.moveTo(0, 0);
+              ctx.lineTo(bx, by);
+              ctx.strokeStyle = '#ff1744';
+              ctx.lineWidth = 2.5;
+              ctx.stroke();
+            }
+          } else {
+            // Violet Hangar bay runway
+            ctx.fillStyle = '#c084fc';
+            ctx.fillRect(-subR * 0.5, -2, subR, 4);
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(-subR * 0.5, -2, subR, 4);
+          }
+
+          // Mini HP ring
+          const hpPct = Math.max(0, sub.hp / sub.maxHp);
+          ctx.beginPath();
+          ctx.arc(0, 0, subR + 4, -Math.PI * 0.5, -Math.PI * 0.5 + Math.PI * 2 * hpPct);
+          ctx.strokeStyle = sub.color;
+          ctx.lineWidth = 2;
+          ctx.stroke();
+        } else {
+          // Ruined smoking hull remnant
+          ctx.beginPath();
+          ctx.arc(0, 0, subR * 0.75, 0, Math.PI * 2);
+          ctx.fillStyle = '#1e293b';
+          ctx.fill();
+          ctx.strokeStyle = '#475569';
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+
+      // If Core Exposed, render crackling golden electrical arcs across the Mothership hull!
+      if (this.coreExposed) {
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.strokeStyle = '#ffd700';
+        ctx.shadowColor = '#ffd700';
+        ctx.shadowBlur = 14;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        for (let i = 0; i < 4; i++) {
+          const arcAngle = (this.pulsePhase * 2 + i * Math.PI * 0.5);
+          const r1 = r * 0.35;
+          const r2 = r * 1.3;
+          ctx.moveTo(Math.cos(arcAngle) * r1, Math.sin(arcAngle) * r1);
+          ctx.lineTo(Math.cos(arcAngle + 0.3) * (r * 0.8), Math.sin(arcAngle + 0.3) * (r * 0.8));
+          ctx.lineTo(Math.cos(arcAngle) * r2, Math.sin(arcAngle) * r2);
+        }
+        ctx.stroke();
+        ctx.restore();
+      }
     }
   }
 }

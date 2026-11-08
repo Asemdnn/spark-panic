@@ -213,19 +213,36 @@ window.addEventListener('DOMContentLoaded', () => {
     const waveNumEl = document.getElementById('draftWaveNum');
     if (waveNumEl) waveNumEl.textContent = `WAVE ${nextWaveNum}`;
 
-    draftCardsContainer.innerHTML = options.map((perk, idx) => `
-      <button class="draft-card group relative p-4 rounded-2xl glass-card border border-cosmic-cyan/40 hover:border-cosmic-cyan hover:shadow-[0_0_25px_rgba(0,229,255,0.4)] transition-all cursor-pointer flex flex-col items-center text-center text-white" data-draft-idx="${idx}">
-        <div class="absolute top-2.5 left-2.5 text-[10px] font-orbitron font-extrabold px-2 py-0.5 rounded-full bg-cosmic-cyan/20 text-cosmic-cyan border border-cosmic-cyan/40">
+    draftCardsContainer.innerHTML = options.map((perk, idx) => {
+      const isSyn = !!perk.isSynergy;
+      const borderClass = isSyn
+        ? 'border-2 border-amber-400 bg-amber-950/40 shadow-[0_0_25px_rgba(251,191,36,0.5)] hover:border-amber-300 hover:shadow-[0_0_35px_rgba(251,191,36,0.7)]'
+        : 'border border-cosmic-cyan/40 hover:border-cosmic-cyan hover:shadow-[0_0_25px_rgba(0,229,255,0.4)]';
+      const badgeClass = isSyn
+        ? 'bg-amber-400/20 text-amber-300 border border-amber-400/60'
+        : 'bg-cosmic-cyan/20 text-cosmic-cyan border border-cosmic-cyan/40';
+      const titleColor = isSyn ? 'text-amber-300' : 'text-cosmic-cyan';
+      const btnClass = isSyn
+        ? 'bg-amber-500/25 text-amber-300 border border-amber-400/50 group-hover:bg-amber-400 group-hover:text-slate-950 shadow-[0_0_12px_rgba(251,191,36,0.3)]'
+        : 'bg-cosmic-cyan/15 text-cosmic-cyan border border-cosmic-cyan/30 group-hover:bg-cosmic-cyan group-hover:text-slate-950';
+      const btnText = isSyn ? '🌟 EVOLVE WEAPON' : 'SELECT REINFORCEMENT';
+
+      return `
+      <button class="draft-card group relative p-4 rounded-2xl glass-card ${borderClass} transition-all cursor-pointer flex flex-col items-center text-center text-white" data-draft-idx="${idx}">
+        <div class="absolute top-2.5 left-2.5 text-[10px] font-orbitron font-extrabold px-2 py-0.5 rounded-full ${badgeClass}">
           [${idx + 1}]
         </div>
+        ${isSyn ? `<div class="absolute top-2.5 right-2.5 text-[9px] font-orbitron font-black px-2 py-0.5 rounded-full bg-amber-500 text-slate-950 shadow-[0_0_10px_#f59e0b] animate-pulse">🌟 SYNERGY</div>` : ''}
         <div class="text-3xl md:text-4xl my-2 group-hover:scale-110 transition duration-200">${perk.icon}</div>
-        <h4 class="font-orbitron font-black text-sm md:text-base text-cosmic-cyan mb-1.5">${perk.name}</h4>
+        <h4 class="font-orbitron font-black text-sm md:text-base ${titleColor} mb-1">${perk.name}</h4>
+        ${isSyn && perk.synergyWith ? `<div class="text-[9px] font-orbitron font-bold text-amber-400/90 mb-1.5">⚡ ${perk.synergyWith}</div>` : ''}
         <p class="text-xs text-slate-300 leading-relaxed">${perk.desc}</p>
-        <div class="mt-3.5 w-full py-1.5 rounded-xl font-orbitron font-extrabold text-[10px] tracking-wider bg-cosmic-cyan/15 text-cosmic-cyan border border-cosmic-cyan/30 group-hover:bg-cosmic-cyan group-hover:text-slate-950 transition">
-          SELECT REINFORCEMENT
+        <div class="mt-3.5 w-full py-1.5 rounded-xl font-orbitron font-extrabold text-[10px] tracking-wider ${btnClass} transition">
+          ${btnText}
         </div>
       </button>
-    `).join('');
+      `;
+    }).join('');
 
     draftCardsContainer.querySelectorAll('.draft-card').forEach(card => {
       card.addEventListener('click', () => {
@@ -243,12 +260,18 @@ window.addEventListener('DOMContentLoaded', () => {
 
   engine.onUpdateDraftBadges = (perks) => {
     if (!hudDraftPerks) return;
-    hudDraftPerks.innerHTML = perks.map(p => `
-      <div class="glass-panel px-2.5 py-1 rounded-xl flex items-center gap-1.5 border-cosmic-cyan/35 text-xs font-orbitron shadow-[0_0_8px_rgba(0,229,255,0.25)]" title="${p.name}: ${p.desc}">
+    hudDraftPerks.innerHTML = perks.map(p => {
+      const isSyn = !!p.isSynergy;
+      const borderClass = isSyn
+        ? 'border-amber-400/60 text-amber-300 shadow-[0_0_12px_rgba(251,191,36,0.4)]'
+        : 'border-cosmic-cyan/35 text-cosmic-cyan shadow-[0_0_8px_rgba(0,229,255,0.25)]';
+      return `
+      <div class="glass-panel px-2.5 py-1 rounded-xl flex items-center gap-1.5 ${borderClass} text-xs font-orbitron" title="${p.name}: ${p.desc}">
         <span class="text-sm">${p.icon}</span>
-        <span class="text-[9px] font-bold text-cosmic-cyan hidden sm:inline">${p.name.split(' ')[0]}</span>
+        <span class="text-[9px] font-bold ${isSyn ? 'text-amber-300' : 'text-cosmic-cyan'} hidden sm:inline">${p.name.split(' ')[0]}</span>
       </div>
-    `).join('');
+      `;
+    }).join('');
   };
 
   // Top HUD Controls
