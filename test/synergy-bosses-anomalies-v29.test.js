@@ -471,7 +471,7 @@ describe('v2.9 Synergy Evolutions, Multi-Part Destructible Bosses, Wormhole Anom
       const htmlPath = path.resolve(__dirname, '../index.html');
       const html = fs.readFileSync(htmlPath, 'utf-8');
 
-      expect(html).toContain('⚡ v2.9 SYNERGY OVERDRIVE EDITION');
+      expect(html).toMatch(/(⚡ v2\.9 SYNERGY OVERDRIVE|🌟 v3\.0 GALACTIC COMMAND) EDITION/);
       expect(html).toContain('id="bossSubsystemsContainer"');
       expect(html).toContain('id="bossWpnSubsystemBar"');
       expect(html).toContain('id="bossHgrSubsystemBar"');
@@ -524,7 +524,7 @@ describe('v2.9 Synergy Evolutions, Multi-Part Destructible Bosses, Wormhole Anom
 
       try {
         BattleCardGenerator.renderCard(engine, saveSystem);
-        const vBadge = fillTextCalls.find(c => c.text === "⚡ v2.9 SYNERGY OVERDRIVE EDITION");
+        const vBadge = fillTextCalls.find(c => c.text === "🌟 v3.0 GALACTIC COMMAND EDITION" || c.text === "⚡ v2.9 SYNERGY OVERDRIVE EDITION");
         expect(vBadge).toBeDefined();
         expect(vBadge.x).toBe(48);
         expect(vBadge.y).toBe(76);

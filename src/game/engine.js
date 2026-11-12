@@ -1,6 +1,6 @@
-// Spark Panic: Planetary Invasion Defense 2.5 - Core Game Engine Coordinator
+// Spark Panic: Planetary Invasion Defense 3.0 - Core Game Engine Coordinator
 
-import { PLANETS, SECTORS, ALIEN_CLASSES, ARMORY_CONFIG, TROPHIES, GUARDIAN_RANKS, getDailyAnomalyConfig, DAILY_MUTATORS, TITAN_PROTOCOL_CONFIG, WINGMAN_CONFIG, ASCENSION_CONFIG, TURRET_SKINS, COSMIC_RELICS, STRUCTURE_CONFIG, DEFAULT_SETTINGS, TACTICAL_DRAFT_PERKS, SYNERGY_EVOLUTIONS } from '../config.js';
+import { PLANETS, SECTORS, ALIEN_CLASSES, ARMORY_CONFIG, TROPHIES, GUARDIAN_RANKS, getDailyAnomalyConfig, DAILY_MUTATORS, TITAN_PROTOCOL_CONFIG, WINGMAN_CONFIG, ASCENSION_CONFIG, TURRET_SKINS, COSMIC_RELICS, STRUCTURE_CONFIG, DEFAULT_SETTINGS, TACTICAL_DRAFT_PERKS, SYNERGY_EVOLUTIONS, SHIPYARD_PARTS } from '../config.js';
 import { audio } from '../engine/audio.js';
 import { saveSystem } from '../engine/storage.js';
 import { Planet } from './planet.js';
@@ -64,6 +64,13 @@ export class GameEngine {
     this.titanProtocolTimer = 0;
     this.isTitanPitStop = false;
     this.titanPitStopTimer = 0;
+
+    // v3.0 Shipyard, Incursions & Cinematic Camera Zoom
+    this.activeIncursion = null;
+    this.isIncursion = false;
+    this.cameraZoom = 1.0;
+    this.targetZoom = 1.0;
+    this.zoomTimer = 0;
 
     // Tactical Telemetry & Damage Tracking
     this.telemetryHistory = [];
@@ -242,6 +249,10 @@ export class GameEngine {
     if (this.hasDailyMutator('hyperCapacitor')) {
       this.killRechargeRate *= 1.6;
     }
+    const loadout = this.getShipyardLoadout();
+    if (loadout.reactor === 'balanced') {
+      this.killRechargeRate *= 1.10;
+    }
 
     // 4. Shield Grid
     this.planet.setPlanet(this.planet.data || PLANETS[0], up.shieldGrid || 0);
@@ -271,6 +282,80 @@ export class GameEngine {
 
     // 7. Tactical Core Cooldowns
     this.skills.setCooldownReduction(up.tacticalCd || 0);
+
+    // 8. Sector Liberation Bonuses (v3.0)
+    const sectorBonuses = this.getSectorLiberationBonuses();
+    if (sectorBonuses.sector1) {
+      // Sector I: +10% Max Planetary Shield & Core HP
+      this.planet.maxShield = Math.round(this.planet.maxShield * 1.10);
+      this.planet.shield = this.planet.maxShield;
+      this.planet.maxCoreHp = Math.round(this.planet.maxCoreHp * 1.10);
+      this.planet.coreHp = this.planet.maxCoreHp;
+    }
+    if (sectorBonuses.sector2) {
+      // Sector II: +12% Spark Nova Blast Radius
+      this.novaMultiplier *= 1.12;
+    }
+    if (sectorBonuses.sector3) {
+      // Sector III: -10% Cooldown on [Q], [W], [E], [R]
+      this.skills.cdMultiplier *= 0.90;
+    }
+  }
+
+  getSectorLiberationBonuses() {
+    const stars = saveSystem?.data?.planetStars || {};
+    const isSectorLiberated = (start, end) => {
+      for (let p = start; p <= end; p++) {
+        if ((stars[p] || 0) < 1) return false;
+      }
+      return true;
+    };
+
+    const sector1 = isSectorLiberated(1, 5);
+    const sector2 = isSectorLiberated(6, 10);
+    const sector3 = isSectorLiberated(11, 15);
+    const sector4 = isSectorLiberated(16, 20);
+
+    return {
+      sector1,
+      sector2,
+      sector3,
+      sector4,
+      hpMultiplier: sector1 ? 1.10 : 1.0,           // Sector I: +10% Max Planetary Shield & Core HP
+      novaRadiusMultiplier: sector2 ? 1.12 : 1.0,   // Sector II: +12% Spark Nova Blast Radius
+      cooldownMultiplier: sector3 ? 0.90 : 1.0,     // Sector III: -10% Cooldown on [Q], [W], [E], [R]
+      rewardMultiplier: sector4 ? 1.20 : 1.0        // Sector IV: +20% Star Shards & Score Multiplier
+    };
+  }
+
+  getShipyardLoadout() {
+    if (saveSystem && saveSystem.getShipyardLoadout) {
+      return saveSystem.getShipyardLoadout();
+    }
+    return { barrel: 'standard', reactor: 'balanced', shieldMod: 'hex' };
+  }
+
+  finishMission(victory) {
+    const cfg = PLANETS.find(p => p.id === this.currentPlanetId) || {};
+    const planetName = cfg.name || (this.isTitanProtocolMode ? 'Titan Protocol' : (this.isDailyAnomalyMode ? 'Daily Anomaly' : (this.isEndlessMode ? 'Endless Siege' : 'Unknown')));
+    const mode = this.isTitanProtocolMode ? 'TITAN' : (this.isDailyAnomalyMode ? 'DAILY' : (this.isEndlessMode ? 'ENDLESS' : 'CAMPAIGN'));
+    const runData = {
+      date: new Date().toISOString(),
+      mode,
+      planetId: this.currentPlanetId,
+      planetName,
+      waveReached: this.currentWave,
+      victory: !!victory,
+      score: this.score,
+      maxCombo: this.maxCombo,
+      chassis: saveSystem.getSelectedChassis(),
+      wingman: saveSystem.getSelectedWingmanDoctrine(),
+      relics: saveSystem.getEquippedRelics().map(r => r.id),
+      synergies: (this.activeDraftPerks || []).filter(p => p.isSynergy).map(p => p.id || p.name),
+      telemetryHistory: (this.telemetryHistory || []).map(t => ({ ...t }))
+    };
+    saveSystem.recordRun(runData);
+    return runData;
   }
 
   hasRelic(id) {
@@ -299,6 +384,12 @@ export class GameEngine {
     this.coreCharge = 0;
     audio.playCataclysm();
     this.addScreenShake(20, 0.7);
+
+    // Zoom trigger: [F] Cataclysm (1.15x for 0.9s)
+    if (this.getSettings().screenShake !== false && this.getSettings().screenShake !== 0) {
+      this.targetZoom = 1.15;
+      this.zoomTimer = 0.9;
+    }
 
     const sector = this.planet.sector || (this.planet.data ? this.planet.data.sector : 1) || 1;
 
@@ -382,6 +473,13 @@ export class GameEngine {
 
     this.updateCataclysmUI();
     return true;
+  }
+
+  addCoreCharge(amount) {
+    const loadout = this.getShipyardLoadout();
+    const mult = (loadout.reactor === 'balanced') ? 1.10 : 1.0;
+    this.coreCharge = Math.min(100, (this.coreCharge || 0) + amount * mult);
+    this.updateCataclysmUI();
   }
 
   updateCataclysmUI() {
@@ -538,6 +636,8 @@ export class GameEngine {
     this.isDailyAnomalyMode = false;
     this.isTitanProtocolMode = false;
     this.dailyAnomalyConfig = null;
+    this.activeIncursion = saveSystem.getActiveIncursion ? saveSystem.getActiveIncursion() : { planetId: 1, active: true };
+    this.isIncursion = !this.isEndlessMode && !this.isTitanProtocolMode && !this.isDailyAnomalyMode && (this.activeIncursion?.active && this.activeIncursion?.planetId === this.currentPlanetId);
     const cfg = PLANETS.find(p => p.id === planetId) || PLANETS[0];
     this.totalWaves = cfg.waves;
     this.currentWave = 1;
@@ -713,6 +813,9 @@ export class GameEngine {
     this.pointerDownTime = 0;
     this.isChargingOvercharge = false;
     this.chargeProgress = 0;
+    this.cameraZoom = 1.0;
+    this.targetZoom = 1.0;
+    this.zoomTimer = 0;
     this.activeDraftPerks = [];
     this.waveDraftPending = false;
     this.currentDraftOptions = [];
@@ -874,6 +977,16 @@ export class GameEngine {
         bossCustomName: 'Elite Anomaly Escort'
       });
     }
+
+    // Incursion Defense: Guaranteed Elite Squadron Leader per wave
+    if (this.isIncursion) {
+      this.waveSpawnQueue.push({
+        classKey: 'DREADNOUGHT',
+        delay: totalEnemies * 0.25,
+        bossCustomName: 'Elite Squadron Leader',
+        isEliteLeader: true
+      });
+    }
   }
 
   triggerSparkNova(targetX, targetY) {
@@ -885,6 +998,18 @@ export class GameEngine {
     let blastRadius = 86 * this.novaMultiplier;
     let damage = 38 * this.novaMultiplier;
     let color = '#00e5ff';
+
+    const loadout = this.getShipyardLoadout();
+    if (loadout.reactor === 'cryo') {
+      for (const a of this.aliens) {
+        if (!a.alive) continue;
+        const dist = Math.hypot(a.x - targetX, a.y - targetY);
+        if (dist <= blastRadius + (a.radius || 16)) {
+          a.slowTimer = Math.max(a.slowTimer || 0, 2.0);
+          a.speedMultiplier = 0.65;
+        }
+      }
+    }
 
     if (inNebula) {
       blastRadius *= 1.35; // +35% blast radius in Ion Nebula
@@ -1095,6 +1220,10 @@ export class GameEngine {
     let pts = (alien.score || 25) * Math.max(1, this.combo);
     if (this.hasDailyMutator('swarmBlitz')) {
       pts = Math.round(pts * 1.35);
+    }
+    const sectorBonuses = this.getSectorLiberationBonuses();
+    if (sectorBonuses.sector4) {
+      pts = Math.round(pts * sectorBonuses.rewardMultiplier);
     }
     this.score += pts;
 
@@ -1525,6 +1654,23 @@ export class GameEngine {
 
     const isOverdrive = this.skills.overdriveActive;
 
+    // Cinematic Camera Zoom lerping & expiration decay
+    const screenShakeSetting = this.getSettings().screenShake;
+    if (screenShakeSetting === false || screenShakeSetting === 0) {
+      this.cameraZoom = 1.0;
+      this.targetZoom = 1.0;
+      this.zoomTimer = 0;
+    } else {
+      this.cameraZoom += (this.targetZoom - this.cameraZoom) * Math.min(1, dt * 5);
+      if (this.zoomTimer > 0) {
+        this.zoomTimer -= dt;
+        if (this.zoomTimer <= 0) {
+          this.zoomTimer = 0;
+          this.targetZoom = 1.0;
+        }
+      }
+    }
+
     // Mission timer & Titan Protocol timer
     this.missionTimer += dt;
     if (this.isTitanProtocolMode) {
@@ -1568,8 +1714,17 @@ export class GameEngine {
       const heldSec = (performance.now() - this.pointerDownTime) / 1000;
       if (heldSec >= 0.25) {
         this.isChargingOvercharge = true;
-        this.chargeProgress = Math.min(1.0, (heldSec - 0.25) / 0.40);
+        const loadout = this.getShipyardLoadout();
+        const chargeRate = loadout.barrel === 'siege' ? 1.35 : 1.0;
+        this.chargeProgress = Math.min(1.0, ((heldSec - 0.25) / 0.40) * chargeRate);
         this.turret.angle = Math.atan2(this.pointerY - this.planet.y, this.pointerX - this.planet.x);
+        if (this.zoomTimer <= 0 && screenShakeSetting !== false && screenShakeSetting !== 0) {
+          this.targetZoom = 1.04;
+        }
+      }
+    } else {
+      if (this.targetZoom === 1.04 && this.zoomTimer <= 0) {
+        this.targetZoom = 1.0;
       }
     }
 
@@ -1611,7 +1766,14 @@ export class GameEngine {
     // 2. Update Guardian Turret (+2 barrels & +35% fire rate when Overclock is active; Weaver web slows by 30%; +40% fire rate during Frenzy)
     const isOverclock = this.supplyPods.isQuadPulseActive();
     const isWeaverSlowed = this.aliens.some(a => a.alive && a.classKey === 'WEAVER');
-    const turretDt = this.frenzyActive ? dt * 1.4 : dt;
+    let fireRateMult = 1.0;
+    if (this.frenzyActive) fireRateMult *= 1.4;
+    if (this.turret && this.turret.fireIntervalMultiplier) fireRateMult /= this.turret.fireIntervalMultiplier;
+    const loadout = this.getShipyardLoadout();
+    if (loadout.barrel === 'gatling') fireRateMult *= 1.35;
+    else if (loadout.barrel === 'siege') fireRateMult *= 0.80;
+    const turretDt = dt * fireRateMult;
+
     this.turret.update(
       turretDt,
       this.pointerX,
@@ -1623,9 +1785,45 @@ export class GameEngine {
         // While charging Overcharge Lance, pause standard auto-fire bursts
         if (this.isChargingOvercharge) return;
 
+        // Apply Shipyard Barrel modifiers
+        const currentLoadout = this.getShipyardLoadout();
+        let finalBolts = bolts;
+
+        if (currentLoadout.barrel === 'standard') {
+          for (const b of finalBolts) {
+            b.speed = (b.speed || 520) * 1.10;
+          }
+        } else if (currentLoadout.barrel === 'gatling') {
+          // 2-round staggered burst with ±6° micro-spread (-18% per-bolt damage)
+          const gatlingBolts = [];
+          const spreadRad = (6 * Math.PI) / 180;
+          for (const b of finalBolts) {
+            const dmg = Math.max(1, Math.round(b.damage * 0.82));
+            gatlingBolts.push({
+              ...b,
+              angle: b.angle - spreadRad,
+              damage: dmg,
+              staggerOffset: 0
+            });
+            gatlingBolts.push({
+              ...b,
+              angle: b.angle + spreadRad,
+              damage: dmg,
+              staggerOffset: -14
+            });
+          }
+          finalBolts = gatlingBolts;
+        } else if (currentLoadout.barrel === 'siege') {
+          // +45% bolt damage, +1 Pierce
+          for (const b of finalBolts) {
+            b.damage = Math.round(b.damage * 1.45);
+            b.pierce = (b.pierce || 1) + 1;
+          }
+        }
+
         // v2.9 Frenzy Overdrive: Chromatic Rainbow Plasma Lances (+25% damage)
         if (this.frenzyActive) {
-          for (const b of bolts) {
+          for (const b of finalBolts) {
             b.isChromatic = true;
             b.damage = Math.round(b.damage * 1.25);
           }
@@ -1634,7 +1832,7 @@ export class GameEngine {
         // v2.8 Chain-Reaction Momentum perk: bonus damage per rapid kill
         if (this.hasPerk('chainMomentum') && this.chainMomentumStacks > 0) {
           const mult = 1.0 + this.chainMomentumStacks * 0.15;
-          for (const b of bolts) {
+          for (const b of finalBolts) {
             b.damage = Math.round(b.damage * mult);
           }
         }
@@ -1642,14 +1840,14 @@ export class GameEngine {
         if (this.hasRelic('overchargedCoil')) {
           this.turretShotCount++;
           if (this.turretShotCount % 4 === 0) {
-            for (const b of bolts) {
+            for (const b of finalBolts) {
               b.isOvercharged = true;
               b.damage = Math.round(b.damage * 2.2);
               b.color = '#ffd700';
             }
           }
         }
-        this.projectiles.spawnTurretBolts(this.planet.x, this.planet.y, this.planet.planetRadius, bolts);
+        this.projectiles.spawnTurretBolts(this.planet.x, this.planet.y, this.planet.planetRadius, finalBolts);
       },
       isOverclock,
       isWeaverSlowed
@@ -1731,7 +1929,8 @@ export class GameEngine {
     }
     if (this.frenzyActive) {
       this.frenzyTimer -= dt;
-      this.frenzy = Math.max(0, (this.frenzyTimer / 8.0) * 100);
+      const maxFrenzyDuration = 8.0 + ((this.getShipyardLoadout().reactor === 'frenzy') ? 3.0 : 0);
+      this.frenzy = Math.max(0, (this.frenzyTimer / maxFrenzyDuration) * 100);
       if (this.frenzyTimer <= 0) {
         this.frenzyActive = false;
         this.frenzy = 0;
@@ -1834,6 +2033,11 @@ export class GameEngine {
         this.aliens.push(alien);
         this.particles.spawnNova(wp.x, wp.y, 110, '#e040fb', 0, false);
         this.addScreenShake(12, 0.3);
+        // Zoom trigger: Boss Warp-Rift emergence (1.12x for 1.2s)
+        if (this.getSettings().screenShake !== false && this.getSettings().screenShake !== 0) {
+          this.targetZoom = 1.12;
+          this.zoomTimer = 1.2;
+        }
         this.warpPortals.splice(i, 1);
       }
     }
@@ -1906,6 +2110,9 @@ export class GameEngine {
         }
         const alien = new Alien(ax, ay, item.classKey, item.bossCustomName);
         alien.engine = this;
+        if (item.isEliteLeader) {
+          alien.isEliteLeader = true;
+        }
         if (item.bossCustomHp) {
           alien.hp = item.bossCustomHp;
           alien.maxHp = item.bossCustomHp;
@@ -1951,10 +2158,37 @@ export class GameEngine {
       const hitRadius = this.planet.shield > 0 ? this.planet.shieldRadius : this.planet.planetRadius;
 
       if (!alien.isLeech && !alien.isBeacon && dist <= hitRadius + alien.radius) {
+        const shieldAbsorbed = this.planet.shield > 0;
         this.planet.damage(alien.damage, alien.x, alien.y);
         this.addScreenShake(alien.classKey === 'BOSS' ? 18 : 8, 0.25);
         this.particles.spawnDebris(alien.x, alien.y, alien.color, 10);
         alien.alive = false;
+
+        // Electrostatic Thorn Dome Shield Mod (v3.0)
+        if (shieldAbsorbed && this.getShipyardLoadout().shieldMod === 'thorn') {
+          this.particles.addFloater(alien.x, alien.y - 20, '⚡ TESLA THORN ARC!', '#00e5ff', 15);
+          alien.takeDamage(55, alien.x, alien.y, false);
+          const nearby = this.aliens.filter(other => other.alive && other !== alien && Math.hypot(other.x - alien.x, other.y - alien.y) <= 95);
+          nearby.sort((a, b) => Math.hypot(a.x - alien.x, a.y - alien.y) - Math.hypot(b.x - alien.x, b.y - alien.y));
+          const targets = nearby.slice(0, 2);
+          for (const t of targets) {
+            this.projectiles.teslaArcs.push({
+              x1: alien.x,
+              y1: alien.y,
+              x2: t.x,
+              y2: t.y,
+              timer: 0.18,
+              maxTimer: 0.18,
+              color: '#00e5ff'
+            });
+            const destroyed = t.takeDamage(55, t.x, t.y, false);
+            this.particles.spawnDebris(t.x, t.y, '#00e5ff', 6);
+            if (destroyed) {
+              this.onAlienDestroyed(t);
+            }
+          }
+        }
+
         this.aliens.splice(i, 1);
         continue;
       }
@@ -1973,12 +2207,23 @@ export class GameEngine {
       this.planet.planetRadius,
       this.aliens,
       (alien, destroyed, nova) => {
-        this.damageSources.nova += (nova.damage || 32);
+        const currentLoadout = this.getShipyardLoadout();
+        let novaDmg = nova.damage || 32;
+        if (currentLoadout.reactor === 'cryo') {
+          alien.slowTimer = Math.max(alien.slowTimer || 0, 2.0);
+          alien.speedMultiplier = 0.65;
+          if (alien.slowTimer > 0 || alien.frozenTimer > 0) {
+            novaDmg = Math.round(novaDmg * 1.15);
+          }
+        }
+        this.damageSources.nova += novaDmg;
         if (destroyed) this.onAlienDestroyed(alien, nova);
       },
       (val) => {
-        saveSystem.addShards(val);
-        this.coreCharge = Math.min(100, this.coreCharge + 2.0);
+        const sectorBonuses = this.getSectorLiberationBonuses();
+        const mult = (sectorBonuses.sector4 ? sectorBonuses.rewardMultiplier : 1.0) * (this.isIncursion ? 2 : 1);
+        saveSystem.addShards(Math.round(val * mult));
+        this.addCoreCharge(2.0);
       },
       (boss) => this.onBossPhase2(boss),
       this.hazards,
@@ -2061,7 +2306,14 @@ export class GameEngine {
       const elTitle = document.getElementById('victoryPlanetTitle');
       if (elTitle) elTitle.textContent = `${cfg.name.toUpperCase()} PRIME SAVED`;
       const ascensionMults = saveSystem.getAscensionMultipliers();
-      earnedShards = Math.round(stars * 45 * ascensionMults.shardMultiplier);
+      const sectorBonuses = this.getSectorLiberationBonuses();
+      earnedShards = Math.round(stars * 45 * ascensionMults.shardMultiplier * sectorBonuses.rewardMultiplier);
+      if (this.isIncursion) {
+        earnedShards = (earnedShards * 2) + 100;
+        saveSystem.addShards(earnedShards);
+        saveSystem.rotateIncursion();
+        this.showToast('✦ INCURSION REPELLED! 2X SHARDS & +100 ✦ LIBERATION BONUS!', '#ffd700');
+      }
     }
 
     const elEnemies = document.getElementById('vicStatEnemies');
@@ -2089,6 +2341,7 @@ export class GameEngine {
       }
     }
 
+    this.finishMission(true);
     this.renderTelemetrySparkline();
     document.getElementById('modalVictory')?.classList.remove('hidden');
   }
@@ -2138,6 +2391,7 @@ export class GameEngine {
       }
     }
 
+    this.finishMission(false);
     this.renderTelemetrySparkline();
     document.getElementById('modalDefeat')?.classList.remove('hidden');
   }
@@ -2281,6 +2535,24 @@ export class GameEngine {
       ctx.translate(shakeX, shakeY);
     }
 
+    // Cinematic Camera Zoom transform
+    const cx = this.width / 2;
+    const cy = this.height / 2;
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.scale(this.cameraZoom, this.cameraZoom);
+    ctx.translate(-cx, -cy);
+
+    this.drawBattleScene(ctx);
+
+    ctx.restore(); // restore camera zoom
+    ctx.restore(); // restore screen shake
+
+    // Update In-Game HUD Overlays
+    this.updateHUD();
+  }
+
+  drawBattleScene(ctx) {
     // 1. Render Deep Space Background Void & 3-Layer Parallax Starfield
     const bgGrad = ctx.createRadialGradient(
       this.planet.x, this.planet.y, 80,
@@ -2382,6 +2654,42 @@ export class GameEngine {
 
     // 4. Render Orbital Guardian Turret
     this.turret.render(ctx, this.planet.x, this.planet.y, this.planet.planetRadius, isOverdrive);
+
+    // v3.0 Shipyard Gatling Barrel: triple-spoked rotating muzzle!
+    const loadout = this.getShipyardLoadout();
+    if (loadout.barrel === 'gatling') {
+      const orbitR = this.planet.planetRadius + 8 - (this.turret.recoil || 0);
+      const tx = this.planet.x + Math.cos(this.turret.angle) * orbitR;
+      const ty = this.planet.y + Math.sin(this.turret.angle) * orbitR;
+      const muzzleDist = 20;
+      const mx = tx + Math.cos(this.turret.angle) * muzzleDist;
+      const my = ty + Math.sin(this.turret.angle) * muzzleDist;
+
+      ctx.save();
+      ctx.translate(mx, my);
+      const rotAngle = (this.gameTime || 0) * 16;
+      ctx.rotate(rotAngle);
+      ctx.beginPath();
+      ctx.arc(0, 0, 4, 0, Math.PI * 2);
+      ctx.fillStyle = '#ff9100';
+      ctx.shadowColor = '#ff9100';
+      ctx.shadowBlur = 8;
+      ctx.fill();
+      ctx.strokeStyle = '#ffd700';
+      ctx.lineWidth = 2.5;
+      for (let s = 0; s < 3; s++) {
+        const a = (s / 3) * Math.PI * 2;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(Math.cos(a) * 8.5, Math.sin(a) * 8.5);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(Math.cos(a) * 8.5, Math.sin(a) * 8.5, 2, 0, Math.PI * 2);
+        ctx.fillStyle = '#ffffff';
+        ctx.fill();
+      }
+      ctx.restore();
+    }
 
     // 5. Render Laser Targeting Sight (only during PLAYING state)
     if (this.state === 'PLAYING') {
@@ -2759,11 +3067,6 @@ export class GameEngine {
       ctx.fillRect(0, 0, this.width, this.height);
       ctx.restore();
     }
-
-    ctx.restore();
-
-    // Update In-Game HUD Overlays
-    this.updateHUD();
   }
 
   updateHUD() {
@@ -3083,7 +3386,9 @@ export class GameEngine {
     this.parryTimer = 0.38;
 
     const turretAngle = this.turret ? this.turret.angle : -Math.PI * 0.5;
-    const halfArc = (110 * Math.PI) / 360; // 55° (110° total arc)
+    const loadout = this.getShipyardLoadout();
+    const parryArcDeg = (loadout && loadout.shieldMod === 'parry') ? 145 : 110;
+    const halfArc = (parryArcDeg * Math.PI) / 360;
     const knockbackDist = (this.planet.shieldRadius || 97) + 35;
 
     // Close-Range Alien Knockback: Blasted backward 90px, stunned 1.8s, takes 45 shock damage
@@ -3139,6 +3444,9 @@ export class GameEngine {
     // Cooldown reduced to 0.5s on successful Perfect Parry!
     this.parryCooldownTimer = Math.min(this.parryCooldownTimer, 0.5);
 
+    const loadout = this.getShipyardLoadout();
+    const parryDmgMult = (loadout && loadout.shieldMod === 'parry') ? 1.40 : 1.0;
+
     // Reflected back as friendly Homing Super-Missile
     let target = null;
     let minDist = 99999;
@@ -3157,7 +3465,7 @@ export class GameEngine {
       y: torpY,
       angle: refAngle,
       speed: 480,
-      damage: 85 * (this.novaMultiplier || 1.0),
+      damage: 85 * (this.novaMultiplier || 1.0) * parryDmgMult,
       color: '#ffd700',
       isReflectedMissile: true,
       isRocket: true,
@@ -3226,7 +3534,7 @@ export class GameEngine {
           y: torpY,
           angle: missileAng,
           speed: 480,
-          damage: 85 * (this.novaMultiplier || 1.0),
+          damage: 85 * (this.novaMultiplier || 1.0) * parryDmgMult,
           color: '#ffd700',
           isReflectedMissile: true,
           isRocket: true,
@@ -3245,9 +3553,12 @@ export class GameEngine {
     if (this.chargeProgress < 0.50) {
       this.chargeProgress = 0;
       this.isChargingOvercharge = false;
+      if (this.targetZoom === 1.04 && this.zoomTimer <= 0) this.targetZoom = 1.0;
       return false;
     }
 
+    const loadout = this.getShipyardLoadout();
+    const isSiege = loadout.barrel === 'siege';
     const baseDmg = (this.turret ? (this.turret.damage || 20) : 20);
     const dmg = Math.round(baseDmg * (1.0 + this.chargeProgress * 2.2));
 
@@ -3262,7 +3573,8 @@ export class GameEngine {
       speed: 820,
       damage: dmg,
       color: '#00e5ff',
-      pierce: 5,
+      pierce: isSiege ? 6 : 5,
+      isWiderBeam: isSiege,
       isOverchargeLance: true,
       isDirectPierce: true,
       source: 'overcharge'
@@ -3290,6 +3602,7 @@ export class GameEngine {
 
     this.chargeProgress = 0;
     this.isChargingOvercharge = false;
+    if (this.targetZoom === 1.04 && this.zoomTimer <= 0) this.targetZoom = 1.0;
     return true;
   }
 
@@ -3427,11 +3740,14 @@ export class GameEngine {
   }
 
   spawnSparks(x, y, count = 2) {
-    saveSystem.addShards(count * 5);
+    const sectorBonuses = this.getSectorLiberationBonuses();
+    const mult = (sectorBonuses.sector4 ? sectorBonuses.rewardMultiplier : 1.0) * (this.isIncursion ? 2 : 1);
+    const shards = Math.round(count * 5 * mult);
+    saveSystem.addShards(shards);
     for (let i = 0; i < count; i++) {
       this.particles.spawnCosmicSpark(x + (Math.random() - 0.5) * 12, y + (Math.random() - 0.5) * 12, 1);
     }
-    this.particles.addFloater(x, y - 15, `+${count * 5} ✦`, '#ffd700', 14);
+    this.particles.addFloater(x, y - 15, `+${shards} ✦`, '#ffd700', 14);
   }
 
   spawnVolatilePlasmaPool(x, y) {
@@ -3470,7 +3786,9 @@ export class GameEngine {
   addFrenzy(amount) {
     if (this.frenzyActive) return;
     if (this.frenzyPauseTimer > 0) return;
-    this.frenzy = Math.min(100, this.frenzy + amount);
+    const loadout = this.getShipyardLoadout();
+    const gainMult = loadout.reactor === 'frenzy' ? 1.35 : 1.0;
+    this.frenzy = Math.min(100, this.frenzy + amount * gainMult);
     this.updateFrenzyUI();
     if (this.frenzy >= 100) {
       this.triggerHyperFrenzy();
@@ -3480,7 +3798,9 @@ export class GameEngine {
   triggerHyperFrenzy() {
     this.frenzy = 100;
     this.frenzyActive = true;
-    this.frenzyTimer = 8.0;
+    const loadout = this.getShipyardLoadout();
+    const bonusDuration = loadout.reactor === 'frenzy' ? 3.0 : 0;
+    this.frenzyTimer = 8.0 + bonusDuration;
     audio.setBgmTempoMultiplier(1.15);
     audio.playSkill('Q');
     this.addScreenShake(12, 0.35);

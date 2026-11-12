@@ -89,7 +89,7 @@ export class BattleCardGenerator {
     ctx.font = '700 12px Orbitron, sans-serif';
     ctx.fillStyle = '#ffd700';
     ctx.textAlign = 'left';
-    ctx.fillText("⚡ v2.9 SYNERGY OVERDRIVE EDITION", 48, 76);
+    ctx.fillText("🌟 v3.0 GALACTIC COMMAND EDITION", 48, 76);
 
     // Top Divider
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
@@ -134,13 +134,17 @@ export class BattleCardGenerator {
     // Mini Planet Illustration & Mission Brief
     const planetId = engine.currentPlanetId || 1;
     const planetCfg = PLANETS.find(p => p.id === planetId) || PLANETS[0];
-    const isWin = engine.state === 'VICTORY';
-    const isTitan = !!engine.isTitanProtocolMode;
-    const isEndless = !!engine.isEndlessMode;
+    const isWin = engine.state === 'VICTORY' || !!engine.victory;
+    const isTitan = !!engine.isTitanProtocolMode || engine.mode === 'TITAN' || engine.mode === 'Titan Protocol';
+    const isEndless = !!engine.isEndlessMode || engine.mode === 'ENDLESS' || engine.mode === 'Endless';
+    const isIncursion = !!engine.isIncursion || engine.mode === 'INCURSION' || engine.mode === 'Incursion';
+    const isDaily = !!engine.isDailyAnomalyMode || engine.mode === 'DAILY' || engine.mode === 'Daily Anomaly';
 
     let missionStatus = isWin ? 'PLANET LIBERATED' : 'PLANET DEFENSE REPORT';
     if (isTitan) missionStatus = isWin ? 'TITAN PROTOCOL CONQUERED' : 'TITAN GAUNTLET RECORD';
     else if (isEndless) missionStatus = `ENDLESS SIEGE WAVE ${engine.currentWave}`;
+    else if (isIncursion) missionStatus = isWin ? 'INCURSION REPELLED (2x ✦)' : 'INCURSION DEFENSE RECORD';
+    else if (isDaily) missionStatus = isWin ? 'DAILY ANOMALY CLEARED' : 'DAILY ANOMALY RECORD';
 
     ctx.fillStyle = 'rgba(12, 18, 40, 0.7)';
     ctx.fillRect(60, 268, 320, 185);
@@ -317,11 +321,11 @@ export class BattleCardGenerator {
     ctx.strokeRect(60, 468, 1080, 95);
 
     // Chassis & Wingman summary
-    const chassisId = saveSystem.getSelectedChassis ? saveSystem.getSelectedChassis() : 'striker';
+    const chassisId = engine.selectedChassis || (saveSystem.getSelectedChassis ? saveSystem.getSelectedChassis() : 'striker');
     const chassisCfg = CHASSIS_CONFIG[chassisId] || CHASSIS_CONFIG.striker;
-    const skinId = saveSystem.getSelectedTurretSkin ? saveSystem.getSelectedTurretSkin() : 'sentinel';
+    const skinId = engine.selectedSkin || (saveSystem.getSelectedTurretSkin ? saveSystem.getSelectedTurretSkin() : 'sentinel');
     const skinCfg = TURRET_SKINS[skinId] || TURRET_SKINS.sentinel;
-    const doctrineId = saveSystem.getSelectedWingmanDoctrine ? saveSystem.getSelectedWingmanDoctrine() : 'aegis';
+    const doctrineId = engine.selectedWingman || (saveSystem.getSelectedWingmanDoctrine ? saveSystem.getSelectedWingmanDoctrine() : 'aegis');
     const doctrineCfg = WINGMAN_CONFIG.doctrines[doctrineId] || WINGMAN_CONFIG.doctrines.aegis;
 
     ctx.font = '700 9px Orbitron, sans-serif';
@@ -332,14 +336,22 @@ export class BattleCardGenerator {
     ctx.fillText(`${chassisCfg.name.toUpperCase()} (${skinCfg.name})`, 80, 514);
     ctx.font = '600 11px Inter, sans-serif';
     ctx.fillStyle = '#cbd5e1';
-    ctx.fillText(`Wingman: ${doctrineCfg.name}`, 80, 536);
+    ctx.fillText(`Wingman: ${doctrineCfg.name}`, 80, 534);
+
+    if (engine.synergies && engine.synergies.length > 0) {
+      ctx.font = '600 10px Inter, sans-serif';
+      ctx.fillStyle = '#ffd700';
+      const synStr = engine.synergies.slice(0, 2).join(' • ');
+      ctx.fillText(`⚡ Synergies: ${synStr}`, 80, 552);
+    }
 
     // 3 Equipped Cosmic Relics
     ctx.font = '700 9px Orbitron, sans-serif';
     ctx.fillStyle = '#ffd700';
     ctx.fillText('ANCIENT COSMIC RELICS (3 SLOTS)', 480, 492);
 
-    const equippedRelics = saveSystem.getEquippedRelics ? saveSystem.getEquippedRelics() : [];
+    const rawRelics = engine.equippedRelics || (saveSystem.getEquippedRelics ? saveSystem.getEquippedRelics() : []);
+    const equippedRelics = rawRelics.map(r => typeof r === 'string' ? (COSMIC_RELICS[r] || { id: r, name: r, icon: '🏺', color: '#ffd700' }) : r);
     for (let slot = 0; slot < 3; slot++) {
       const rx = 480 + slot * 215;
       const ry = 502;
@@ -421,7 +433,7 @@ export class BattleCardGenerator {
     const score = (engine.score || 0).toLocaleString();
     const combo = engine.maxCombo || 1;
     const wave = engine.currentWave || 1;
-    const text = `🪐 SPARK PANIC: PLANETARY INVASION DEFENSE (v2.9)\n` +
+    const text = `🪐 SPARK PANIC: PLANETARY INVASION DEFENSE (🌟 v3.0 GALACTIC COMMAND EDITION)\n` +
       `🛡️ Mission Score: ${score} pts • Max Chain Combo: x${combo} • Wave Reached: ${wave}\n` +
       `🎮 Defend 20 living worlds: https://asemdnn.github.io/spark-panic/`;
 

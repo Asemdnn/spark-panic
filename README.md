@@ -1,13 +1,50 @@
-# Spark Panic: Planetary Invasion Defense — Guardian of the Universe (v2.9 Synergy Overdrive Edition)
+# Spark Panic: Planetary Invasion Defense — Guardian of the Universe (v3.0 Galactic Command Edition)
 
 [![Deploy to GitHub Pages](https://github.com/Asemdnn/spark-panic/actions/workflows/deploy.yml/badge.svg)](https://github.com/Asemdnn/spark-panic/actions/workflows/deploy.yml)
 [![Live Demo](https://img.shields.io/badge/Play_Live-GitHub_Pages-00e5ff?style=flat&logo=github)](https://asemdnn.github.io/spark-panic/)
 [![PWA Ready](https://img.shields.io/badge/PWA-Ready-00e676?style=flat&logo=pwa)](https://asemdnn.github.io/spark-panic/)
 
-**Spark Panic 2.9 ("Synergy Overdrive Edition")** is a high-octane, self-contained HTML5 Canvas + Tailwind CSS arcade strategy and action planetary defense game. You are the **Orbital Guardian**, defending living celestial worlds and their cyber-cities against 360° incoming waves of relentless alien invasion fleets.
+**Spark Panic 3.0 ("Galactic Command Edition")** is a high-octane, self-contained HTML5 Canvas + Tailwind CSS arcade strategy and action planetary defense game. You are the **Orbital Guardian**, defending living celestial worlds and their cyber-cities against 360° incoming waves of relentless alien invasion fleets.
 
 - 🎮 **Play Online**: [https://asemdnn.github.io/spark-panic/](https://asemdnn.github.io/spark-panic/)
 - 📦 **GitHub Repository**: [https://github.com/Asemdnn/spark-panic](https://github.com/Asemdnn/spark-panic)
+
+---
+
+## 🌟 What's New in v3.0: Galactic Command Edition
+
+1. **🛠️ Modular Orbital Shipyard (`#modalArmory` -> '🛠️ MODULAR ORBITAL SHIPYARD')**:
+   - **Deep 3-Slot Modular Engineering**: Freely customize and upgrade 3 critical weapon, reactor, and shielding modules:
+     - **Slot A: Barrel Assembly**:
+       - *⚙️ Precision Twin-Bore* (Free default): Balanced fire rate, tight spread, +10% projectile speed.
+       - *🔥 Rotary Gatling Array* (✦ 250): +35% fire rate, 2-round staggered bursts with ±6° micro-spread (-18% per-bolt damage), rendered with triple-spoked rotating muzzle!
+       - *🎯 Heavy Siege Fokus-Barrel* (✦ 300): -20% fire rate, +45% bolt damage, +1 Pierce, charges Overcharge 35% faster with wider beam.
+     - **Slot B: Core Reactor**:
+       - *⚡ Harmonic Dynamo* (Free default): +10% Spark Nova recharge rate and +10% Cataclysm Core charge gain.
+       - *🔥 Frenzy Overclock Core* (✦ 280): FRENZY gauge fills +35% faster and Hyper-Frenzy lasts +3.0s longer.
+       - *❄️ Cryo-Capacitor Core* (✦ 280): Spark Novas chill enemies 2.0s (-35% speed) and grant +15% bonus damage against chilled/stunned foes.
+     - **Slot C: Aegis Shield Geometry**:
+       - *🛡️ Hex-Aegis Matrix* (Free default): Balanced shield capacity and natural regeneration rate.
+       - *🪞 Phase-Parry Amplifier* (✦ 260): Widens Aegis Phase-Parry arc by +35° and deals +40% reflected missile damage.
+       - *⚡ Electrostatic Thorn Dome* (✦ 300): Discharges 95px Tesla Thorn Arc (55 dmg) zapping attacker and up to 2 nearby enemies when shield is rammed.
+
+2. **🚨 Living Star Map Incursions & Sector Liberation Passive Buffs**:
+   - **Living Incursions**: An active incursion fleet continuously targets an unlocked celestial world with a pulsing Crimson Armada Siege Reticle and orbiting mini-warships.
+   - **Tactical Rewards**: Defending an incursion planet guarantees 1 Elite Squadron Leader per wave, awards **2x Star Shards**, grants a **+100 ✦ Liberation Bonus**, and rotates the incursion across the galaxy.
+   - **Quick-Launch Incursion**: Dedicated `🚨 DEFEND INCURSION: [PLANET] (2x ✦)` quick-launch button in the Star Map control bar.
+   - **Sector Liberation Passive Buffs**: Fully liberating sectors (1+ stars across all 5 planets) awards persistent passive bonuses:
+     - **Sector I**: +10% Max Planetary Shield & Core HP.
+     - **Sector II**: +12% Spark Nova Blast Radius.
+     - **Sector III**: -10% Cooldown on [Q], [W], [E], [R] skills.
+     - **Sector IV**: +20% Star Shards & Score Multiplier.
+
+3. **🏆 Hall of Champions & Holographic Battle Card Records**:
+   - **Top 10 Commander Runs Table (`#modalCodex`)**: Persistent leaderboard tracking Rank (#1–#10), Date, Mode badge ('Campaign', 'Endless', 'Titan Protocol', 'Daily Anomaly', 'Incursion'), Planet, Final Score, Peak Combo, Wave, Chassis & Synergies.
+   - **Historical Battle Card Viewer**: Clicking `📸 View Card` generates a 1200x630 Holographic Battle Card pre-populated with that run's stats and sparkline telemetry history!
+
+4. **🎥 Cinematic Combat Dynamic Camera Zoom**:
+   - Dynamic, smooth camera zoom lerp centering around intense battlefield climaxes: Boss Warp-Rift emergence (1.12x), Cataclysm release (1.15x), and Overcharge Lance charge hold (1.04x).
+   - Fully accessible: automatically disabled (locked to 1.0x) when screen shake is set to 0/off.
 
 ---
 

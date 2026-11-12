@@ -1,6 +1,6 @@
 // Spark Panic 2.5 - Persistence & Upgrade Armory Save Engine
 
-import { ARMORY_CONFIG, GUARDIAN_RANKS, TROPHIES, CHASSIS_CONFIG, TURRET_SKINS, WINGMAN_CONFIG, ASCENSION_CONFIG, TITAN_PROTOCOL_CONFIG, COSMIC_RELICS, DEFAULT_SETTINGS } from '../config.js';
+import { ARMORY_CONFIG, GUARDIAN_RANKS, TROPHIES, CHASSIS_CONFIG, TURRET_SKINS, WINGMAN_CONFIG, ASCENSION_CONFIG, TITAN_PROTOCOL_CONFIG, COSMIC_RELICS, DEFAULT_SETTINGS, SHIPYARD_PARTS } from '../config.js';
 
 const STORAGE_KEY = 'spark_panic_v2_save';
 
@@ -42,6 +42,10 @@ export class SaveSystem {
       ascensionTier: 0,
       equippedRelics: [],
       unlockedRelics: {},
+      shipyard: { barrel: 'standard', reactor: 'balanced', shieldMod: 'hex' },
+      unlockedShipyardParts: ['barrel:standard', 'reactor:balanced', 'shieldMod:hex'],
+      activeIncursion: { planetId: 1, active: true },
+      runHistory: [],
       settings: { ...DEFAULT_SETTINGS }
     };
 
@@ -52,6 +56,11 @@ export class SaveSystem {
       if (!raw) return defaults;
       const parsed = JSON.parse(raw);
       const endlessBestWave = parsed.endlessBestWave || parsed.endlessMaxWave || 0;
+      const baseUnlockedParts = ['barrel:standard', 'reactor:balanced', 'shieldMod:hex'];
+      const mergedUnlockedParts = Array.isArray(parsed.unlockedShipyardParts)
+        ? Array.from(new Set([...baseUnlockedParts, ...parsed.unlockedShipyardParts]))
+        : baseUnlockedParts;
+
       return {
         ...defaults,
         ...parsed,
@@ -75,6 +84,12 @@ export class SaveSystem {
         ascensionTier: typeof parsed.ascensionTier === 'number' ? parsed.ascensionTier : defaults.ascensionTier,
         equippedRelics: Array.isArray(parsed.equippedRelics) ? parsed.equippedRelics.slice(0, 3) : defaults.equippedRelics,
         unlockedRelics: { ...(parsed.unlockedRelics || {}) },
+        shipyard: { barrel: 'standard', reactor: 'balanced', shieldMod: 'hex', ...(parsed.shipyard || {}) },
+        unlockedShipyardParts: mergedUnlockedParts,
+        activeIncursion: parsed.activeIncursion && typeof parsed.activeIncursion.planetId === 'number'
+          ? { planetId: parsed.activeIncursion.planetId, active: parsed.activeIncursion.active !== false }
+          : { planetId: 1, active: true },
+        runHistory: Array.isArray(parsed.runHistory) ? parsed.runHistory.slice(0, 10) : [],
         settings: { ...DEFAULT_SETTINGS, ...(parsed.settings || {}) }
       };
     } catch (e) {
@@ -383,6 +398,14 @@ export class SaveSystem {
         ascensionTier: typeof parsed.ascensionTier === 'number' ? parsed.ascensionTier : (this.data.ascensionTier || 0),
         equippedRelics: Array.isArray(parsed.equippedRelics) ? parsed.equippedRelics.slice(0, 3) : (this.data.equippedRelics || []),
         unlockedRelics: { ...(this.data.unlockedRelics || {}), ...(parsed.unlockedRelics || {}) },
+        shipyard: { barrel: 'standard', reactor: 'balanced', shieldMod: 'hex', ...(this.data.shipyard || {}), ...(parsed.shipyard || {}) },
+        unlockedShipyardParts: Array.isArray(parsed.unlockedShipyardParts)
+          ? Array.from(new Set(['barrel:standard', 'reactor:balanced', 'shieldMod:hex', ...(this.data.unlockedShipyardParts || []), ...parsed.unlockedShipyardParts]))
+          : (this.data.unlockedShipyardParts || ['barrel:standard', 'reactor:balanced', 'shieldMod:hex']),
+        activeIncursion: parsed.activeIncursion && typeof parsed.activeIncursion.planetId === 'number'
+          ? { planetId: parsed.activeIncursion.planetId, active: parsed.activeIncursion.active !== false }
+          : (this.data.activeIncursion || { planetId: 1, active: true }),
+        runHistory: Array.isArray(parsed.runHistory) ? parsed.runHistory.slice(0, 10) : (this.data.runHistory || []),
         settings: { ...DEFAULT_SETTINGS, ...(this.data.settings || {}), ...(parsed.settings || {}) }
       };
       this.save();
@@ -426,9 +449,106 @@ export class SaveSystem {
       ascensionTier: 0,
       equippedRelics: [],
       unlockedRelics: {},
+      shipyard: { barrel: 'standard', reactor: 'balanced', shieldMod: 'hex' },
+      unlockedShipyardParts: ['barrel:standard', 'reactor:balanced', 'shieldMod:hex'],
+      activeIncursion: { planetId: 1, active: true },
+      runHistory: [],
       settings: { ...DEFAULT_SETTINGS }
     };
     this.save();
+  }
+
+  // Shipyard System (v3.0)
+  isShipyardPartUnlocked(slot, partId) {
+    if (!SHIPYARD_PARTS[slot] || !SHIPYARD_PARTS[slot][partId]) return false;
+    if (SHIPYARD_PARTS[slot][partId].cost === 0) return true;
+    const key = `${slot}:${partId}`;
+    return Array.isArray(this.data.unlockedShipyardParts) && this.data.unlockedShipyardParts.includes(key);
+  }
+
+  unlockShipyardPart(slot, partId, free = false) {
+    const part = SHIPYARD_PARTS[slot]?.[partId];
+    if (!part) return false;
+    if (this.isShipyardPartUnlocked(slot, partId)) return true;
+    const cost = part.cost || 0;
+    if (free || this.data.shards >= cost) {
+      if (!free && cost > 0) {
+        this.data.shards -= cost;
+      }
+      if (!Array.isArray(this.data.unlockedShipyardParts)) {
+        this.data.unlockedShipyardParts = ['barrel:standard', 'reactor:balanced', 'shieldMod:hex'];
+      }
+      const key = `${slot}:${partId}`;
+      if (!this.data.unlockedShipyardParts.includes(key)) {
+        this.data.unlockedShipyardParts.push(key);
+      }
+      this.save();
+      return true;
+    }
+    return false;
+  }
+
+  equipShipyardPart(slot, partId) {
+    if (!this.isShipyardPartUnlocked(slot, partId)) return false;
+    if (!this.data.shipyard) {
+      this.data.shipyard = { barrel: 'standard', reactor: 'balanced', shieldMod: 'hex' };
+    }
+    this.data.shipyard[slot] = partId;
+    this.save();
+    return true;
+  }
+
+  getShipyardLoadout() {
+    return {
+      barrel: 'standard',
+      reactor: 'balanced',
+      shieldMod: 'hex',
+      ...(this.data.shipyard || {})
+    };
+  }
+
+  // Planetary Incursion System (v3.0)
+  getActiveIncursion() {
+    const maxUnlocked = Math.max(1, this.data.unlockedPlanet || 1);
+    if (!this.data.activeIncursion || typeof this.data.activeIncursion.planetId !== 'number' || this.data.activeIncursion.planetId > maxUnlocked) {
+      return this.rotateIncursion();
+    }
+    return this.data.activeIncursion;
+  }
+
+  rotateIncursion() {
+    const maxUnlocked = Math.max(1, this.data.unlockedPlanet || 1);
+    let target = 1;
+    if (maxUnlocked > 1) {
+      const current = this.data.activeIncursion?.planetId || 1;
+      const candidates = [];
+      for (let p = 1; p <= maxUnlocked; p++) {
+        if (p !== current) candidates.push(p);
+      }
+      target = candidates.length > 0 ? candidates[Math.floor(Math.random() * candidates.length)] : 1;
+    }
+    this.data.activeIncursion = {
+      planetId: target,
+      active: true
+    };
+    this.save();
+    return this.data.activeIncursion;
+  }
+
+  // Run History System (v3.0)
+  recordRun(runData) {
+    if (!Array.isArray(this.data.runHistory)) {
+      this.data.runHistory = [];
+    }
+    this.data.runHistory.push(runData);
+    this.data.runHistory.sort((a, b) => (b.score || 0) - (a.score || 0));
+    this.data.runHistory = this.data.runHistory.slice(0, 10);
+    this.save();
+    return this.data.runHistory;
+  }
+
+  getRunHistory() {
+    return this.data.runHistory || [];
   }
 
   // Ancient Cosmic Relics System (v2.5)

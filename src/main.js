@@ -1,6 +1,6 @@
 // Spark Panic 2.5 - Application Bootstrap & Event Controller
 
-import { PLANETS, SECTORS, ALIEN_CLASSES, ARMORY_CONFIG, TROPHIES, GUARDIAN_RANKS, CHASSIS_CONFIG, getDailyAnomalyConfig, TITAN_PROTOCOL_CONFIG, WINGMAN_CONFIG, TURRET_SKINS, ASCENSION_CONFIG, COSMIC_RELICS, STRUCTURE_CONFIG, DEFAULT_SETTINGS } from './config.js';
+import { PLANETS, SECTORS, ALIEN_CLASSES, ARMORY_CONFIG, TROPHIES, GUARDIAN_RANKS, CHASSIS_CONFIG, getDailyAnomalyConfig, TITAN_PROTOCOL_CONFIG, WINGMAN_CONFIG, TURRET_SKINS, ASCENSION_CONFIG, COSMIC_RELICS, STRUCTURE_CONFIG, DEFAULT_SETTINGS, SHIPYARD_PARTS } from './config.js';
 import { audio } from './engine/audio.js';
 import { saveSystem } from './engine/storage.js';
 import { GameEngine } from './game/engine.js';
@@ -361,6 +361,18 @@ window.addEventListener('DOMContentLoaded', () => {
     engine.startCampaignPlanet(selectedPlanetId);
   });
 
+  // v3.0 Incursion Quick-Launch Button
+  document.getElementById('btnStarMapIncursion')?.addEventListener('click', () => {
+    audio.init();
+    const activeIncursion = saveSystem.getActiveIncursion ? saveSystem.getActiveIncursion() : null;
+    if (activeIncursion && activeIncursion.active) {
+      hideAllModals();
+      engine.startCampaignPlanet(activeIncursion.planetId);
+      const p = PLANETS.find(pl => pl.id === activeIncursion.planetId) || PLANETS[0];
+      engine.showToast(`🚨 DEFENDING INCURSION: ${p.name.toUpperCase()}! 2X SHARDS!`, '#ff3366');
+    }
+  });
+
   // Daily Cosmic Anomaly Modal Controls
   document.getElementById('btnDailyAnomalyClose')?.addEventListener('click', () => {
     document.getElementById('modalDailyAnomaly')?.classList.add('hidden');
@@ -384,7 +396,9 @@ window.addEventListener('DOMContentLoaded', () => {
       e.currentTarget.classList.remove('bg-slate-900/50', 'text-slate-400', 'border-slate-800');
 
       selectedSector = parseInt(e.currentTarget.getAttribute('data-sector'), 10);
-      renderStarMapPlanets();
+      const firstPlanet = PLANETS.find(p => p.sector === selectedSector);
+      if (firstPlanet) selectedPlanetId = firstPlanet.id;
+      drawStarMap();
     });
   });
 
@@ -398,6 +412,7 @@ window.addEventListener('DOMContentLoaded', () => {
     const refunded = saveSystem.refundAllTech();
     renderArmoryGrid();
     renderChassisDeck();
+    renderShipyardDeck();
     renderWingmanDeck();
     renderTurretSkinDeck();
     renderRelicsDeck();
@@ -703,6 +718,7 @@ window.addEventListener('DOMContentLoaded', () => {
         openStarMap();
         renderArmoryGrid();
         renderChassisDeck();
+        renderShipyardDeck();
         renderWingmanDeck();
         renderTurretSkinDeck();
         updateArmoryAscensionBtn();
@@ -741,8 +757,103 @@ window.addEventListener('DOMContentLoaded', () => {
       }
     });
 
+    // Incursion Quick-Launch Button in Control Bar
+    const incursionBtn = document.getElementById('btnStarMapIncursion');
+    const incursionLabel = document.getElementById('starMapIncursionLabel');
+    const activeIncursion = saveSystem.getActiveIncursion ? saveSystem.getActiveIncursion() : null;
+    if (incursionBtn && incursionLabel) {
+      if (activeIncursion && activeIncursion.active) {
+        const incursionPlanet = PLANETS.find(p => p.id === activeIncursion.planetId) || PLANETS[0];
+        incursionLabel.textContent = `🚨 DEFEND INCURSION: ${incursionPlanet.name.toUpperCase()} (2x ✦)`;
+        incursionBtn.classList.remove('hidden');
+      } else {
+        incursionBtn.classList.add('hidden');
+      }
+    }
+
+    drawStarMap();
+  }
+
+  function drawStarMap() {
     renderStarMapPlanets();
     updateTacticalBriefing();
+    updateSectorLiberationBar();
+  }
+
+  function updateSectorLiberationBar() {
+    const bar = document.getElementById('sectorLiberationBar');
+    if (!bar) return;
+    bar.innerHTML = '';
+
+    const bonuses = engine.getSectorLiberationBonuses ? engine.getSectorLiberationBonuses() : { sector1: false, sector2: false, sector3: false, sector4: false };
+    const starsData = saveSystem?.data?.planetStars || {};
+
+    const SECTOR_INFO = [
+      { id: 1, name: 'SEC I', title: 'Inner Sanctuaries', bonus: '+10% Shield & Core HP', active: bonuses.sector1, start: 1, end: 5 },
+      { id: 2, name: 'SEC II', title: 'Nebula Frontier', bonus: '+12% Nova Blast Radius', active: bonuses.sector2, start: 6, end: 10 },
+      { id: 3, name: 'SEC III', title: 'Dark Rift', bonus: '-10% Skill Cooldowns', active: bonuses.sector3, start: 11, end: 15 },
+      { id: 4, name: 'SEC IV', title: 'Sol Genesis', bonus: '+20% Shards & Score Mult', active: bonuses.sector4, start: 16, end: 20 }
+    ];
+
+    for (const sec of SECTOR_INFO) {
+      let secStars = 0;
+      let liberatedCount = 0;
+      for (let p = sec.start; p <= sec.end; p++) {
+        const s = starsData[p] || 0;
+        secStars += s;
+        if (s >= 1) liberatedCount++;
+      }
+      const isMastered = secStars >= 15;
+      const isLiberated = sec.active || liberatedCount >= 5;
+
+      const card = document.createElement('div');
+      card.className = `glass-card p-2 rounded-xl flex flex-col justify-between border cursor-pointer transition ${
+        selectedSector === sec.id
+          ? 'border-cosmic-cyan ring-1 ring-cosmic-cyan/40 bg-slate-900/80 shadow-md'
+          : (isLiberated ? 'border-cosmic-gold/40 bg-slate-950/70 hover:border-cosmic-gold' : 'border-slate-800 bg-slate-950/50 hover:border-slate-700')
+      }`;
+
+      card.innerHTML = `
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-1.5">
+            <span class="text-[10px] font-orbitron font-black text-white">${sec.name}</span>
+            <span class="text-[8px] font-orbitron font-bold text-cosmic-gold">★ ${secStars}/15</span>
+          </div>
+          <span class="text-[8px] font-orbitron font-black px-1.5 py-0.5 rounded ${
+            isMastered
+              ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-[0_0_8px_rgba(245,158,11,0.3)]'
+              : (isLiberated ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-slate-900 text-slate-500')
+          }">
+            ${isMastered ? '🏆 MASTER' : (isLiberated ? '✓ LIBERATED' : `${liberatedCount}/5 SAVED`)}
+          </span>
+        </div>
+        <div class="mt-1 flex items-center justify-between text-[8px] font-orbitron">
+          <span class="${isLiberated ? 'text-cosmic-mint font-bold' : 'text-slate-500'} truncate" title="${sec.bonus}">
+            ${isLiberated ? '⚡ ' : '🔒 '}${sec.bonus}
+          </span>
+        </div>
+      `;
+
+      card.addEventListener('click', () => {
+        audio.init();
+        selectedSector = sec.id;
+        const tabs = document.querySelectorAll('.sector-tab');
+        tabs.forEach(t => {
+          if (parseInt(t.getAttribute('data-sector'), 10) === selectedSector) {
+            t.classList.add('active', 'bg-cosmic-cyan/20', 'text-cosmic-cyan', 'border-cosmic-cyan');
+            t.classList.remove('bg-slate-900/50', 'text-slate-400', 'border-slate-800');
+          } else {
+            t.classList.remove('active', 'bg-cosmic-cyan/20', 'text-cosmic-cyan', 'border-cosmic-cyan');
+            t.classList.add('bg-slate-900/50', 'text-slate-400', 'border-slate-800');
+          }
+        });
+        const firstPlanet = PLANETS.find(p => p.sector === selectedSector);
+        if (firstPlanet) selectedPlanetId = firstPlanet.id;
+        drawStarMap();
+      });
+
+      bar.appendChild(card);
+    }
   }
 
   function renderStarMapPlanets() {
@@ -752,15 +863,19 @@ window.addEventListener('DOMContentLoaded', () => {
 
     const sectorPlanets = PLANETS.filter(p => p.sector === selectedSector);
     const unlocked = saveSystem.data.unlockedPlanet || 1;
+    const activeIncursion = saveSystem.getActiveIncursion ? saveSystem.getActiveIncursion() : null;
 
     for (const p of sectorPlanets) {
       const isLocked = p.id > unlocked;
       const isSelected = p.id === selectedPlanetId;
       const stars = saveSystem.data.planetStars[p.id] || 0;
+      const isIncursion = activeIncursion && activeIncursion.active && p.id === activeIncursion.planetId;
 
       const card = document.createElement('div');
-      card.className = `glass-card p-3 rounded-2xl flex flex-col items-center text-center cursor-pointer transition border ${
-        isSelected ? 'border-cosmic-cyan ring-2 ring-cosmic-cyan/50 bg-cosmic-cyan/10' : (isLocked ? 'border-slate-800 opacity-60' : 'border-slate-700/60 hover:border-cosmic-cyan/60')
+      card.className = `glass-card p-3 rounded-2xl flex flex-col items-center text-center cursor-pointer transition border relative ${
+        isIncursion
+          ? (isSelected ? 'border-rose-500 ring-2 ring-rose-500/60 bg-rose-950/30' : 'border-rose-500/80 shadow-[0_0_15px_rgba(244,63,94,0.35)] bg-rose-950/20 hover:border-rose-400')
+          : (isSelected ? 'border-cosmic-cyan ring-2 ring-cosmic-cyan/50 bg-cosmic-cyan/10' : (isLocked ? 'border-slate-800 opacity-60' : 'border-slate-700/60 hover:border-cosmic-cyan/60'))
       }`;
 
       const starIcons = isLocked
@@ -768,15 +883,29 @@ window.addEventListener('DOMContentLoaded', () => {
         : Array.from({ length: 3 }, (_, i) => ICON_SVG.star('w-3.5 h-3.5 ' + (i < stars ? 'text-cosmic-gold' : 'text-slate-700'), i < stars)).join('');
 
       card.innerHTML = `
-        <div class="w-12 h-12 rounded-full mb-2 flex items-center justify-center text-xl shadow-lg relative" style="background: radial-gradient(circle at 35% 35%, ${p.color2}, ${p.color1} 70%, #030712); box-shadow: 0 0 12px ${p.atmo}66;">
+        <div class="w-12 h-12 rounded-full mb-2 flex items-center justify-center text-xl shadow-lg relative" style="background: radial-gradient(circle at 35% 35%, ${p.color2}, ${p.color1} 70%, #030712); box-shadow: 0 0 12px ${isIncursion ? '#f43f5e' : p.atmo}66;">
           ${isLocked ? `<span class="bg-slate-900/90 p-1 rounded-full flex items-center justify-center">${ICON_SVG.lock('w-3 h-3 text-slate-300')}</span>` : ''}
           ${p.bossName ? `<span class="absolute -top-1 -right-1 flex items-center justify-center">${ICON_SVG.crown('w-3.5 h-3.5 text-cosmic-gold')}</span>` : ''}
+          ${isIncursion ? `
+            <!-- Pulsing Crimson Armada Siege Reticle + 3 Orbiting Warship Triangles -->
+            <svg class="absolute -inset-2.5 w-[68px] h-[68px] pointer-events-none animate-spin" style="animation-duration: 9s;" viewBox="0 0 68 68">
+              <circle cx="34" cy="34" r="30" fill="none" stroke="#f43f5e" stroke-width="1.5" stroke-dasharray="6 4" opacity="0.9" class="animate-pulse" />
+              <line x1="34" y1="0" x2="34" y2="7" stroke="#ff1744" stroke-width="2" />
+              <line x1="34" y1="61" x2="34" y2="68" stroke="#ff1744" stroke-width="2" />
+              <line x1="0" y1="34" x2="7" y2="34" stroke="#ff1744" stroke-width="2" />
+              <line x1="61" y1="34" x2="68" y2="34" stroke="#ff1744" stroke-width="2" />
+              <polygon points="34,2 30,9 38,9" fill="#ff1744" />
+              <polygon points="61,48 54,47 58,54" fill="#ff1744" />
+              <polygon points="7,48 14,47 10,54" fill="#ff1744" />
+            </svg>
+          ` : ''}
         </div>
         <div class="text-xs font-black font-orbitron text-white truncate w-full">${p.name}</div>
         <div class="text-[9px] text-slate-400 truncate w-full">${p.title}</div>
         <div class="flex items-center gap-0.5 text-xs text-cosmic-gold mt-1.5">
           ${starIcons}
         </div>
+        ${isIncursion ? `<div class="w-full text-center py-0.5 px-1 rounded-md text-[7px] font-orbitron font-black bg-rose-600/30 text-rose-300 border border-rose-500/50 animate-pulse mt-1">🚨 INCURSION ALERT: 2x SHARDS!</div>` : ''}
       `;
 
       if (!isLocked) {
@@ -795,6 +924,8 @@ window.addEventListener('DOMContentLoaded', () => {
   function updateTacticalBriefing() {
     const planet = PLANETS.find(p => p.id === selectedPlanetId) || PLANETS[0];
     const stars = saveSystem.data.planetStars[planet.id] || 0;
+    const activeIncursion = saveSystem.getActiveIncursion ? saveSystem.getActiveIncursion() : null;
+    const isIncursion = activeIncursion && activeIncursion.active && planet.id === activeIncursion.planetId;
 
     document.getElementById('briefingSectorTag').textContent = `SECTOR ${'I'.repeat(planet.sector)}`;
     const starBriefing = Array.from({ length: 3 }, (_, i) => 
@@ -806,7 +937,32 @@ window.addEventListener('DOMContentLoaded', () => {
     document.getElementById('briefingWaves').textContent = `${planet.waves} Invasion Waves`;
     document.getElementById('briefingEnemies').textContent = `${planet.baseEnemies} Alien Invaders`;
     document.getElementById('briefingRings').textContent = planet.rings ? 'Yes (Encircled)' : 'None';
-    document.getElementById('briefingBoss').textContent = planet.bossName ? `BOSS: ${planet.bossName}` : 'Standard Armada';
+    
+    const threatEl = document.getElementById('briefingBoss');
+    if (threatEl) {
+      if (isIncursion) {
+        threatEl.innerHTML = '<span class="text-rose-400 font-bold animate-pulse">🚨 LIVING INCURSION: +1 ELITE / WAVE (2x ✦ SHARDS)</span>';
+      } else {
+        threatEl.textContent = planet.bossName ? `BOSS: ${planet.bossName}` : 'Standard Armada';
+      }
+    }
+
+    const launchBtn = document.getElementById('btnLaunchMission');
+    if (launchBtn) {
+      if (isIncursion) {
+        launchBtn.innerHTML = `
+          <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4.5c1.62-1.63 5-2.5 5-2.5"/><path d="M12 15v5s3.03-.55 4.5-2c1.63-1.62 2.5-5 2.5-5"/></svg>
+          <span>🚨 DEFEND INCURSION (2x ✦ SHARDS)</span>
+        `;
+        launchBtn.className = 'w-full py-3 rounded-xl font-orbitron font-black text-xs tracking-wider bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white shadow-[0_0_20px_rgba(244,63,94,0.4)] transition cursor-pointer flex items-center justify-center gap-2';
+      } else {
+        launchBtn.innerHTML = `
+          <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4.5c1.62-1.63 5-2.5 5-2.5"/><path d="M12 15v5s3.03-.55 4.5-2c1.63-1.62 2.5-5 2.5-5"/></svg>
+          <span>LAUNCH PLANETARY DEFENSE</span>
+        `;
+        launchBtn.className = 'w-full py-3 rounded-xl font-orbitron font-black text-xs tracking-wider bg-gradient-to-r from-cosmic-cyan to-blue-600 hover:from-cyan-300 hover:to-blue-500 text-slate-950 shadow-[0_0_15px_rgba(0,229,255,0.4)] transition cursor-pointer flex items-center justify-center gap-2';
+      }
+    }
 
     // Draw preview canvas
     const pCanvas = document.getElementById('briefingPlanetCanvas');
@@ -826,23 +982,185 @@ window.addEventListener('DOMContentLoaded', () => {
       pCtx.fill();
 
       // Atmospheric rim
-      pCtx.strokeStyle = planet.atmo;
+      pCtx.strokeStyle = isIncursion ? '#f43f5e' : planet.atmo;
       pCtx.lineWidth = 2.5;
-      pCtx.shadowColor = planet.atmo;
+      pCtx.shadowColor = isIncursion ? '#f43f5e' : planet.atmo;
       pCtx.shadowBlur = 8;
       pCtx.stroke();
       pCtx.shadowBlur = 0;
+
+      // Incursion Reticle overlay on briefing canvas
+      if (isIncursion) {
+        pCtx.save();
+        pCtx.strokeStyle = '#f43f5e';
+        pCtx.lineWidth = 1.5;
+        pCtx.setLineDash([4, 4]);
+        pCtx.beginPath();
+        pCtx.arc(35, 35, 32, 0, Math.PI * 2);
+        pCtx.stroke();
+        pCtx.setLineDash([]);
+
+        pCtx.strokeStyle = '#ff1744';
+        pCtx.beginPath();
+        pCtx.moveTo(35, 0); pCtx.lineTo(35, 6);
+        pCtx.moveTo(35, 64); pCtx.lineTo(35, 70);
+        pCtx.moveTo(0, 35); pCtx.lineTo(6, 35);
+        pCtx.moveTo(64, 35); pCtx.lineTo(70, 35);
+        pCtx.stroke();
+
+        const angleStep = (Math.PI * 2) / 3;
+        for (let w = 0; w < 3; w++) {
+          const ang = w * angleStep - Math.PI / 2;
+          const wx = 35 + Math.cos(ang) * 31;
+          const wy = 35 + Math.sin(ang) * 31;
+          pCtx.save();
+          pCtx.translate(wx, wy);
+          pCtx.rotate(ang + Math.PI / 2);
+          pCtx.fillStyle = '#ff1744';
+          pCtx.beginPath();
+          pCtx.moveTo(0, -4);
+          pCtx.lineTo(3, 4);
+          pCtx.lineTo(-3, 4);
+          pCtx.closePath();
+          pCtx.fill();
+          pCtx.restore();
+        }
+        pCtx.restore();
+      }
     }
   }
 
   function openArmory() {
     document.getElementById('modalArmory').classList.remove('hidden');
     renderChassisDeck();
+    renderShipyardDeck();
     renderWingmanDeck();
     renderTurretSkinDeck();
     renderRelicsDeck();
     renderArmoryGrid();
     updateArmoryAscensionBtn();
+  }
+
+  function renderShipyardDeck() {
+    const container = document.getElementById('shipyardContainer');
+    if (!container) return;
+    container.innerHTML = '';
+
+    const currentLoadout = saveSystem.getShipyardLoadout ? saveSystem.getShipyardLoadout() : { barrel: 'standard', reactor: 'balanced', shieldMod: 'hex' };
+    const shards = saveSystem.data?.shards || 0;
+
+    const SLOTS = [
+      { key: 'barrel', label: 'SLOT A: BARREL ASSEMBLY', sub: 'Precision Bore, Gatling Array, Siege Fokus-Barrel' },
+      { key: 'reactor', label: 'SLOT B: CORE REACTOR', sub: 'Harmonic Dynamo, Frenzy Overclock, Cryo-Capacitor' },
+      { key: 'shieldMod', label: 'SLOT C: AEGIS SHIELD GEOMETRY', sub: 'Hex-Aegis, Phase-Parry Amp, Electrostatic Thorn' }
+    ];
+
+    for (const slot of SLOTS) {
+      const partsObj = SHIPYARD_PARTS[slot.key] || {};
+      const slotBox = document.createElement('div');
+      slotBox.className = 'bg-slate-950/60 p-2.5 rounded-xl border border-slate-800/80';
+
+      slotBox.innerHTML = `
+        <div class="flex items-center justify-between pb-1.5 mb-2 border-b border-slate-800/70">
+          <span class="text-[10px] font-orbitron font-bold text-cosmic-cyan">${slot.label}</span>
+          <span class="text-[8px] font-orbitron text-slate-400">${slot.sub}</span>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-2" id="slotParts_${slot.key}"></div>
+      `;
+
+      const partsGrid = slotBox.querySelector(`#slotParts_${slot.key}`);
+      for (const [partId, cfg] of Object.entries(partsObj)) {
+        const isUnlocked = saveSystem.isShipyardPartUnlocked(slot.key, partId);
+        const isEquipped = currentLoadout[slot.key] === partId;
+        const canAfford = shards >= cfg.cost;
+
+        const partCard = document.createElement('div');
+        partCard.className = `glass-card p-2.5 rounded-xl flex flex-col justify-between border transition ${
+          isEquipped
+            ? 'border-cosmic-cyan ring-1 ring-cosmic-cyan/50 bg-cosmic-cyan/10'
+            : (isUnlocked ? 'border-slate-700/60 hover:border-slate-500' : 'border-slate-800 opacity-75')
+        }`;
+
+        let actionBtn = '';
+        if (isEquipped) {
+          actionBtn = `
+            <div class="w-full py-1 rounded-lg font-orbitron font-black text-[9px] tracking-wider text-center bg-cosmic-cyan/20 text-cosmic-cyan border border-cosmic-cyan/50">
+              EQUIPPED
+            </div>
+          `;
+        } else if (isUnlocked) {
+          actionBtn = `
+            <button class="btn-equip-shipyard w-full py-1 rounded-lg font-orbitron font-bold text-[9px] tracking-wider transition cursor-pointer bg-slate-800 hover:bg-cosmic-cyan hover:text-slate-950 text-white border border-slate-600 hover:border-cosmic-cyan" data-slot="${slot.key}" data-part="${partId}">
+              EQUIP
+            </button>
+          `;
+        } else {
+          actionBtn = `
+            <button class="btn-unlock-shipyard w-full py-1 rounded-lg font-orbitron font-bold text-[9px] tracking-wider transition cursor-pointer flex items-center justify-center gap-1 ${
+              canAfford
+                ? 'bg-gradient-to-r from-cosmic-gold to-amber-600 hover:from-amber-300 hover:to-amber-500 text-slate-950 font-black shadow-md'
+                : 'bg-slate-900 text-slate-500 border border-slate-800 cursor-not-allowed'
+            }" data-slot="${slot.key}" data-part="${partId}" ${canAfford ? '' : 'disabled'}>
+              <span>UNLOCK [✦ ${cfg.cost}]</span>
+            </button>
+          `;
+        }
+
+        partCard.innerHTML = `
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <div class="flex items-center gap-1.5">
+                <span class="text-base">${cfg.icon}</span>
+                <span class="font-orbitron font-bold text-xs text-white">${cfg.name}</span>
+              </div>
+              <span class="text-[8px] font-orbitron font-bold px-1.5 py-0.5 rounded ${
+                isUnlocked ? 'bg-cosmic-mint/20 text-cosmic-mint border border-cosmic-mint/30' : 'bg-slate-800 text-slate-400'
+              }">
+                ${isUnlocked ? 'UNLOCKED' : `✦ ${cfg.cost}`}
+              </span>
+            </div>
+            <p class="text-[9px] text-slate-300 leading-snug mb-2">${cfg.desc}</p>
+          </div>
+          ${actionBtn}
+        `;
+
+        partsGrid.appendChild(partCard);
+      }
+
+      container.appendChild(slotBox);
+    }
+
+    // Attach listeners
+    container.querySelectorAll('.btn-equip-shipyard').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        audio.init();
+        const slot = e.currentTarget.getAttribute('data-slot');
+        const part = e.currentTarget.getAttribute('data-part');
+        saveSystem.equipShipyardPart(slot, part);
+        engine.applyUpgrades();
+        renderShipyardDeck();
+        const name = SHIPYARD_PARTS[slot]?.[part]?.name || part;
+        engine.showToast(`EQUIPPED ${name.toUpperCase()}!`, '#00e5ff');
+      });
+    });
+
+    container.querySelectorAll('.btn-unlock-shipyard').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        audio.init();
+        const slot = e.currentTarget.getAttribute('data-slot');
+        const part = e.currentTarget.getAttribute('data-part');
+        const ok = saveSystem.unlockShipyardPart(slot, part);
+        if (ok) {
+          audio.playShardPickup();
+          saveSystem.equipShipyardPart(slot, part);
+          engine.applyUpgrades();
+          renderShipyardDeck();
+          renderArmoryGrid();
+          const name = SHIPYARD_PARTS[slot]?.[part]?.name || part;
+          engine.showToast(`UNLOCKED & EQUIPPED ${name.toUpperCase()}!`, '#ffd700');
+        }
+      });
+    });
   }
 
   function renderChassisDeck() {
@@ -1287,6 +1605,7 @@ window.addEventListener('DOMContentLoaded', () => {
           audio.playShardPickup();
           renderArmoryGrid();
           renderChassisDeck();
+          renderShipyardDeck();
           renderWingmanDeck();
           renderTurretSkinDeck();
           updateArmoryAscensionBtn();
@@ -1304,9 +1623,24 @@ window.addEventListener('DOMContentLoaded', () => {
   function renderCodexList() {
     const list = document.getElementById('codexList');
     if (!list) return;
-    list.innerHTML = '';
 
-    // 7 Alien Dossiers
+    let hallContainer = document.getElementById('hallOfChampionsContainer');
+    let dossiersContainer = document.getElementById('alienDossiersContainer');
+
+    if (!hallContainer || !dossiersContainer) {
+      list.innerHTML = `
+        <div id="hallOfChampionsContainer" class="glass-panel p-3.5 rounded-2xl border border-cosmic-gold/40 mb-3"></div>
+        <div id="alienDossiersContainer" class="space-y-3"></div>
+      `;
+      hallContainer = document.getElementById('hallOfChampionsContainer');
+      dossiersContainer = document.getElementById('alienDossiersContainer');
+    }
+
+    renderHallOfChampions(hallContainer);
+
+    dossiersContainer.innerHTML = '';
+
+    // 10 Alien Dossiers
     for (const [key, alien] of Object.entries(ALIEN_CLASSES)) {
       const card = document.createElement('div');
       card.className = 'glass-card p-3.5 rounded-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-3 border border-slate-700/50 hover:border-cosmic-cyan/40 transition';
@@ -1347,14 +1681,14 @@ window.addEventListener('DOMContentLoaded', () => {
         </div>
       `;
 
-      list.appendChild(card);
+      dossiersContainer.appendChild(card);
     }
 
     // Trophies section inside Codex
     const trophHeader = document.createElement('h3');
     trophHeader.className = 'font-orbitron font-black text-sm text-cosmic-gold mt-4 mb-2 flex items-center gap-2';
     trophHeader.innerHTML = `${ICON_SVG.trophy('w-4 h-4 text-cosmic-gold')} <span>GUARDIAN TROPHIES SHOWCASE</span>`;
-    list.appendChild(trophHeader);
+    dossiersContainer.appendChild(trophHeader);
 
     for (const t of TROPHIES) {
       const isUnlocked = !!saveSystem.data.trophies[t.id];
@@ -1375,8 +1709,141 @@ window.addEventListener('DOMContentLoaded', () => {
           ${isUnlocked ? `<span class="flex items-center gap-1 font-bold">UNLOCKED (+${t.reward} ${ICON_SVG.shard('w-3.5 h-3.5 text-cosmic-gold')})</span>` : 'LOCKED'}
         </div>
       `;
-      list.appendChild(card);
+      dossiersContainer.appendChild(card);
     }
+  }
+
+  function renderHallOfChampions(container) {
+    if (!container) return;
+    container.innerHTML = '';
+
+    const runs = saveSystem.getRunHistory ? saveSystem.getRunHistory() : [];
+
+    const header = document.createElement('div');
+    header.className = 'flex items-center justify-between pb-2 mb-2 border-b border-slate-800';
+    header.innerHTML = `
+      <div class="flex items-center gap-2">
+        <span class="text-xl">🏆</span>
+        <div>
+          <h3 class="font-orbitron font-black text-sm text-cosmic-gold tracking-wide">🏆 HALL OF CHAMPIONS (TOP 10 COMMANDER RUNS)</h3>
+          <p class="text-[9px] text-slate-400">Classified orbital telemetry & high-score battle records</p>
+        </div>
+      </div>
+      <span class="text-[9px] font-orbitron font-bold text-cosmic-cyan px-2 py-0.5 rounded bg-cosmic-cyan/10 border border-cosmic-cyan/30">${runs.length} / 10 LOGGED</span>
+    `;
+    container.appendChild(header);
+
+    if (runs.length === 0) {
+      const emptyBox = document.createElement('div');
+      emptyBox.className = 'text-center py-6 text-slate-400 text-xs font-orbitron';
+      emptyBox.textContent = 'No combat records logged yet, Commander. Defend celestial worlds or enter Titan Protocol to claim your place in the Hall of Champions!';
+      container.appendChild(emptyBox);
+      return;
+    }
+
+    const tableWrap = document.createElement('div');
+    tableWrap.className = 'overflow-x-auto';
+
+    const table = document.createElement('table');
+    table.className = 'w-full text-left text-xs font-orbitron';
+    table.innerHTML = `
+      <thead>
+        <tr class="text-[9px] text-slate-400 border-b border-slate-800/80">
+          <th class="py-1.5 px-2">RANK</th>
+          <th class="py-1.5 px-2">DATE & MODE</th>
+          <th class="py-1.5 px-2">PLANET</th>
+          <th class="py-1.5 px-2">FINAL SCORE</th>
+          <th class="py-1.5 px-2">COMBO</th>
+          <th class="py-1.5 px-2">WAVE</th>
+          <th class="py-1.5 px-2">CHASSIS & SYNERGIES</th>
+          <th class="py-1.5 px-2 text-right">ACTION</th>
+        </tr>
+      </thead>
+      <tbody id="hallOfChampionsBody" class="divide-y divide-slate-800/50"></tbody>
+    `;
+
+    const tbody = table.querySelector('#hallOfChampionsBody');
+    runs.forEach((run, idx) => {
+      const row = document.createElement('tr');
+      row.className = 'hover:bg-slate-900/40 transition';
+
+      let rankMedal = `#${idx + 1}`;
+      if (idx === 0) rankMedal = '🥇 #1';
+      else if (idx === 1) rankMedal = '🥈 #2';
+      else if (idx === 2) rankMedal = '🥉 #3';
+
+      let dateStr = 'Recent';
+      if (run.date) {
+        try {
+          const d = new Date(run.date);
+          dateStr = d.toLocaleDateString(undefined, { month: 'numeric', day: 'numeric', year: '2-digit' });
+        } catch { dateStr = 'Recent'; }
+      }
+
+      let modeBadge = 'Campaign';
+      let modeClass = 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40';
+      const mUpper = (run.mode || '').toUpperCase();
+      if (mUpper === 'TITAN' || mUpper === 'TITAN PROTOCOL') {
+        modeBadge = 'Titan Protocol';
+        modeClass = 'bg-amber-500/20 text-amber-300 border-amber-500/40';
+      } else if (mUpper === 'DAILY' || mUpper === 'DAILY ANOMALY') {
+        modeBadge = 'Daily Anomaly';
+        modeClass = 'bg-orange-500/20 text-orange-300 border-orange-500/40';
+      } else if (mUpper === 'ENDLESS') {
+        modeBadge = 'Endless';
+        modeClass = 'bg-purple-500/20 text-purple-300 border-purple-500/40';
+      } else if (mUpper === 'INCURSION') {
+        modeBadge = 'Incursion';
+        modeClass = 'bg-rose-500/20 text-rose-300 border-rose-500/40';
+      }
+
+      const chassisName = CHASSIS_CONFIG[run.chassis]?.name || run.chassis || 'Striker';
+      let synBadges = '';
+      if (Array.isArray(run.synergies) && run.synergies.length > 0) {
+        synBadges = `<span class="text-[8px] px-1 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">+${run.synergies.length} Syn</span>`;
+      }
+
+      row.innerHTML = `
+        <td class="py-2 px-2 font-black ${idx === 0 ? 'text-cosmic-gold' : (idx < 3 ? 'text-slate-200' : 'text-slate-400')}">${rankMedal}</td>
+        <td class="py-2 px-2">
+          <div class="flex items-center gap-1.5 flex-wrap">
+            <span class="text-[9px] px-1.5 py-0.5 rounded-full font-bold border ${modeClass}">${modeBadge}</span>
+            <span class="text-[9px] text-slate-400 font-mono">${dateStr}</span>
+          </div>
+        </td>
+        <td class="py-2 px-2 font-bold text-white">${run.planetName || 'Aerilon'}</td>
+        <td class="py-2 px-2 font-black text-cosmic-cyan">${(run.score || 0).toLocaleString()}</td>
+        <td class="py-2 px-2 font-bold text-cosmic-magenta">x${run.maxCombo || 1}</td>
+        <td class="py-2 px-2 text-slate-300">W${run.waveReached || 1}</td>
+        <td class="py-2 px-2">
+          <div class="flex items-center gap-1.5">
+            <span class="text-[10px] text-slate-300">${chassisName}</span>
+            ${synBadges}
+          </div>
+        </td>
+        <td class="py-2 px-2 text-right">
+          <button class="btn-view-historical-card px-2.5 py-1 rounded-lg font-orbitron font-bold text-[9px] bg-amber-500/20 hover:bg-amber-500/40 text-amber-300 border border-amber-500/40 transition cursor-pointer inline-flex items-center gap-1 shadow-sm" data-idx="${idx}">
+            📸 View Card
+          </button>
+        </td>
+      `;
+
+      tbody.appendChild(row);
+    });
+
+    tableWrap.appendChild(table);
+    container.appendChild(tableWrap);
+
+    // View card listener
+    container.querySelectorAll('.btn-view-historical-card').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const idx = parseInt(e.currentTarget.getAttribute('data-idx'), 10);
+        const selectedRun = runs[idx];
+        if (selectedRun) {
+          openHistoricalBattleCard(selectedRun);
+        }
+      });
+    });
   }
 
   // ==================== TACTICAL SETTINGS MODAL ====================
@@ -1500,11 +1967,59 @@ window.addEventListener('DOMContentLoaded', () => {
   });
 
   // ==================== BATTLE CARD MODAL ====================
+  let activeBattleCardEngine = engine;
+
+  function createHistoricalEngine(run) {
+    const isWin = !!run.victory;
+    const modeUpper = (run.mode || '').toUpperCase();
+    return {
+      isHistoricalRun: true,
+      mode: run.mode,
+      currentPlanetId: run.planetId || 1,
+      state: isWin ? 'VICTORY' : 'DEFEAT',
+      victory: isWin,
+      isTitanProtocolMode: modeUpper === 'TITAN' || modeUpper === 'TITAN PROTOCOL',
+      isEndlessMode: modeUpper === 'ENDLESS',
+      isDailyAnomalyMode: modeUpper === 'DAILY' || modeUpper === 'DAILY ANOMALY',
+      isIncursion: modeUpper === 'INCURSION',
+      currentWave: run.waveReached || 1,
+      totalWaves: 3,
+      score: run.score || 0,
+      maxCombo: run.maxCombo || 1,
+      enemiesVaporized: run.enemiesVaporized || Math.round((run.score || 1000) / 75),
+      planet: {
+        coreHp: isWin ? 100 : 0,
+        maxCoreHp: 100
+      },
+      selectedChassis: run.chassis || 'striker',
+      selectedWingman: run.wingman || 'aegis',
+      equippedRelics: run.relics || [],
+      synergies: run.synergies || [],
+      telemetryHistory: Array.isArray(run.telemetryHistory) && run.telemetryHistory.length > 0 ? run.telemetryHistory : [
+        { time: 0, combo: 1, integrity: 100 },
+        { time: 40, combo: Math.max(1, Math.round((run.maxCombo || 1) * 0.7)), integrity: 90 },
+        { time: 80, combo: run.maxCombo || 1, integrity: isWin ? 100 : 25 }
+      ],
+      damageSources: run.damageSources || { turret: 55, nova: 30, wingman: 15 }
+    };
+  }
+
   function openBattleCardModal() {
     audio.init();
+    activeBattleCardEngine = engine;
     const canvas = document.getElementById('battleCardCanvas');
     if (canvas) {
-      BattleCardGenerator.renderInto(canvas, engine, saveSystem);
+      BattleCardGenerator.renderInto(canvas, activeBattleCardEngine, saveSystem);
+    }
+    document.getElementById('modalBattleCard')?.classList.remove('hidden');
+  }
+
+  function openHistoricalBattleCard(run) {
+    audio.init();
+    activeBattleCardEngine = createHistoricalEngine(run);
+    const canvas = document.getElementById('battleCardCanvas');
+    if (canvas) {
+      BattleCardGenerator.renderInto(canvas, activeBattleCardEngine, saveSystem);
     }
     document.getElementById('modalBattleCard')?.classList.remove('hidden');
   }
@@ -1520,7 +2035,7 @@ window.addEventListener('DOMContentLoaded', () => {
     audio.init();
     const canvas = document.getElementById('battleCardCanvas');
     if (canvas) {
-      BattleCardGenerator.downloadCard(canvas);
+      BattleCardGenerator.downloadCard(canvas, `spark-panic-card-${activeBattleCardEngine.score || 'record'}.png`);
       engine.showToast('BATTLE CARD PNG DOWNLOADED!', '#ffd700');
     }
   });
@@ -1530,7 +2045,7 @@ window.addEventListener('DOMContentLoaded', () => {
     const canvas = document.getElementById('battleCardCanvas');
     const label = document.getElementById('copyCardLabel');
     if (canvas) {
-      const res = await BattleCardGenerator.copyCardToClipboard(canvas, engine);
+      const res = await BattleCardGenerator.copyCardToClipboard(canvas, activeBattleCardEngine);
       if (label) {
         label.textContent = res === 'IMAGE_COPIED' ? '✓ IMAGE COPIED!' : '✓ STATS COPIED!';
         setTimeout(() => { if (label) label.textContent = 'COPY IMAGE / STATS'; }, 2200);

@@ -1222,3 +1222,67 @@ export const SYNERGY_EVOLUTIONS = [
     desc: 'Spawns 2 additional Autonomous Micro-Interceptor Drones that orbit alongside WING-01 and launch mini Spark Novas at clusters every 6s!'
   }
 ];
+
+// v3.0 Orbital Shipyard Modular Turret Engineering Parts
+export const SHIPYARD_PARTS = {
+  barrel: {
+    standard: {
+      name: 'Precision Twin-Bore',
+      icon: '⚙️',
+      cost: 0,
+      desc: 'Balanced fire rate, tight spread, +10% projectile speed.'
+    },
+    gatling: {
+      name: 'Rotary Gatling Array',
+      icon: '🔥',
+      cost: 250,
+      desc: '+35% fire rate, 2-round staggered burst with ±6° micro-spread (-18% per-bolt damage).'
+    },
+    siege: {
+      name: 'Heavy Siege Fokus-Barrel',
+      icon: '🎯',
+      cost: 300,
+      desc: '-20% fire rate, +45% bolt damage, +1 Pierce, and Overcharge charges 35% faster with wider beam.'
+    }
+  },
+  reactor: {
+    balanced: {
+      name: 'Harmonic Dynamo',
+      icon: '⚡',
+      cost: 0,
+      desc: '+10% Spark Nova recharge rate and +10% Cataclysm Core charge gain.'
+    },
+    frenzy: {
+      name: 'Frenzy Overclock Core',
+      icon: '🔥',
+      cost: 280,
+      desc: 'FRENZY gauge fills +35% faster and Hyper-Frenzy lasts +3.0s longer.'
+    },
+    cryo: {
+      name: 'Cryo-Capacitor Core',
+      icon: '❄️',
+      cost: 280,
+      desc: 'Spark Novas chill enemies 2.0s (-35% speed) and grant +15% bonus damage against chilled/stunned.'
+    }
+  },
+  shieldMod: {
+    hex: {
+      name: 'Hex-Aegis Matrix',
+      icon: '🛡️',
+      cost: 0,
+      desc: 'Standard balanced shield capacity and regen.'
+    },
+    parry: {
+      name: 'Phase-Parry Amplifier',
+      icon: '🪞',
+      cost: 260,
+      desc: 'Widens Aegis Phase-Parry arc by +35° and +40% reflected missile damage.'
+    },
+    thorn: {
+      name: 'Electrostatic Thorn Dome',
+      icon: '⚡',
+      cost: 300,
+      desc: 'Discharges 95px Tesla Thorn Arc (55 dmg) zapping attacker and up to 2 nearby enemies when shield is rammed.'
+    }
+  }
+};

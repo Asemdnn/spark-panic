@@ -20,8 +20,9 @@ export class ProjectileManager {
   spawnTurretBolts(planetX, planetY, turretRadius, boltConfigs) {
     for (const b of boltConfigs) {
       if (this.bolts.length >= 250) break;
-      const startX = planetX + Math.cos(b.angle) * (turretRadius + 6);
-      const startY = planetY + Math.sin(b.angle) * (turretRadius + 6);
+      const offset = (turretRadius + 6) + (b.staggerOffset || 0);
+      const startX = planetX + Math.cos(b.angle) * offset;
+      const startY = planetY + Math.sin(b.angle) * offset;
       this.bolts.push({
         x: startX,
         y: startY,
@@ -36,6 +37,7 @@ export class ProjectileManager {
         isRailgun: !!b.isRailgun,
         isDirectPierce: !!b.isDirectPierce,
         isOvercharged: !!b.isOvercharged,
+        isWiderBeam: !!b.isWiderBeam,
         speed: b.speed || 520,
         chassis: b.chassis || 'striker',
         source: 'turret',
@@ -299,11 +301,16 @@ export class ProjectileManager {
           }
 
           const d = Math.hypot(alien.x - b.x, alien.y - b.y);
-          if (d <= alien.radius + 6) {
+          const hitR = b.hitRadius || (b.isOverchargeLance ? (b.isWiderBeam ? 18 : 8) : 6);
+          if (d <= alien.radius + hitR) {
+            const loadout = (planet && planet.engine && planet.engine.getShipyardLoadout) ? planet.engine.getShipyardLoadout() : null;
+            const isChilledOrStunned = (alien.slowTimer > 0 || alien.frozenTimer > 0);
+            const boltDmg = (loadout && loadout.reactor === 'cryo' && isChilledOrStunned) ? Math.round(b.damage * 1.15) : b.damage;
+
             if (b.isOvercharged) {
               // Overcharged Coil: 2.2x primary damage + 2 golden chain arcs
-              const destroyed = alien.takeDamage(b.damage, b.x, b.y, false, onBossPhase2Callback);
-              if (onAlienHitCallback) onAlienHitCallback(alien, destroyed, b.x, b.y, b.damage, b.source || 'turret');
+              const destroyed = alien.takeDamage(boltDmg, b.x, b.y, false, onBossPhase2Callback);
+              if (onAlienHitCallback) onAlienHitCallback(alien, destroyed, b.x, b.y, boltDmg, b.source || 'turret');
 
               const candidates = [];
               for (const other of aliens) {
@@ -317,8 +324,8 @@ export class ProjectileManager {
 
               if (candidates[0]) {
                 const target1 = candidates[0].alien;
-                const k1 = target1.takeDamage(b.damage * 0.65, target1.x, target1.y, false, onBossPhase2Callback);
-                if (onAlienHitCallback) onAlienHitCallback(target1, k1, target1.x, target1.y, b.damage * 0.65, b.source || 'turret');
+                const k1 = target1.takeDamage(boltDmg * 0.65, target1.x, target1.y, false, onBossPhase2Callback);
+                if (onAlienHitCallback) onAlienHitCallback(target1, k1, target1.x, target1.y, boltDmg * 0.65, b.source || 'turret');
                 this.teslaArcs.push({
                   x1: alien.x,
                   y1: alien.y,
@@ -333,8 +340,8 @@ export class ProjectileManager {
               if (candidates[1]) {
                 const target2 = candidates[1].alien;
                 const origin = candidates[0] ? candidates[0].alien : alien;
-                const k2 = target2.takeDamage(b.damage * 0.45, target2.x, target2.y, false, onBossPhase2Callback);
-                if (onAlienHitCallback) onAlienHitCallback(target2, k2, target2.x, target2.y, b.damage * 0.45, b.source || 'turret');
+                const k2 = target2.takeDamage(boltDmg * 0.45, target2.x, target2.y, false, onBossPhase2Callback);
+                if (onAlienHitCallback) onAlienHitCallback(target2, k2, target2.x, target2.y, boltDmg * 0.45, b.source || 'turret');
                 this.teslaArcs.push({
                   x1: origin.x,
                   y1: origin.y,
@@ -347,7 +354,7 @@ export class ProjectileManager {
               }
             } else if (b.isRailgun) {
               // Railgun Lancer: +50% bonus dmg against Solar Dreadnoughts & Mothership Bosses, ignores shields
-              let hitDmg = b.damage;
+              let hitDmg = boltDmg;
               if (alien.classKey === 'DREADNOUGHT' || alien.classKey === 'BOSS') {
                 hitDmg *= 1.5;
               }
@@ -366,8 +373,8 @@ export class ProjectileManager {
               });
             } else if (b.isTesla) {
               // Tesla Arc Cannon: Chain-lightning to up to 2 (or 3 at Lv.5+) nearby targets within 115px
-              const destroyed = alien.takeDamage(b.damage, b.x, b.y, false, onBossPhase2Callback);
-              if (onAlienHitCallback) onAlienHitCallback(alien, destroyed, b.x, b.y, b.damage, b.source || 'turret');
+              const destroyed = alien.takeDamage(boltDmg, b.x, b.y, false, onBossPhase2Callback);
+              if (onAlienHitCallback) onAlienHitCallback(alien, destroyed, b.x, b.y, boltDmg, b.source || 'turret');
 
               const candidates = [];
               for (const other of aliens) {
@@ -430,8 +437,8 @@ export class ProjectileManager {
               }
             } else if (b.isOverchargeLance) {
               // v2.8 Focused Overcharge Plasma Lance: High velocity piercing, shatters Jammer barriers
-              const destroyed = alien.takeDamage(b.damage, b.x, b.y, true, onBossPhase2Callback, true);
-              if (onAlienHitCallback) onAlienHitCallback(alien, destroyed, b.x, b.y, b.damage, b.source || 'turret');
+              const destroyed = alien.takeDamage(boltDmg, b.x, b.y, true, onBossPhase2Callback, true);
+              if (onAlienHitCallback) onAlienHitCallback(alien, destroyed, b.x, b.y, boltDmg, b.source || 'turret');
               if (alien.lastHitWasCrit && planet?.engine) {
                 planet.engine.onCritBreach(alien);
               }
@@ -444,8 +451,8 @@ export class ProjectileManager {
               }
             } else if (b.isReflectedMissile) {
               // v2.8 Homing Reflected Super-Missile: 65px micro-nova detonation
-              const destroyed = alien.takeDamage(b.damage, b.x, b.y, true, onBossPhase2Callback, true);
-              if (onAlienHitCallback) onAlienHitCallback(alien, destroyed, b.x, b.y, b.damage, b.source || 'parry');
+              const destroyed = alien.takeDamage(boltDmg, b.x, b.y, true, onBossPhase2Callback, true);
+              if (onAlienHitCallback) onAlienHitCallback(alien, destroyed, b.x, b.y, boltDmg, b.source || 'parry');
               if (alien.lastHitWasCrit && planet?.engine) {
                 planet.engine.onCritBreach(alien);
               }
@@ -457,14 +464,14 @@ export class ProjectileManager {
                 if (other === alien || !other.alive) continue;
                 const splashDist = Math.hypot(other.x - b.x, other.y - b.y);
                 if (splashDist <= 65 + (other.radius || 16)) {
-                  const k = other.takeDamage(b.damage * 0.6, b.x, b.y, true, onBossPhase2Callback);
-                  if (onAlienHitCallback) onAlienHitCallback(other, k, b.x, b.y, b.damage * 0.6, 'parry');
+                  const k = other.takeDamage(boltDmg * 0.6, b.x, b.y, true, onBossPhase2Callback);
+                  if (onAlienHitCallback) onAlienHitCallback(other, k, b.x, b.y, boltDmg * 0.6, 'parry');
                 }
               }
             } else {
               // Standard Pulse Striker bolt or Wingman Bolt
-              const destroyed = alien.takeDamage(b.damage, b.x, b.y, false, onBossPhase2Callback);
-              if (onAlienHitCallback) onAlienHitCallback(alien, destroyed, b.x, b.y, b.damage, b.source || 'turret');
+              const destroyed = alien.takeDamage(boltDmg, b.x, b.y, false, onBossPhase2Callback);
+              if (onAlienHitCallback) onAlienHitCallback(alien, destroyed, b.x, b.y, boltDmg, b.source || 'turret');
 
               if (planet?.engine?.hasPerk && planet.engine.hasPerk('cryoRounds')) {
                 alien.slowTimer = Math.max(alien.slowTimer || 0, 2.2);
@@ -476,8 +483,8 @@ export class ProjectileManager {
                   if (other === alien || !other.alive) continue;
                   const splashDist = Math.hypot(other.x - b.x, other.y - b.y);
                   if (splashDist <= b.splashRadius + (other.radius || 16)) {
-                    const k = other.takeDamage(b.damage * 0.5, b.x, b.y, false, onBossPhase2Callback);
-                    if (onAlienHitCallback) onAlienHitCallback(other, k, b.x, b.y, b.damage * 0.5, b.source || 'turret');
+                    const k = other.takeDamage(boltDmg * 0.5, b.x, b.y, false, onBossPhase2Callback);
+                    if (onAlienHitCallback) onAlienHitCallback(other, k, b.x, b.y, boltDmg * 0.5, b.source || 'turret');
                   }
                 }
               }
@@ -534,13 +541,15 @@ export class ProjectileManager {
       if (planet) {
         const d = Math.hypot(planet.x - torp.x, planet.y - torp.y);
 
-        // v2.8 Active Aegis Phase-Parry Deflection Check (110° arc at shield perimeter)
+        // v2.8 Active Aegis Phase-Parry Deflection Check (110° arc at shield perimeter, 145° with parry amplifier)
         if (planet.engine && planet.engine.parryTimer > 0 && d <= planet.shieldRadius + 24) {
           const tAng = Math.atan2(torp.y - planet.y, torp.x - planet.x);
           const pAng = planet.engine.turret.angle;
           let diff = Math.abs(tAng - pAng);
           while (diff > Math.PI) diff = Math.abs(diff - Math.PI * 2);
-          const halfArc = (110 * Math.PI) / 360; // 55° (110° total arc)
+          const loadout = planet.engine.getShipyardLoadout ? planet.engine.getShipyardLoadout() : null;
+          const parryArcDeg = (loadout && loadout.shieldMod === 'parry') ? 145 : 110;
+          const halfArc = (parryArcDeg * Math.PI) / 360;
           if (diff <= halfArc) {
             torp.alive = false;
             planet.engine.onPerfectParry(torp.x, torp.y, torp.damage);
@@ -676,9 +685,10 @@ export class ProjectileManager {
       ctx.lineCap = 'round';
       for (const b of this.bolts) {
         const angle = (b.vx !== 0 || b.vy !== 0) ? Math.atan2(b.vy, b.vx) : (b.angle || 0);
-        const r = b.r || (b.isOverchargeLance ? 7.0 : (b.isOvercharged ? 5.5 : (b.isRailgun ? 5.0 : 4.5)));
-        const trailLen = b.isOverchargeLance ? 38 : (b.isOvercharged || b.isRailgun ? 26 : (b.isTesla ? 22 : 20));
-        const coreLen = b.isOverchargeLance ? 18 : 10;
+        const isWider = b.isWiderBeam || (b.isOverchargeLance && b.isSiege);
+        const r = b.r || (b.isOverchargeLance ? (isWider ? 12.0 : 7.0) : (b.isOvercharged ? 5.5 : (b.isRailgun ? 5.0 : 4.5)));
+        const trailLen = b.isOverchargeLance ? (isWider ? 48 : 38) : (b.isOvercharged || b.isRailgun ? 26 : (b.isTesla ? 22 : 20));
+        const coreLen = b.isOverchargeLance ? (isWider ? 24 : 18) : 10;
         const isChrom = b.isChromatic || b.source === 'frenzy';
         const chromColor = `hsl(${Math.floor((Date.now() / 4) % 360)}, 100%, 65%)`;
         const boltColor = isChrom ? chromColor : (b.isOverchargeLance ? '#00e5ff' : (b.isReflectedMissile ? '#ffd700' : (b.isOvercharged ? '#ffd700' : (b.isRailgun ? '#ffd700' : (b.color || '#00e5ff')))));
