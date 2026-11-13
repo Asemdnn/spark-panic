@@ -356,7 +356,7 @@ describe('v2.5 Commander\'s Ultimate Edition Suite', () => {
         expect(mainTitle.y).toBe(52);
         expect(mainTitle.textAlign).toBe('left');
 
-        const goldBadge = fillTextCalls.find(c => c.text === "🌟 v3.0 GALACTIC COMMAND EDITION" || c.text === "⚡ v2.9 SYNERGY OVERDRIVE EDITION" || c.text === "⚡ v2.8 TACTICAL MASTERY EDITION" || c.text === "⚡ v2.7 COSMIC CATACLYSM EDITION");
+        const goldBadge = fillTextCalls.find(c => c.text === "🎨 v3.1 PRISMATIC ART EDITION" || c.text === "🌟 v3.0 GALACTIC COMMAND EDITION" || c.text === "⚡ v2.9 SYNERGY OVERDRIVE EDITION" || c.text === "⚡ v2.8 TACTICAL MASTERY EDITION" || c.text === "⚡ v2.7 COSMIC CATACLYSM EDITION");
         expect(goldBadge).toBeDefined();
         expect(goldBadge.x).toBe(48);
         expect(goldBadge.y).toBe(76);
@@ -383,7 +383,7 @@ describe('v2.5 Commander\'s Ultimate Edition Suite', () => {
     it('should have updated title screen badge to v2.8 Tactical Mastery Edition in index.html', () => {
       const htmlPath = path.resolve(__dirname, '../index.html');
       const html = fs.readFileSync(htmlPath, 'utf-8');
-      expect(html).toMatch(/(⚡ v2\.[789] (COSMIC CATACLYSM|TACTICAL MASTERY|SYNERGY OVERDRIVE)|🌟 v3\.0 GALACTIC COMMAND) EDITION/);
+      expect(html).toMatch(/(⚡ v2\.[789] (COSMIC CATACLYSM|TACTICAL MASTERY|SYNERGY OVERDRIVE)|🌟 v3\.0 GALACTIC COMMAND|🎨 v3\.1 PRISMATIC ART) EDITION/);
       expect(html).not.toContain('ORBITAL DEFENSE INVASION 2.0');
     });
   });

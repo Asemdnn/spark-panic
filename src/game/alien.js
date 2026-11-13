@@ -449,8 +449,100 @@ export class Alien {
     }
   }
 
-  render(ctx) {
+  getNearestLightAngle(engine) {
+    let lx = engine?.planet?.x ?? 400;
+    let ly = engine?.planet?.y ?? 300;
+    let minDist = Math.hypot(lx - this.x, ly - this.y);
+
+    if (engine?.particles?.novas && engine.particles.novas.length > 0) {
+      for (const n of engine.particles.novas) {
+        const d = Math.hypot(n.x - this.x, n.y - this.y);
+        if (d < minDist) {
+          minDist = d;
+          lx = n.x;
+          ly = n.y;
+        }
+      }
+    }
+    return Math.atan2(ly - this.y, lx - this.x);
+  }
+
+  getRelativeLightAngle(engine) {
+    return this.getNearestLightAngle(engine) - this.heading;
+  }
+
+  drawTwinExhaustPlumes(ctx, rearX, spreadY, baseLen, baseWidth, timeSec, color = '#00e5ff') {
+    const plumePulse = Math.sin(timeSec * 16 + this.pulsePhase) * 0.25;
+    const len = baseLen * (1.0 + plumePulse);
+    const w = baseWidth * (1.0 + plumePulse * 0.5);
+
+    for (const py of [-spreadY, spreadY]) {
+      ctx.save();
+      // Outer diamond vector exhaust
+      ctx.beginPath();
+      ctx.moveTo(rearX, py);
+      ctx.lineTo(rearX - len * 0.45, py - w * 0.5);
+      ctx.lineTo(rearX - len, py);
+      ctx.lineTo(rearX - len * 0.45, py + w * 0.5);
+      ctx.closePath();
+      ctx.fillStyle = color;
+      ctx.globalAlpha = 0.65;
+      ctx.shadowColor = color;
+      ctx.shadowBlur = 8;
+      ctx.fill();
+
+      // Inner hot core diamond
+      ctx.beginPath();
+      ctx.moveTo(rearX, py);
+      ctx.lineTo(rearX - len * 0.28, py - w * 0.25);
+      ctx.lineTo(rearX - len * 0.65, py);
+      ctx.lineTo(rearX - len * 0.28, py + w * 0.25);
+      ctx.closePath();
+      ctx.fillStyle = '#ffffff';
+      ctx.globalAlpha = 0.9;
+      ctx.shadowBlur = 4;
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  drawRimLighting(ctx, edges, relLightAngle) {
+    // 2.5D Directional Rim-Lighting along forward/light-facing edges
+    ctx.save();
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 2.5;
+    ctx.shadowColor = '#ffffff';
+    ctx.shadowBlur = 10;
+    ctx.globalAlpha = 0.85;
+
+    for (const edge of edges) {
+      // Normal of the edge
+      const dx = edge.x2 - edge.x1;
+      const dy = edge.y2 - edge.y1;
+      // Normal pointing outward
+      const nx = -dy;
+      const ny = dx;
+      const nLen = Math.hypot(nx, ny) || 1;
+      const dot = (nx / nLen) * Math.cos(relLightAngle) + (ny / nLen) * Math.sin(relLightAngle);
+
+      // If edge faces light source (dot > 0), draw 2.5px specular highlight rim
+      if (dot > 0.15) {
+        ctx.beginPath();
+        ctx.moveTo(edge.x1, edge.y1);
+        ctx.lineTo(edge.x2, edge.y2);
+        ctx.stroke();
+      }
+    }
+    ctx.restore();
+  }
+
+  render(ctx, engine = null, timeSec = null) {
     if (!this.alive) return;
+
+    const eng = engine || this.engine;
+    const t = timeSec !== null ? timeSec : (eng?.gameTime ?? (Date.now() * 0.001));
+    const artStyle = eng?.artStyle || 'astral';
+    const relLightAngle = this.getRelativeLightAngle(eng);
 
     ctx.save();
     ctx.translate(this.x, this.y);
@@ -471,20 +563,91 @@ export class Alien {
       ctx.setLineDash([]);
     }
 
+    const chassisFill = (artStyle === 'vector') ? 'transparent' : '#090d1e';
+    const paneAlpha = 0.55 + Math.sin(t * 6) * 0.25;
+
     // Class Specific Ship Hull Drawing
     if (this.classKey === 'SCOUT') {
-      // Delta-Wing Dart Fighter
+      // Twin articulated diamond vector exhaust plumes
+      this.drawTwinExhaustPlumes(ctx, -r * 0.75, r * 0.42, r * 0.8, r * 0.35, t, this.color);
+
+      // Delta-Wing Dart Fighter Hull
+      const pTip = { x: r * 1.3, y: 0 };
+      const pTopWing = { x: -r * 0.9, y: -r * 0.85 };
+      const pNotch = { x: -r * 0.4, y: 0 };
+      const pBotWing = { x: -r * 0.9, y: r * 0.85 };
+
+      // Obsidian armored chassis (#090d1e)
       ctx.beginPath();
-      ctx.moveTo(r * 1.3, 0);
-      ctx.lineTo(-r * 0.9, -r * 0.85);
-      ctx.lineTo(-r * 0.4, 0);
-      ctx.lineTo(-r * 0.9, r * 0.85);
+      ctx.moveTo(pTip.x, pTip.y);
+      ctx.lineTo(pTopWing.x, pTopWing.y);
+      ctx.lineTo(pNotch.x, pNotch.y);
+      ctx.lineTo(pBotWing.x, pBotWing.y);
       ctx.closePath();
-      ctx.fillStyle = '#0a1d37';
+      if (artStyle !== 'vector') {
+        ctx.fillStyle = chassisFill;
+        ctx.fill();
+      }
+
+      // Internal faceted stained-glass energy panes pulsing with Math.sin(timeSec * 6)
+      // Top pane
+      ctx.beginPath();
+      ctx.moveTo(pTip.x * 0.8, 0);
+      ctx.lineTo(pTopWing.x * 0.75, pTopWing.y * 0.7);
+      ctx.lineTo(pNotch.x * 0.6, 0);
+      ctx.closePath();
+      ctx.fillStyle = this.color;
+      ctx.globalAlpha = paneAlpha;
       ctx.fill();
-      ctx.strokeStyle = this.color;
-      ctx.lineWidth = 2;
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 1.0;
       ctx.stroke();
+
+      // Bottom pane
+      ctx.beginPath();
+      ctx.moveTo(pTip.x * 0.8, 0);
+      ctx.lineTo(pBotWing.x * 0.75, pBotWing.y * 0.7);
+      ctx.lineTo(pNotch.x * 0.6, 0);
+      ctx.closePath();
+      ctx.fillStyle = this.color;
+      ctx.globalAlpha = paneAlpha;
+      ctx.fill();
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 1.0;
+      ctx.stroke();
+      ctx.globalAlpha = 1.0;
+
+      // Double-beveled neon edge
+      ctx.beginPath();
+      ctx.moveTo(pTip.x, pTip.y);
+      ctx.lineTo(pTopWing.x, pTopWing.y);
+      ctx.lineTo(pNotch.x, pNotch.y);
+      ctx.lineTo(pBotWing.x, pBotWing.y);
+      ctx.closePath();
+      ctx.strokeStyle = (artStyle === 'comic') ? '#000000' : this.color;
+      ctx.lineWidth = (artStyle === 'comic') ? 3.5 : 2.4;
+      ctx.stroke();
+
+      if (artStyle !== 'comic' && artStyle !== 'vector') {
+        // Inner bevel highlight line
+        ctx.beginPath();
+        ctx.moveTo(pTip.x * 0.9, 0);
+        ctx.lineTo(pTopWing.x * 0.9, pTopWing.y * 0.85);
+        ctx.lineTo(pNotch.x * 0.85, 0);
+        ctx.lineTo(pBotWing.x * 0.9, pBotWing.y * 0.85);
+        ctx.closePath();
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1.0;
+        ctx.globalAlpha = 0.55;
+        ctx.stroke();
+        ctx.globalAlpha = 1.0;
+      }
+
+      // Dynamic 2.5D Directional Rim-Lighting along forward-facing edges
+      this.drawRimLighting(ctx, [
+        { x1: pTip.x, y1: pTip.y, x2: pTopWing.x, y2: pTopWing.y },
+        { x1: pBotWing.x, y1: pBotWing.y, x2: pTip.x, y2: pTip.y }
+      ], relLightAngle);
 
       // Glowing Cockpit
       ctx.beginPath();
@@ -492,42 +655,145 @@ export class Alien {
       ctx.fillStyle = this.color;
       ctx.fill();
     } else if (this.classKey === 'INTERCEPTOR') {
+      // Twin articulated diamond vector exhaust plumes
+      this.drawTwinExhaustPlumes(ctx, -r * 0.75, r * 0.55, r * 0.85, r * 0.38, t, this.color);
+
       // Trident 3-Prong Warship
+      const pTip = { x: r * 1.4, y: 0 };
+      const pTopProng = { x: r * 0.2, y: -r * 1.1 };
+      const pTopRear = { x: -r * 0.8, y: -r * 0.6 };
+      const pNotch = { x: -r * 0.3, y: 0 };
+      const pBotRear = { x: -r * 0.8, y: r * 0.6 };
+      const pBotProng = { x: r * 0.2, y: r * 1.1 };
+
+      // Obsidian armored chassis (#090d1e)
       ctx.beginPath();
-      ctx.moveTo(r * 1.4, 0);
-      ctx.lineTo(r * 0.2, -r * 1.1);
-      ctx.lineTo(-r * 0.8, -r * 0.6);
-      ctx.lineTo(-r * 0.3, 0);
-      ctx.lineTo(-r * 0.8, r * 0.6);
-      ctx.lineTo(r * 0.2, r * 1.1);
+      ctx.moveTo(pTip.x, pTip.y);
+      ctx.lineTo(pTopProng.x, pTopProng.y);
+      ctx.lineTo(pTopRear.x, pTopRear.y);
+      ctx.lineTo(pNotch.x, pNotch.y);
+      ctx.lineTo(pBotRear.x, pBotRear.y);
+      ctx.lineTo(pBotProng.x, pBotProng.y);
       ctx.closePath();
-      ctx.fillStyle = '#2d0628';
+      if (artStyle !== 'vector') {
+        ctx.fillStyle = chassisFill;
+        ctx.fill();
+      }
+
+      // Internal faceted stained-glass energy panes
+      // Center pane
+      ctx.beginPath();
+      ctx.moveTo(pTip.x * 0.75, 0);
+      ctx.lineTo(0, -r * 0.4);
+      ctx.lineTo(-r * 0.4, 0);
+      ctx.lineTo(0, r * 0.4);
+      ctx.closePath();
+      ctx.fillStyle = this.color;
+      ctx.globalAlpha = paneAlpha;
       ctx.fill();
-      ctx.strokeStyle = this.color;
-      ctx.lineWidth = 2.2;
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 1.0;
       ctx.stroke();
+
+      // Top wing pane
+      ctx.beginPath();
+      ctx.moveTo(pTopProng.x * 0.85, pTopProng.y * 0.85);
+      ctx.lineTo(pTopRear.x * 0.7, pTopRear.y * 0.7);
+      ctx.lineTo(0, -r * 0.35);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      // Bottom wing pane
+      ctx.beginPath();
+      ctx.moveTo(pBotProng.x * 0.85, pBotProng.y * 0.85);
+      ctx.lineTo(pBotRear.x * 0.7, pBotRear.y * 0.7);
+      ctx.lineTo(0, r * 0.35);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      ctx.globalAlpha = 1.0;
+
+      // Double-beveled neon edge
+      ctx.beginPath();
+      ctx.moveTo(pTip.x, pTip.y);
+      ctx.lineTo(pTopProng.x, pTopProng.y);
+      ctx.lineTo(pTopRear.x, pTopRear.y);
+      ctx.lineTo(pNotch.x, pNotch.y);
+      ctx.lineTo(pBotRear.x, pBotRear.y);
+      ctx.lineTo(pBotProng.x, pBotProng.y);
+      ctx.closePath();
+      ctx.strokeStyle = (artStyle === 'comic') ? '#000000' : this.color;
+      ctx.lineWidth = (artStyle === 'comic') ? 3.5 : 2.4;
+      ctx.stroke();
+
+      // Dynamic 2.5D Directional Rim-Lighting
+      this.drawRimLighting(ctx, [
+        { x1: pTip.x, y1: pTip.y, x2: pTopProng.x, y2: pTopProng.y },
+        { x1: pBotProng.x, y1: pBotProng.y, x2: pTip.x, y2: pTip.y }
+      ], relLightAngle);
 
       // Core plasma orb
       ctx.beginPath();
-      ctx.arc(0, 0, r * 0.4, 0, Math.PI * 2);
+      ctx.arc(0, 0, r * 0.35, 0, Math.PI * 2);
       ctx.fillStyle = '#ffffff';
       ctx.fill();
     } else if (this.classKey === 'CRYO') {
-      // Hexagonal Stasis Cruiser
+      // Twin articulated diamond vector exhaust plumes
+      this.drawTwinExhaustPlumes(ctx, -r * 0.95, r * 0.38, r * 0.8, r * 0.32, t, this.color);
+
+      // Hexagonal Stasis Cruiser Hull
+      const hexVerts = [];
       ctx.beginPath();
       for (let i = 0; i < 6; i++) {
         const ang = (i / 6) * Math.PI * 2;
         const px = Math.cos(ang) * (r * 1.15);
         const py = Math.sin(ang) * (r * 1.15);
+        hexVerts.push({ x: px, y: py });
         if (i === 0) ctx.moveTo(px, py);
         else ctx.lineTo(px, py);
       }
       ctx.closePath();
-      ctx.fillStyle = '#062d1f';
-      ctx.fill();
-      ctx.strokeStyle = this.color;
-      ctx.lineWidth = 2.5;
+      if (artStyle !== 'vector') {
+        ctx.fillStyle = chassisFill;
+        ctx.fill();
+      }
+
+      // Internal faceted stained-glass crystal panes (6 triangles from center)
+      for (let i = 0; i < 6; i++) {
+        const v1 = hexVerts[i];
+        const v2 = hexVerts[(i + 1) % 6];
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(v1.x * 0.8, v1.y * 0.8);
+        ctx.lineTo(v2.x * 0.8, v2.y * 0.8);
+        ctx.closePath();
+        ctx.fillStyle = (i % 2 === 0) ? this.color : '#00e5ff';
+        ctx.globalAlpha = paneAlpha;
+        ctx.fill();
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1.0;
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 1.0;
+
+      // Double-beveled neon edge
+      ctx.beginPath();
+      for (let i = 0; i < 6; i++) {
+        if (i === 0) ctx.moveTo(hexVerts[i].x, hexVerts[i].y);
+        else ctx.lineTo(hexVerts[i].x, hexVerts[i].y);
+      }
+      ctx.closePath();
+      ctx.strokeStyle = (artStyle === 'comic') ? '#000000' : this.color;
+      ctx.lineWidth = (artStyle === 'comic') ? 3.5 : 2.5;
       ctx.stroke();
+
+      // Dynamic 2.5D Directional Rim-Lighting
+      const hexEdges = [];
+      for (let i = 0; i < 6; i++) {
+        hexEdges.push({ x1: hexVerts[i].x, y1: hexVerts[i].y, x2: hexVerts[(i + 1) % 6].x, y2: hexVerts[(i + 1) % 6].y });
+      }
+      this.drawRimLighting(ctx, hexEdges, relLightAngle);
 
       // Frost Crystal Core
       ctx.beginPath();
@@ -537,106 +803,344 @@ export class Alien {
       ctx.lineWidth = 2;
       ctx.stroke();
     } else if (this.classKey === 'PHASE') {
-      // Diamond Quantum Vessel
+      // Twin articulated diamond vector exhaust plumes
+      this.drawTwinExhaustPlumes(ctx, -r * 0.95, r * 0.32, r * 0.85, r * 0.34, t, this.color);
+
+      // Diamond Quantum Vessel Hull
+      const pTip = { x: r * 1.3, y: 0 };
+      const pTop = { x: 0, y: -r * 0.9 };
+      const pRear = { x: -r * 1.1, y: 0 };
+      const pBot = { x: 0, y: r * 0.9 };
+
       ctx.beginPath();
-      ctx.moveTo(r * 1.3, 0);
-      ctx.lineTo(0, -r * 0.9);
-      ctx.lineTo(-r * 1.1, 0);
-      ctx.lineTo(0, r * 0.9);
+      ctx.moveTo(pTip.x, pTip.y);
+      ctx.lineTo(pTop.x, pTop.y);
+      ctx.lineTo(pRear.x, pRear.y);
+      ctx.lineTo(pBot.x, pBot.y);
       ctx.closePath();
-      ctx.fillStyle = '#220835';
-      ctx.fill();
-      ctx.strokeStyle = this.color;
-      ctx.lineWidth = 2.2;
+      if (artStyle !== 'vector') {
+        ctx.fillStyle = chassisFill;
+        ctx.fill();
+      }
+
+      // Internal faceted stained-glass energy panes (4 quadrants)
+      const diamondPanes = [
+        [pTip, pTop],
+        [pTop, pRear],
+        [pRear, pBot],
+        [pBot, pTip]
+      ];
+      for (const [v1, v2] of diamondPanes) {
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(v1.x * 0.8, v1.y * 0.8);
+        ctx.lineTo(v2.x * 0.8, v2.y * 0.8);
+        ctx.closePath();
+        ctx.fillStyle = this.color;
+        ctx.globalAlpha = paneAlpha;
+        ctx.fill();
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1.0;
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 1.0;
+
+      // Double-beveled neon edge
+      ctx.beginPath();
+      ctx.moveTo(pTip.x, pTip.y);
+      ctx.lineTo(pTop.x, pTop.y);
+      ctx.lineTo(pRear.x, pRear.y);
+      ctx.lineTo(pBot.x, pBot.y);
+      ctx.closePath();
+      ctx.strokeStyle = (artStyle === 'comic') ? '#000000' : this.color;
+      ctx.lineWidth = (artStyle === 'comic') ? 3.5 : 2.4;
       ctx.stroke();
+
+      // Dynamic 2.5D Directional Rim-Lighting
+      this.drawRimLighting(ctx, [
+        { x1: pTip.x, y1: pTip.y, x2: pTop.x, y2: pTop.y },
+        { x1: pTop.x, y1: pTop.y, x2: pRear.x, y2: pRear.y },
+        { x1: pRear.x, y1: pRear.y, x2: pBot.x, y2: pBot.y },
+        { x1: pBot.x, y1: pBot.y, x2: pTip.x, y2: pTip.y }
+      ], relLightAngle);
 
       // Pulsing phase ring
       ctx.beginPath();
-      ctx.arc(0, 0, r * 0.5, 0, Math.PI * 2);
+      ctx.arc(0, 0, r * 0.45, 0, Math.PI * 2);
       ctx.fillStyle = '#ffffff';
       ctx.fill();
     } else if (this.classKey === 'DROPSHIP') {
-      // Heavy Armored Lander
+      // Twin articulated diamond vector exhaust plumes
+      this.drawTwinExhaustPlumes(ctx, -r * 0.95, r * 0.65, r * 0.9, r * 0.4, t, this.color);
+
+      // Heavy Armored Lander Hull
+      const p1 = { x: r * 0.9, y: -r * 0.75 };
+      const p2 = { x: -r * 0.9, y: -r * 0.75 };
+      const p3 = { x: -r * 0.9, y: r * 0.75 };
+      const p4 = { x: r * 0.9, y: r * 0.75 };
+
       ctx.beginPath();
-      ctx.rect(-r * 1.0, -r * 0.8, r * 2.0, r * 1.6);
-      ctx.fillStyle = '#300814';
+      ctx.moveTo(p1.x, p1.y);
+      ctx.lineTo(p2.x, p2.y);
+      ctx.lineTo(p3.x, p3.y);
+      ctx.lineTo(p4.x, p4.y);
+      ctx.closePath();
+      if (artStyle !== 'vector') {
+        ctx.fillStyle = chassisFill;
+        ctx.fill();
+      }
+
+      // Internal faceted stained-glass armor panels
+      ctx.beginPath();
+      ctx.rect(-r * 0.6, -r * 0.5, r * 1.2, r * 1.0);
+      ctx.fillStyle = this.color;
+      ctx.globalAlpha = paneAlpha;
       ctx.fill();
-      ctx.strokeStyle = this.color;
-      ctx.lineWidth = 2.8;
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 1.2;
       ctx.stroke();
+
+      // Diagonal cross facet seams
+      ctx.beginPath();
+      ctx.moveTo(-r * 0.6, -r * 0.5); ctx.lineTo(r * 0.6, r * 0.5);
+      ctx.moveTo(-r * 0.6, r * 0.5); ctx.lineTo(r * 0.6, -r * 0.5);
+      ctx.stroke();
+      ctx.globalAlpha = 1.0;
+
+      // Double-beveled neon edge
+      ctx.beginPath();
+      ctx.moveTo(p1.x, p1.y);
+      ctx.lineTo(p2.x, p2.y);
+      ctx.lineTo(p3.x, p3.y);
+      ctx.lineTo(p4.x, p4.y);
+      ctx.closePath();
+      ctx.strokeStyle = (artStyle === 'comic') ? '#000000' : this.color;
+      ctx.lineWidth = (artStyle === 'comic') ? 3.5 : 2.8;
+      ctx.stroke();
+
+      // Dynamic 2.5D Directional Rim-Lighting
+      this.drawRimLighting(ctx, [
+        { x1: p4.x, y1: p4.y, x2: p1.x, y2: p1.y },
+        { x1: p1.x, y1: p1.y, x2: p2.x, y2: p2.y }
+      ], relLightAngle);
 
       // Dual side engines
       ctx.fillStyle = '#ff3366';
-      ctx.fillRect(-r * 1.1, -r * 0.9, r * 0.4, r * 0.35);
-      ctx.fillRect(-r * 1.1, r * 0.55, r * 0.4, r * 0.35);
+      ctx.fillRect(-r * 1.05, -r * 0.85, r * 0.35, r * 0.3);
+      ctx.fillRect(-r * 1.05, r * 0.55, r * 0.35, r * 0.3);
     } else if (this.classKey === 'DREADNOUGHT') {
-      // Solar Dreadnought Flagship
+      // Twin articulated diamond vector exhaust plumes
+      this.drawTwinExhaustPlumes(ctx, -r * 1.1, r * 0.55, r * 1.05, r * 0.45, t, this.color);
+
+      // Solar Dreadnought Flagship Hull
+      const pTip = { x: r * 1.6, y: 0 };
+      const pTopFwd = { x: r * 0.6, y: -r * 1.1 };
+      const pTopRear = { x: -r * 1.2, y: -r * 0.8 };
+      const pNotch = { x: -r * 0.7, y: 0 };
+      const pBotRear = { x: -r * 1.2, y: r * 0.8 };
+      const pBotFwd = { x: r * 0.6, y: r * 1.1 };
+
       ctx.beginPath();
-      ctx.moveTo(r * 1.6, 0);
-      ctx.lineTo(r * 0.6, -r * 1.1);
-      ctx.lineTo(-r * 1.2, -r * 0.8);
-      ctx.lineTo(-r * 0.7, 0);
-      ctx.lineTo(-r * 1.2, r * 0.8);
-      ctx.lineTo(r * 0.6, r * 1.1);
+      ctx.moveTo(pTip.x, pTip.y);
+      ctx.lineTo(pTopFwd.x, pTopFwd.y);
+      ctx.lineTo(pTopRear.x, pTopRear.y);
+      ctx.lineTo(pNotch.x, pNotch.y);
+      ctx.lineTo(pBotRear.x, pBotRear.y);
+      ctx.lineTo(pBotFwd.x, pBotFwd.y);
       ctx.closePath();
-      ctx.fillStyle = '#352504';
-      ctx.fill();
-      ctx.strokeStyle = this.color;
-      ctx.lineWidth = 3;
+      if (artStyle !== 'vector') {
+        ctx.fillStyle = chassisFill;
+        ctx.fill();
+      }
+
+      // Internal faceted stained-glass energy panes
+      const dreadPanes = [
+        [{ x: pTip.x * 0.85, y: 0 }, { x: pTopFwd.x * 0.8, y: pTopFwd.y * 0.8 }, { x: 0, y: 0 }],
+        [{ x: pTip.x * 0.85, y: 0 }, { x: pBotFwd.x * 0.8, y: pBotFwd.y * 0.8 }, { x: 0, y: 0 }],
+        [{ x: pTopFwd.x * 0.8, y: pTopFwd.y * 0.8 }, { x: pTopRear.x * 0.8, y: pTopRear.y * 0.8 }, { x: pNotch.x * 0.7, y: 0 }],
+        [{ x: pBotFwd.x * 0.8, y: pBotFwd.y * 0.8 }, { x: pBotRear.x * 0.8, y: pBotRear.y * 0.8 }, { x: pNotch.x * 0.7, y: 0 }]
+      ];
+      for (const pane of dreadPanes) {
+        ctx.beginPath();
+        ctx.moveTo(pane[0].x, pane[0].y);
+        ctx.lineTo(pane[1].x, pane[1].y);
+        ctx.lineTo(pane[2].x, pane[2].y);
+        ctx.closePath();
+        ctx.fillStyle = this.color;
+        ctx.globalAlpha = paneAlpha;
+        ctx.fill();
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1.0;
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 1.0;
+
+      // Double-beveled neon edge
+      ctx.beginPath();
+      ctx.moveTo(pTip.x, pTip.y);
+      ctx.lineTo(pTopFwd.x, pTopFwd.y);
+      ctx.lineTo(pTopRear.x, pTopRear.y);
+      ctx.lineTo(pNotch.x, pNotch.y);
+      ctx.lineTo(pBotRear.x, pBotRear.y);
+      ctx.lineTo(pBotFwd.x, pBotFwd.y);
+      ctx.closePath();
+      ctx.strokeStyle = (artStyle === 'comic') ? '#000000' : this.color;
+      ctx.lineWidth = (artStyle === 'comic') ? 3.5 : 3.0;
       ctx.stroke();
+
+      // Dynamic 2.5D Directional Rim-Lighting
+      this.drawRimLighting(ctx, [
+        { x1: pTip.x, y1: pTip.y, x2: pTopFwd.x, y2: pTopFwd.y },
+        { x1: pBotFwd.x, y1: pBotFwd.y, x2: pTip.x, y2: pTip.y }
+      ], relLightAngle);
 
       // Heavy Core Reactor
       ctx.beginPath();
-      ctx.arc(0, 0, r * 0.5, 0, Math.PI * 2);
+      ctx.arc(0, 0, r * 0.45, 0, Math.PI * 2);
       ctx.fillStyle = '#ffd700';
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(0, 0, r * 0.22, 0, Math.PI * 2);
+      ctx.fillStyle = '#ffffff';
+      ctx.fill();
+    } else if (this.classKey === 'BOSS') {
+      // Twin articulated diamond vector exhaust plumes
+      this.drawTwinExhaustPlumes(ctx, -r * 1.35, r * 0.75, r * 1.25, r * 0.55, t, this.color);
+
+      // Sector Mothership Apex Flagship Hull
+      const pTip = { x: r * 1.8, y: 0 };
+      const pTopFwd = { x: r * 0.8, y: -r * 1.2 };
+      const pTopRear = { x: -r * 1.4, y: -r * 1.0 };
+      const pNotch = { x: -r * 0.8, y: 0 };
+      const pBotRear = { x: -r * 1.4, y: r * 1.0 };
+      const pBotFwd = { x: r * 0.8, y: r * 1.2 };
+
+      ctx.beginPath();
+      ctx.moveTo(pTip.x, pTip.y);
+      ctx.lineTo(pTopFwd.x, pTopFwd.y);
+      ctx.lineTo(pTopRear.x, pTopRear.y);
+      ctx.lineTo(pNotch.x, pNotch.y);
+      ctx.lineTo(pBotRear.x, pBotRear.y);
+      ctx.lineTo(pBotFwd.x, pBotFwd.y);
+      ctx.closePath();
+      if (artStyle !== 'vector') {
+        ctx.fillStyle = chassisFill;
+        ctx.fill();
+      }
+
+      // Internal faceted stained-glass energy panes
+      const bossPanes = [
+        [{ x: pTip.x * 0.85, y: 0 }, { x: pTopFwd.x * 0.85, y: pTopFwd.y * 0.85 }, { x: 0, y: 0 }],
+        [{ x: pTip.x * 0.85, y: 0 }, { x: pBotFwd.x * 0.85, y: pBotFwd.y * 0.85 }, { x: 0, y: 0 }],
+        [{ x: pTopFwd.x * 0.85, y: pTopFwd.y * 0.85 }, { x: pTopRear.x * 0.85, y: pTopRear.y * 0.85 }, { x: pNotch.x * 0.8, y: 0 }],
+        [{ x: pBotFwd.x * 0.85, y: pBotFwd.y * 0.85 }, { x: pBotRear.x * 0.85, y: pBotRear.y * 0.85 }, { x: pNotch.x * 0.8, y: 0 }]
+      ];
+      for (const pane of bossPanes) {
+        ctx.beginPath();
+        ctx.moveTo(pane[0].x, pane[0].y);
+        ctx.lineTo(pane[1].x, pane[1].y);
+        ctx.lineTo(pane[2].x, pane[2].y);
+        ctx.closePath();
+        ctx.fillStyle = this.color;
+        ctx.globalAlpha = paneAlpha;
+        ctx.fill();
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 1.0;
+
+      // Double-beveled neon edge
+      ctx.beginPath();
+      ctx.moveTo(pTip.x, pTip.y);
+      ctx.lineTo(pTopFwd.x, pTopFwd.y);
+      ctx.lineTo(pTopRear.x, pTopRear.y);
+      ctx.lineTo(pNotch.x, pNotch.y);
+      ctx.lineTo(pBotRear.x, pBotRear.y);
+      ctx.lineTo(pBotFwd.x, pBotFwd.y);
+      ctx.closePath();
+      ctx.strokeStyle = (artStyle === 'comic') ? '#000000' : this.color;
+      ctx.lineWidth = (artStyle === 'comic') ? 3.5 : 3.5;
+      if (artStyle !== 'comic') {
+        ctx.shadowColor = '#ff1744';
+        ctx.shadowBlur = 18;
+      }
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+
+      // Dynamic 2.5D Directional Rim-Lighting
+      this.drawRimLighting(ctx, [
+        { x1: pTip.x, y1: pTip.y, x2: pTopFwd.x, y2: pTopFwd.y },
+        { x1: pBotFwd.x, y1: pBotFwd.y, x2: pTip.x, y2: pTip.y }
+      ], relLightAngle);
+
+      // Heavy Boss Core
+      ctx.beginPath();
+      ctx.arc(0, 0, r * 0.5, 0, Math.PI * 2);
+      ctx.fillStyle = '#ff1744';
       ctx.fill();
       ctx.beginPath();
       ctx.arc(0, 0, r * 0.25, 0, Math.PI * 2);
       ctx.fillStyle = '#ffffff';
       ctx.fill();
-    } else if (this.classKey === 'BOSS') {
-      // Sector Mothership Apex Flagship
-      ctx.beginPath();
-      ctx.moveTo(r * 1.8, 0);
-      ctx.lineTo(r * 0.8, -r * 1.2);
-      ctx.lineTo(-r * 1.4, -r * 1.0);
-      ctx.lineTo(-r * 0.8, 0);
-      ctx.lineTo(-r * 1.4, r * 1.0);
-      ctx.lineTo(r * 0.8, r * 1.2);
-      ctx.closePath();
-      ctx.fillStyle = '#3a0814';
-      ctx.fill();
-      ctx.strokeStyle = this.color;
-      ctx.lineWidth = 3.5;
-      ctx.shadowColor = '#ff1744';
-      ctx.shadowBlur = 18;
-      ctx.stroke();
-      ctx.shadowBlur = 0;
-
-      // Heavy Boss Core
-      ctx.beginPath();
-      ctx.arc(0, 0, r * 0.55, 0, Math.PI * 2);
-      ctx.fillStyle = '#ff1744';
-      ctx.fill();
-      ctx.beginPath();
-      ctx.arc(0, 0, r * 0.28, 0, Math.PI * 2);
-      ctx.fillStyle = '#ffffff';
-      ctx.fill();
     } else if (this.classKey === 'JAMMER') {
-      // Aegis Jammer Frigate: Armored Hull with Curved 90° Frontal Energy Barrier
+      // Twin articulated diamond vector exhaust plumes
+      this.drawTwinExhaustPlumes(ctx, -r * 0.85, r * 0.5, r * 0.85, r * 0.36, t, this.color);
+
+      // Aegis Jammer Frigate Hull
+      const pTip = { x: r * 1.3, y: 0 };
+      const pTopFwd = { x: r * 0.4, y: -r * 0.95 };
+      const pTopRear = { x: -r * 0.9, y: -r * 0.7 };
+      const pNotch = { x: -r * 0.4, y: 0 };
+      const pBotRear = { x: -r * 0.9, y: r * 0.7 };
+      const pBotFwd = { x: r * 0.4, y: r * 0.95 };
+
       ctx.beginPath();
-      ctx.moveTo(r * 1.3, 0);
-      ctx.lineTo(r * 0.4, -r * 0.95);
-      ctx.lineTo(-r * 0.9, -r * 0.7);
-      ctx.lineTo(-r * 0.4, 0);
-      ctx.lineTo(-r * 0.9, r * 0.7);
-      ctx.lineTo(r * 0.4, r * 0.95);
+      ctx.moveTo(pTip.x, pTip.y);
+      ctx.lineTo(pTopFwd.x, pTopFwd.y);
+      ctx.lineTo(pTopRear.x, pTopRear.y);
+      ctx.lineTo(pNotch.x, pNotch.y);
+      ctx.lineTo(pBotRear.x, pBotRear.y);
+      ctx.lineTo(pBotFwd.x, pBotFwd.y);
       ctx.closePath();
-      ctx.fillStyle = '#06202c';
+      if (artStyle !== 'vector') {
+        ctx.fillStyle = chassisFill;
+        ctx.fill();
+      }
+
+      // Internal faceted stained-glass energy panes
+      ctx.beginPath();
+      ctx.moveTo(pTip.x * 0.7, 0);
+      ctx.lineTo(pTopFwd.x * 0.7, pTopFwd.y * 0.7);
+      ctx.lineTo(0, 0);
+      ctx.lineTo(pBotFwd.x * 0.7, pBotFwd.y * 0.7);
+      ctx.closePath();
+      ctx.fillStyle = this.color;
+      ctx.globalAlpha = paneAlpha;
       ctx.fill();
-      ctx.strokeStyle = this.color;
-      ctx.lineWidth = 2.2;
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 1.0;
       ctx.stroke();
+      ctx.globalAlpha = 1.0;
+
+      // Double-beveled neon edge
+      ctx.beginPath();
+      ctx.moveTo(pTip.x, pTip.y);
+      ctx.lineTo(pTopFwd.x, pTopFwd.y);
+      ctx.lineTo(pTopRear.x, pTopRear.y);
+      ctx.lineTo(pNotch.x, pNotch.y);
+      ctx.lineTo(pBotRear.x, pBotRear.y);
+      ctx.lineTo(pBotFwd.x, pBotFwd.y);
+      ctx.closePath();
+      ctx.strokeStyle = (artStyle === 'comic') ? '#000000' : this.color;
+      ctx.lineWidth = (artStyle === 'comic') ? 3.5 : 2.4;
+      ctx.stroke();
+
+      // Dynamic 2.5D Directional Rim-Lighting
+      this.drawRimLighting(ctx, [
+        { x1: pTip.x, y1: pTip.y, x2: pTopFwd.x, y2: pTopFwd.y },
+        { x1: pBotFwd.x, y1: pBotFwd.y, x2: pTip.x, y2: pTip.y }
+      ], relLightAngle);
 
       // Crimson reinforced central armor
       ctx.beginPath();
@@ -648,7 +1152,7 @@ export class Alien {
       ctx.fillStyle = '#ff1744';
       ctx.fill();
 
-      // Curved 90° Frontal Energy Barrier (Facing +X / Heading toward planet)
+      // Curved 90° Frontal Energy Barrier
       ctx.beginPath();
       ctx.arc(r * 0.2, 0, r * 1.15, -Math.PI * 0.25, Math.PI * 0.25);
       ctx.strokeStyle = this.shieldHitFlash > 0 ? '#ffffff' : '#00e5ff';
@@ -658,21 +1162,38 @@ export class Alien {
       ctx.stroke();
       ctx.shadowBlur = 0;
     } else if (this.classKey === 'WEAVER') {
-      // Void Weaver Carrier: Twin Catamaran Hulls with Graviton Matrix
-      ctx.fillStyle = '#220835';
-      ctx.strokeStyle = this.color;
-      ctx.lineWidth = 2.0;
+      // Twin articulated diamond vector exhaust plumes
+      this.drawTwinExhaustPlumes(ctx, -r * 0.85, r * 0.72, r * 0.85, r * 0.35, t, this.color);
 
-      // Twin hulls
+      // Void Weaver Carrier: Twin Catamaran Hulls with Graviton Matrix
+      // Obsidian armored chassis (#090d1e)
       ctx.beginPath();
       ctx.rect(-r * 0.9, -r * 0.95, r * 1.8, r * 0.45);
       ctx.rect(-r * 0.9, r * 0.50, r * 1.8, r * 0.45);
-      ctx.fill();
+      if (artStyle !== 'vector') {
+        ctx.fillStyle = chassisFill;
+        ctx.fill();
+      }
+      ctx.strokeStyle = (artStyle === 'comic') ? '#000000' : this.color;
+      ctx.lineWidth = (artStyle === 'comic') ? 3.5 : 2.2;
       ctx.stroke();
 
       // Connecting bridge
       ctx.fillRect(-r * 0.2, -r * 0.55, r * 0.4, r * 1.1);
       ctx.strokeRect(-r * 0.2, -r * 0.55, r * 0.4, r * 1.1);
+
+      // Internal faceted stained-glass energy panes in twin hulls
+      ctx.fillStyle = this.color;
+      ctx.globalAlpha = paneAlpha;
+      ctx.fillRect(-r * 0.7, -r * 0.85, r * 1.4, r * 0.25);
+      ctx.fillRect(-r * 0.7, r * 0.60, r * 1.4, r * 0.25);
+      ctx.globalAlpha = 1.0;
+
+      // Dynamic 2.5D Directional Rim-Lighting
+      this.drawRimLighting(ctx, [
+        { x1: r * 0.9, y1: -r * 0.95, x2: r * 0.9, y2: -r * 0.50 },
+        { x1: r * 0.9, y1: r * 0.50, x2: r * 0.9, y2: r * 0.95 }
+      ], relLightAngle);
 
       // Glowing Graviton Core
       ctx.beginPath();
@@ -683,25 +1204,73 @@ export class Alien {
       ctx.fill();
       ctx.shadowBlur = 0;
     } else if (this.classKey === 'GALLEON') {
+      // Twin articulated diamond vector exhaust plumes
+      this.drawTwinExhaustPlumes(ctx, -r * 0.5, r * 0.9, r * 0.95, r * 0.4, t, '#ffd700');
+
       // Astral Treasure Galleon: Gilded Hull, Solar Sails & Treasure Core
+      const pTip = { x: r * 1.5, y: 0 };
+      const pTop = { x: -r * 0.5, y: -r * 1.4 };
+      const pNotch = { x: -r * 0.2, y: 0 };
+      const pBot = { x: -r * 0.5, y: r * 1.4 };
+
       ctx.beginPath();
-      ctx.moveTo(r * 1.5, 0);
-      ctx.lineTo(-r * 0.5, -r * 1.4);
-      ctx.lineTo(-r * 0.2, 0);
-      ctx.lineTo(-r * 0.5, r * 1.4);
+      ctx.moveTo(pTip.x, pTip.y);
+      ctx.lineTo(pTop.x, pTop.y);
+      ctx.lineTo(pNotch.x, pNotch.y);
+      ctx.lineTo(pBot.x, pBot.y);
       ctx.closePath();
-      ctx.fillStyle = '#451a03';
+      if (artStyle !== 'vector') {
+        ctx.fillStyle = chassisFill;
+        ctx.fill();
+      }
+
+      // Internal faceted stained-glass panes
+      ctx.beginPath();
+      ctx.moveTo(pTip.x * 0.7, 0);
+      ctx.lineTo(pTop.x * 0.7, pTop.y * 0.7);
+      ctx.lineTo(0, 0);
+      ctx.closePath();
+      ctx.fillStyle = '#ffd700';
+      ctx.globalAlpha = paneAlpha;
       ctx.fill();
-      ctx.strokeStyle = '#ffd700';
-      ctx.lineWidth = 2.4;
-      ctx.shadowColor = '#ffd700';
-      ctx.shadowBlur = 10;
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 1.0;
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(pTip.x * 0.7, 0);
+      ctx.lineTo(pBot.x * 0.7, pBot.y * 0.7);
+      ctx.lineTo(0, 0);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      ctx.globalAlpha = 1.0;
+
+      // Double-beveled gilded edge
+      ctx.beginPath();
+      ctx.moveTo(pTip.x, pTip.y);
+      ctx.lineTo(pTop.x, pTop.y);
+      ctx.lineTo(pNotch.x, pNotch.y);
+      ctx.lineTo(pBot.x, pBot.y);
+      ctx.closePath();
+      ctx.strokeStyle = (artStyle === 'comic') ? '#000000' : '#ffd700';
+      ctx.lineWidth = (artStyle === 'comic') ? 3.5 : 2.5;
+      if (artStyle !== 'comic') {
+        ctx.shadowColor = '#ffd700';
+        ctx.shadowBlur = 10;
+      }
       ctx.stroke();
       ctx.shadowBlur = 0;
 
+      // Dynamic 2.5D Directional Rim-Lighting
+      this.drawRimLighting(ctx, [
+        { x1: pTip.x, y1: pTip.y, x2: pTop.x, y2: pTop.y },
+        { x1: pBot.x, y1: pBot.y, x2: pTip.x, y2: pTip.y }
+      ], relLightAngle);
+
       // Gilded Hull
       ctx.beginPath();
-      ctx.ellipse(0, 0, r * 0.8, r * 0.4, 0, 0, Math.PI * 2);
+      ctx.ellipse(0, 0, r * 0.75, r * 0.38, 0, 0, Math.PI * 2);
       ctx.fillStyle = '#78350f';
       ctx.fill();
       ctx.strokeStyle = '#facc15';

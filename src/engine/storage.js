@@ -634,6 +634,19 @@ export class SaveSystem {
     return this.data.settings;
   }
 
+  // Visual Art Style System (v3.1)
+  getArtStyle() {
+    const s = this.getSettings();
+    return s.artStyle || 'astral';
+  }
+
+  setArtStyle(style) {
+    const valid = ['astral', 'vector', 'comic'];
+    const chosen = valid.includes(style) ? style : 'astral';
+    this.updateSettings({ artStyle: chosen });
+    return chosen;
+  }
+
   // Wingman System
   isWingmanUnlocked() {
     return !!this.data.wingmanUnlocked || (this.data.upgrades && (this.data.upgrades.satellites || 0) >= WINGMAN_CONFIG.unlockSatelliteReq);
@@ -748,3 +761,4 @@ export class SaveSystem {
 
 export const saveSystem = new SaveSystem();
 export const storage = saveSystem;
+export { DEFAULT_SETTINGS };

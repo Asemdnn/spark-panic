@@ -1108,7 +1108,8 @@ export const DEFAULT_SETTINGS = {
   screenShake: 100, // 100 (Full), 50 (Reduced), 0 (Off)
   particleDensity: 'high', // 'high' | 'low'
   threatRings: true, // boolean
-  floatingText: 'all' // 'all' | 'combos' | 'off'
+  floatingText: 'all', // 'all' | 'combos' | 'off'
+  artStyle: 'astral' // 'astral' | 'vector' | 'comic'
 };
 
 export const TACTICAL_DRAFT_PERKS = [

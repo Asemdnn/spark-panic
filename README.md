@@ -1,13 +1,45 @@
-# Spark Panic: Planetary Invasion Defense — Guardian of the Universe (v3.0 Galactic Command Edition)
+# Spark Panic: Planetary Invasion Defense — Guardian of the Universe (🎨 v3.1 Prismatic Art Edition)
 
 [![Deploy to GitHub Pages](https://github.com/Asemdnn/spark-panic/actions/workflows/deploy.yml/badge.svg)](https://github.com/Asemdnn/spark-panic/actions/workflows/deploy.yml)
 [![Live Demo](https://img.shields.io/badge/Play_Live-GitHub_Pages-00e5ff?style=flat&logo=github)](https://asemdnn.github.io/spark-panic/)
 [![PWA Ready](https://img.shields.io/badge/PWA-Ready-00e676?style=flat&logo=pwa)](https://asemdnn.github.io/spark-panic/)
 
-**Spark Panic 3.0 ("Galactic Command Edition")** is a high-octane, self-contained HTML5 Canvas + Tailwind CSS arcade strategy and action planetary defense game. You are the **Orbital Guardian**, defending living celestial worlds and their cyber-cities against 360° incoming waves of relentless alien invasion fleets.
+**Spark Panic 3.1 ("Prismatic Art Edition")** is a high-octane, self-contained HTML5 Canvas + Tailwind CSS arcade strategy and action planetary defense game. You are the **Orbital Guardian**, defending living celestial worlds and their cyber-cities against 360° incoming waves of relentless alien invasion fleets.
 
 - 🎮 **Play Online**: [https://asemdnn.github.io/spark-panic/](https://asemdnn.github.io/spark-panic/)
 - 📦 **GitHub Repository**: [https://github.com/Asemdnn/spark-panic](https://github.com/Asemdnn/spark-panic)
+
+---
+
+## 🎨 What's New in v3.1: Prismatic Art Edition
+
+1. **🌌 Dynamic Spacetime Gravity Grid**:
+   - **22x14 Orbital Vertex Lattice**: Deep-space coordinates feature an interactive gravity grid responding dynamically to celestial mass.
+   - **Gravitational Deformation**: Continuous curvature pulls vertices toward central planets, boss flagships, subspace wormholes, and deployable gravity anchors.
+   - **Concussive Shockwave Displacements**: Detonating Spark Novas and Cataclysms ripples an outward kinetic push wave through the fabric of orbital space.
+
+2. **💎 Faceted Stained-Glass Aesthetic & 2.5D Directional Rim-Lighting**:
+   - **Faceted Gem-Like Chassis**: Planets and alien vessels are rendered with multi-faceted geometric stained-glass geometry and oscillating crystalline energy panes.
+   - **2.5D Directional Specular Highlights**: Real-time directional lighting dynamically calculates the angle to the nearest primary light source (central planet core or active Nova bursts), rendering brilliant 2.5px specular rim highlights along forward-facing silhouettes.
+   - **Articulated Vector Plumes**: Twin diamond-cut vector thruster plumes dynamically flare with vessel speed and maneuvering.
+
+3. **✨ Geometric Nova Mandalas & Halftone Energy Perimeters**:
+   - **Rotating 12-Point Mandalas**: Detonating Novas casts expanding geometric mandalas with octagonal fracture energy rings.
+   - **Halftone Ben-Day Blast Rings**: Procedural Ben-Day dot energy gradients ring blast perimeters.
+   - **Chromatic RGB Aberration Ghosting**: High-intensity combo Novas (x5+) split with cyan and magenta chromatic offset ghost rings.
+   - **High-Impact Speed Frames**: 2-frame speed-line starbursts flash on Perfect Parries, Critical Breaches, and Cataclysms.
+
+4. **🎨 Visual Art Style Switcher & Pipeline**:
+   - **3 Distinct Render Pipelines**:
+     - **💎 ASTRAL (Default)**: Full stained-glass facets, warped gravity grid, 2.5D dynamic rim lighting, and RGB chromatic aberration.
+     - **🕹️ VECTOR**: Deep void (#020408), neon vector wireframes with additive phosphor luminescence, and CRT scanlines.
+     - **💥 COMIC**: Bold 3.5px black ink outlines, flat cel-shaded fills, Ben-Day halftone shading, and dynamic pop-art action bubbles.
+   - **Instant HUD Quick-Toggle & Settings Modal**: Instant hot-swap button (`#btnArtStyle`) in the top telemetry navigation bar with toast notifications, plus a full selector in the Tactical Settings Modal (`#modalSettings`).
+   - **Persistent Preference**: Saved automatically across game sessions in `localStorage`.
+
+5. **🪖 Mecha-Cockpit HUD Framing & Visor Reticle**:
+   - **Cyber-Chamfer Framing**: Angular clipped polygon borders (`.cyber-chamfer`) with tactical corner-bracket accents framing telemetry modules, command decks, and modal interfaces.
+   - **Cockpit Visor Reticle**: Fixed viewport reticle overlay with calibrated tactical degree ticks (000° to 360°), tracking corners, and cross-grid coordinates.
 
 ---
 

@@ -9,7 +9,7 @@
   <meta name="apple-mobile-web-app-title" content="Spark Panic" />
   <meta name="theme-color" content="#00e5ff" />
   <link rel="manifest" href="data:application/manifest+json;utf8,%7B%22name%22%3A%22Spark%20Panic%3A%20Planetary%20Invasion%20Defense%22%2C%22short_name%22%3A%22Spark%20Panic%22%2C%22description%22%3A%22360%C2%B0%20Orbital%20Guardian%20Action%20Strategy%20Game.%20Defend%2020%20celestial%20worlds%20across%204%20Cosmic%20Sectors%20from%20invading%20alien%20fleets.%22%2C%22start_url%22%3A%22.%2F%22%2C%22scope%22%3A%22.%2F%22%2C%22display%22%3A%22standalone%22%2C%22orientation%22%3A%22any%22%2C%22background_color%22%3A%22%23050814%22%2C%22theme_color%22%3A%22%2300e5ff%22%2C%22categories%22%3A%5B%22games%22%2C%22action%22%2C%22arcade%22%5D%2C%22icons%22%3A%5B%7B%22src%22%3A%22data%3Aimage%2Fsvg%2Bxml%3Butf8%2C%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%20192%20192'%3E%3Ccircle%20cx%3D'96'%20cy%3D'96'%20r%3D'90'%20fill%3D'%23050814'%2F%3E%3Ccircle%20cx%3D'96'%20cy%3D'96'%20r%3D'60'%20fill%3D'none'%20stroke%3D'%2300e5ff'%20stroke-width%3D'6'%2F%3E%3Cpolygon%20points%3D'96%2C24%20116%2C76%20168%2C96%20116%2C116%2096%2C168%2076%2C116%2024%2C96%2076%2C76'%20fill%3D'%2300e5ff'%2F%3E%3Ccircle%20cx%3D'96'%20cy%3D'96'%20r%3D'18'%20fill%3D'%23ffffff'%2F%3E%3C%2Fsvg%3E%22%2C%22sizes%22%3A%22192x192%22%2C%22type%22%3A%22image%2Fsvg%2Bxml%22%2C%22purpose%22%3A%22any%20maskable%22%7D%2C%7B%22src%22%3A%22data%3Aimage%2Fsvg%2Bxml%3Butf8%2C%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%20512%20512'%3E%3Ccircle%20cx%3D'256'%20cy%3D'256'%20r%3D'240'%20fill%3D'%23050814'%2F%3E%3Ccircle%20cx%3D'256'%20cy%3D'256'%20r%3D'160'%20fill%3D'none'%20stroke%3D'%2300e5ff'%20stroke-width%3D'16'%2F%3E%3Cpolygon%20points%3D'256%2C64%20309%2C202%20448%2C256%20309%2C310%20256%2C448%20203%2C310%2064%2C256%20203%2C202'%20fill%3D'%2300e5ff'%2F%3E%3Ccircle%20cx%3D'256'%20cy%3D'256'%20r%3D'48'%20fill%3D'%23ffffff'%2F%3E%3C%2Fsvg%3E%22%2C%22sizes%22%3A%22512x512%22%2C%22type%22%3A%22image%2Fsvg%2Bxml%22%2C%22purpose%22%3A%22any%20maskable%22%7D%5D%7D" />
-  <title>Spark Panic: Planetary Invasion Defense — 🌟 v3.0 Galactic Command Edition</title>
+  <title>Spark Panic: Planetary Invasion Defense — 🎨 v3.1 Prismatic Art Edition</title>
   
   <link rel="icon" type="image/jpeg" href="./assets/game-icon.jpg" />
   <link rel="apple-touch-icon" href="./assets/game-icon.jpg" />
@@ -78,6 +78,34 @@
       backdrop-filter: blur(12px);
       border: 1px solid rgba(255, 255, 255, 0.1);
     }
+    .cyber-chamfer {
+      clip-path: polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px);
+      position: relative;
+    }
+    .cyber-chamfer::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 10px;
+      height: 10px;
+      border-top: 2px solid rgba(0, 229, 255, 0.85);
+      border-left: 2px solid rgba(0, 229, 255, 0.85);
+      pointer-events: none;
+      z-index: 10;
+    }
+    .cyber-chamfer::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      right: 0;
+      width: 10px;
+      height: 10px;
+      border-bottom: 2px solid rgba(0, 229, 255, 0.85);
+      border-right: 2px solid rgba(0, 229, 255, 0.85);
+      pointer-events: none;
+      z-index: 10;
+    }
     .glow-cyan {
       box-shadow: 0 0 20px rgba(0, 229, 255, 0.45);
     }
@@ -140,6 +168,77 @@
   <!-- Fullscreen WebGL/Canvas Arena -->
   <canvas id="gameCanvas" class="absolute inset-0 w-full h-full z-0 block cursor-crosshair"></canvas>
 
+  <!-- MECHA-COCKPIT VISOR TACTICAL RETICLE OVERLAY (v3.1) -->
+  <div id="cockpitVisorReticle" class="fixed inset-0 pointer-events-none z-10 overflow-hidden select-none">
+    <!-- Top-Left Reticle & Degree Ticks -->
+    <div class="absolute top-2 left-2 md:top-4 md:left-4 flex flex-col gap-0.5">
+      <div class="flex items-center gap-1">
+        <svg class="w-8 h-8 text-cosmic-cyan/60" viewBox="0 0 32 32" fill="none" stroke="currentColor">
+          <path d="M 0 24 L 0 0 L 24 0" stroke-width="2" />
+          <line x1="0" y1="8" x2="6" y2="8" stroke-width="1.5" />
+          <line x1="0" y1="16" x2="4" y2="16" stroke-width="1" />
+          <line x1="8" y1="0" x2="8" y2="6" stroke-width="1.5" />
+          <line x1="16" y1="0" x2="16" y2="4" stroke-width="1" />
+        </svg>
+        <span class="text-[8px] font-orbitron font-bold text-cosmic-cyan/50 tracking-wider">000° // HUD.SYS</span>
+      </div>
+      <div class="flex items-center gap-1 text-[7px] font-mono text-cosmic-cyan/40 pl-1">
+        <span>015°</span><span>•</span><span>030°</span><span>•</span><span>045°</span>
+      </div>
+    </div>
+
+    <!-- Top-Right Reticle & Degree Ticks -->
+    <div class="absolute top-2 right-2 md:top-4 md:right-4 flex flex-col items-end gap-0.5">
+      <div class="flex items-center gap-1">
+        <span class="text-[8px] font-orbitron font-bold text-cosmic-cyan/50 tracking-wider">090° // TRK.VISOR</span>
+        <svg class="w-8 h-8 text-cosmic-cyan/60" viewBox="0 0 32 32" fill="none" stroke="currentColor">
+          <path d="M 32 24 L 32 0 L 8 0" stroke-width="2" />
+          <line x1="32" y1="8" x2="26" y2="8" stroke-width="1.5" />
+          <line x1="32" y1="16" x2="28" y2="16" stroke-width="1" />
+          <line x1="24" y1="0" x2="24" y2="6" stroke-width="1.5" />
+          <line x1="16" y1="0" x2="16" y2="4" stroke-width="1" />
+        </svg>
+      </div>
+      <div class="flex items-center gap-1 text-[7px] font-mono text-cosmic-cyan/40 pr-1">
+        <span>045°</span><span>•</span><span>060°</span><span>•</span><span>075°</span>
+      </div>
+    </div>
+
+    <!-- Bottom-Left Reticle & Degree Ticks -->
+    <div class="absolute bottom-2 left-2 md:bottom-4 md:left-4 flex flex-col gap-0.5">
+      <div class="flex items-center gap-1 text-[7px] font-mono text-cosmic-cyan/40 pl-1">
+        <span>225°</span><span>•</span><span>240°</span><span>•</span><span>255°</span>
+      </div>
+      <div class="flex items-center gap-1">
+        <svg class="w-8 h-8 text-cosmic-cyan/60" viewBox="0 0 32 32" fill="none" stroke="currentColor">
+          <path d="M 0 8 L 0 32 L 24 32" stroke-width="2" />
+          <line x1="0" y1="24" x2="6" y2="24" stroke-width="1.5" />
+          <line x1="0" y1="16" x2="4" y2="16" stroke-width="1" />
+          <line x1="8" y1="32" x2="8" y2="26" stroke-width="1.5" />
+          <line x1="16" y1="32" x2="16" y2="28" stroke-width="1" />
+        </svg>
+        <span class="text-[8px] font-orbitron font-bold text-cosmic-cyan/50 tracking-wider">270° // MECHA-COCKPIT</span>
+      </div>
+    </div>
+
+    <!-- Bottom-Right Reticle & Degree Ticks -->
+    <div class="absolute bottom-2 right-2 md:bottom-4 md:right-4 flex flex-col items-end gap-0.5">
+      <div class="flex items-center gap-1 text-[7px] font-mono text-cosmic-cyan/40 pr-1">
+        <span>135°</span><span>•</span><span>150°</span><span>•</span><span>165°</span>
+      </div>
+      <div class="flex items-center gap-1">
+        <span class="text-[8px] font-orbitron font-bold text-cosmic-cyan/50 tracking-wider">180° // TACTICAL LOCK</span>
+        <svg class="w-8 h-8 text-cosmic-cyan/60" viewBox="0 0 32 32" fill="none" stroke="currentColor">
+          <path d="M 32 8 L 32 32 L 8 32" stroke-width="2" />
+          <line x1="32" y1="24" x2="26" y2="24" stroke-width="1.5" />
+          <line x1="32" y1="16" x2="28" y2="16" stroke-width="1" />
+          <line x1="24" y1="32" x2="24" y2="26" stroke-width="1.5" />
+          <line x1="16" y1="32" x2="16" y2="28" stroke-width="1" />
+        </svg>
+      </div>
+    </div>
+  </div>
+
   <!-- Animated Top Toast Banner -->
   <div id="toastBanner" class="fixed top-5 left-1/2 -translate-x-1/2 z-50 pointer-events-none transition-all duration-500 opacity-0 -translate-y-8">
     <div class="glass-panel px-6 py-2.5 rounded-full flex items-center gap-3 border border-cosmic-gold/50 shadow-2xl">
@@ -152,7 +251,7 @@
   <div id="hudTop" class="absolute top-0 left-0 right-0 z-20 p-3 md:p-4 flex flex-col md:flex-row items-center justify-between gap-3 pointer-events-none transition-opacity duration-300">
     <!-- Left: Sector & Planet & Wave -->
     <div class="flex items-center gap-2.5 pointer-events-auto">
-      <div id="hudPlanetBadge" class="glass-panel px-3.5 py-1.5 rounded-xl flex items-center gap-2">
+      <div id="hudPlanetBadge" class="glass-panel cyber-chamfer px-3.5 py-1.5 rounded-xl flex items-center gap-2">
         <svg class="w-5 h-5 text-cosmic-cyan shrink-0 animate-pulse-soft" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="12" cy="12" r="7" />
           <path d="M3.5 14.5c4-7 13-7 17 0" />
@@ -162,17 +261,17 @@
           <div class="text-xs md:text-sm font-black font-orbitron text-white tracking-wider" id="hudPlanetLabel">AERILON PRIME</div>
         </div>
       </div>
-      <div id="hudWaveBadge" class="glass-panel px-3 py-1.5 rounded-xl text-center">
+      <div id="hudWaveBadge" class="glass-panel cyber-chamfer px-3 py-1.5 rounded-xl text-center">
         <div class="text-[9px] font-bold text-slate-400 tracking-widest font-orbitron">WAVE</div>
         <div class="text-xs md:text-sm font-black font-orbitron text-cosmic-gold" id="hudWaveValue">1 / 2</div>
       </div>
       <!-- Sector Environmental Hazard Badge -->
-      <div id="hudHazardBadge" class="glass-panel px-3 py-1.5 rounded-xl flex items-center gap-1.5 text-xs font-orbitron font-bold border-cosmic-cyan/40 text-cosmic-cyan">
+      <div id="hudHazardBadge" class="glass-panel cyber-chamfer px-3 py-1.5 rounded-xl flex items-center gap-1.5 text-xs font-orbitron font-bold border-cosmic-cyan/40 text-cosmic-cyan">
         <span id="hazardIcon">☄️</span>
         <span id="hazardLabel" class="text-[10px] md:text-xs">ASTEROID DRIFT</span>
       </div>
       <!-- Galactic Hyperdrive Ascension Badge (Prestige) -->
-      <div id="hudAscensionBadge" class="glass-panel px-3 py-1.5 rounded-xl flex items-center gap-1.5 text-xs font-orbitron font-extrabold border-purple-500/50 text-purple-400 hidden shadow-[0_0_12px_rgba(168,85,247,0.3)]">
+      <div id="hudAscensionBadge" class="glass-panel cyber-chamfer px-3 py-1.5 rounded-xl flex items-center gap-1.5 text-xs font-orbitron font-extrabold border-purple-500/50 text-purple-400 hidden shadow-[0_0_12px_rgba(168,85,247,0.3)]">
         <span class="w-2 h-2 rounded-full bg-purple-400 animate-ping"></span>
         <span id="hudAscensionLabel">ASCENSION I</span>
       </div>
@@ -183,7 +282,7 @@
     <!-- Center: Planetary Defense Integrity & Boss Bar -->
     <div class="w-full md:w-96 flex flex-col items-center gap-1.5 pointer-events-auto">
       <!-- Aegis Shield Bar -->
-      <div class="w-full glass-panel px-3 py-1.5 rounded-xl">
+      <div class="w-full glass-panel cyber-chamfer px-3 py-1.5 rounded-xl">
         <div class="flex justify-between items-center text-[10px] font-orbitron font-bold mb-1">
           <span class="flex items-center gap-1.5 text-cosmic-cyan">
             <span class="w-2 h-2 rounded-full bg-cosmic-cyan shadow-[0_0_8px_#00e5ff]"></span>
@@ -197,7 +296,7 @@
       </div>
 
       <!-- Planetary Core HP Bar -->
-      <div class="w-full glass-panel px-3 py-1.5 rounded-xl">
+      <div class="w-full glass-panel cyber-chamfer px-3 py-1.5 rounded-xl">
         <div class="flex justify-between items-center text-[10px] font-orbitron font-bold mb-1">
           <span class="flex items-center gap-1.5 text-cosmic-mint">
             <span class="w-2 h-2 rounded-full bg-cosmic-mint shadow-[0_0_8px_#00e676]"></span>
@@ -211,7 +310,7 @@
       </div>
 
       <!-- Sector Boss Health Bar (Conditional) -->
-      <div id="bossHudBar" class="w-full glass-panel px-3 py-1.5 rounded-xl border-cosmic-crimson/50 hidden">
+      <div id="bossHudBar" class="w-full glass-panel cyber-chamfer px-3 py-1.5 rounded-xl border-cosmic-crimson/50 hidden">
         <div class="flex justify-between items-center text-[10px] font-orbitron font-bold mb-1">
           <span class="flex items-center gap-1.5 text-cosmic-crimson animate-pulse">
             <svg class="w-3.5 h-3.5 shrink-0 fill-current" viewBox="0 0 24 24"><path d="M12 2L1 21h22L12 2zm0 3.99L19.53 19H4.47L12 5.99zM11 10v4h2v-4h-2zm0 6v2h2v-2h-2z"/></svg>
@@ -244,7 +343,7 @@
 
     <!-- Right: Currency, Score, Combo & Controls -->
     <div class="flex items-center gap-2.5 pointer-events-auto">
-      <div class="glass-panel px-3 py-1.5 rounded-xl flex items-center gap-2">
+      <div class="glass-panel cyber-chamfer px-3 py-1.5 rounded-xl flex items-center gap-2">
         <svg class="w-4 h-4 text-cosmic-gold inline-block shrink-0 fill-current" viewBox="0 0 24 24">
           <path d="M12 2L14.8 9.2L22 12L14.8 14.8L12 22L9.2 14.8L2 12L9.2 9.2L12 2Z" />
         </svg>
@@ -254,18 +353,18 @@
         </div>
       </div>
 
-      <div class="glass-panel px-3.5 py-1.5 rounded-xl text-right min-w-[70px]">
+      <div class="glass-panel cyber-chamfer px-3.5 py-1.5 rounded-xl text-right min-w-[70px]">
         <div class="text-[8px] font-bold text-slate-400 font-orbitron">SCORE</div>
         <div id="hudScore" class="text-xs md:text-sm font-black font-orbitron text-white">0</div>
       </div>
 
       <!-- Combo Indicator -->
-      <div id="hudCombo" class="glass-panel px-2.5 py-1.5 rounded-xl text-center font-orbitron font-black text-xs md:text-sm text-cosmic-magenta border-cosmic-magenta/40 transition-transform duration-200 scale-95 opacity-80">
+      <div id="hudCombo" class="glass-panel cyber-chamfer px-2.5 py-1.5 rounded-xl text-center font-orbitron font-black text-xs md:text-sm text-cosmic-magenta border-cosmic-magenta/40 transition-transform duration-200 scale-95 opacity-80">
         x1
       </div>
 
       <!-- v2.9 Overdrive Frenzy Gauge -->
-      <div id="hudFrenzy" class="glass-panel px-2.5 py-1 rounded-xl flex flex-col justify-center min-w-[76px] border-amber-500/40 transition-all duration-200">
+      <div id="hudFrenzy" class="glass-panel cyber-chamfer px-2.5 py-1 rounded-xl flex flex-col justify-center min-w-[76px] border-amber-500/40 transition-all duration-200">
         <div class="flex justify-between items-center text-[7px] font-orbitron font-bold text-amber-400">
           <span>🔥 FRENZY</span>
           <span id="hudFrenzyVal" class="text-[8px] font-bold text-slate-300">0%</span>
@@ -275,29 +374,34 @@
         </div>
       </div>
 
-      <button id="btnTutorial" class="glass-panel w-9 h-9 rounded-xl flex items-center justify-center hover:border-cosmic-cyan text-cosmic-cyan transition cursor-pointer text-sm" title="Replay Tactical Tutorial (H)">
+      <!-- v3.1 Visual Art Style Quick-Toggle Button -->
+      <button id="btnArtStyle" class="glass-panel cyber-chamfer px-2.5 py-1.5 rounded-xl flex items-center gap-1.5 hover:border-cosmic-cyan text-xs font-orbitron font-bold text-cosmic-cyan transition cursor-pointer" title="Switch Art Style (💎 Astral / 🕹️ Vector / 💥 Comic)">
+        🎨 STYLE: ASTRAL
+      </button>
+
+      <button id="btnTutorial" class="glass-panel cyber-chamfer w-9 h-9 rounded-xl flex items-center justify-center hover:border-cosmic-cyan text-cosmic-cyan transition cursor-pointer text-sm" title="Replay Tactical Tutorial (H)">
         <span class="text-base leading-none">🎓</span>
       </button>
-      <button id="btnBgm" class="glass-panel w-9 h-9 rounded-xl flex items-center justify-center hover:border-cosmic-magenta text-cosmic-magenta transition cursor-pointer text-sm" title="Toggle Synthwave BGM (B)">
+      <button id="btnBgm" class="glass-panel cyber-chamfer w-9 h-9 rounded-xl flex items-center justify-center hover:border-cosmic-magenta text-cosmic-magenta transition cursor-pointer text-sm" title="Toggle Synthwave BGM (B)">
         <svg id="bgmIconSvg" class="w-4 h-4 fill-none stroke-current" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M9 18V5l12-2v13" />
           <circle cx="6" cy="18" r="3" fill="currentColor" />
           <circle cx="18" cy="16" r="3" fill="currentColor" />
         </svg>
       </button>
-      <button id="btnMute" class="glass-panel w-9 h-9 rounded-xl flex items-center justify-center hover:border-cosmic-cyan transition cursor-pointer text-sm" title="Toggle Sound (M)">
+      <button id="btnMute" class="glass-panel cyber-chamfer w-9 h-9 rounded-xl flex items-center justify-center hover:border-cosmic-cyan transition cursor-pointer text-sm" title="Toggle Sound (M)">
         <svg id="muteIconSvg" class="w-4 h-4 text-cosmic-cyan" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
           <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07" />
         </svg>
       </button>
-      <button id="btnPause" class="glass-panel w-9 h-9 rounded-xl flex items-center justify-center hover:border-cosmic-cyan transition cursor-pointer text-sm font-black font-orbitron text-cosmic-cyan" title="Pause Game (P/Esc)">
+      <button id="btnPause" class="glass-panel cyber-chamfer w-9 h-9 rounded-xl flex items-center justify-center hover:border-cosmic-cyan transition cursor-pointer text-sm font-black font-orbitron text-cosmic-cyan" title="Pause Game (P/Esc)">
         <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24">
           <rect x="6" y="4" width="4" height="16" rx="1" />
           <rect x="14" y="4" width="4" height="16" rx="1" />
         </svg>
       </button>
-      <button id="btnSettings" class="glass-panel w-9 h-9 rounded-xl flex items-center justify-center hover:border-cosmic-cyan transition cursor-pointer text-sm text-slate-300 hover:text-white" title="Tactical Settings (O)">
+      <button id="btnSettings" class="glass-panel cyber-chamfer w-9 h-9 rounded-xl flex items-center justify-center hover:border-cosmic-cyan transition cursor-pointer text-sm text-slate-300 hover:text-white" title="Tactical Settings (O)">
         <svg class="w-4 h-4 fill-none stroke-current" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="12" cy="12" r="3"/>
           <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
@@ -364,14 +468,14 @@
     <!-- Center: 3 Active Tactical Skills & Quick Nova -->
     <div class="flex items-center gap-2 pointer-events-auto flex-wrap justify-center">
       <!-- Quick Detonate Nova Tap Button (Mobile Friendly) -->
-      <button id="btnQuickNova" class="group glass-panel relative p-2 md:p-2.5 rounded-2xl flex flex-col items-center min-w-[76px] md:min-w-[88px] min-h-[48px] border-amber-500/40 hover:border-amber-400 bg-amber-500/10 cursor-pointer transition active:scale-95 touch-manipulation" title="Detonate Spark Nova Ahead (Space)">
+      <button id="btnQuickNova" class="group glass-panel cyber-chamfer relative p-2 md:p-2.5 rounded-2xl flex flex-col items-center min-w-[76px] md:min-w-[88px] min-h-[48px] border-amber-500/40 hover:border-amber-400 bg-amber-500/10 cursor-pointer transition active:scale-95 touch-manipulation" title="Detonate Spark Nova Ahead (Space)">
         <span class="text-base leading-none">💥</span>
         <div class="text-[9px] font-orbitron font-black text-amber-300">QUICK NOVA</div>
         <div class="text-[8px] font-orbitron font-bold text-slate-400 mt-0.5">DETONATE</div>
       </button>
 
       <!-- Skill Q: Ion Beam -->
-      <button id="btnSkillQ" class="group glass-panel relative p-2 md:p-2.5 rounded-2xl flex flex-col items-center min-w-[76px] md:min-w-[88px] min-h-[48px] border-cosmic-cyan/40 hover:border-cosmic-cyan cursor-pointer transition active:scale-95 touch-manipulation overflow-hidden">
+      <button id="btnSkillQ" class="group glass-panel cyber-chamfer relative p-2 md:p-2.5 rounded-2xl flex flex-col items-center min-w-[76px] md:min-w-[88px] min-h-[48px] border-cosmic-cyan/40 hover:border-cosmic-cyan cursor-pointer transition active:scale-95 touch-manipulation overflow-hidden">
         <div id="cdFillQ" class="absolute bottom-0 left-0 right-0 bg-cosmic-cyan/20 pointer-events-none transition-all duration-75" style="height: 0%;"></div>
         <div id="skillCdQ" class="absolute inset-0 bg-slate-950/80 rounded-2xl flex items-center justify-center font-orbitron text-xs font-bold text-cosmic-cyan hidden z-10">
           0.0s
@@ -382,7 +486,7 @@
       </button>
 
       <!-- Skill W: EMP Shockwave -->
-      <button id="btnSkillW" class="group glass-panel relative p-2 md:p-2.5 rounded-2xl flex flex-col items-center min-w-[76px] md:min-w-[88px] min-h-[48px] border-cosmic-magenta/40 hover:border-cosmic-magenta cursor-pointer transition active:scale-95 touch-manipulation overflow-hidden">
+      <button id="btnSkillW" class="group glass-panel cyber-chamfer relative p-2 md:p-2.5 rounded-2xl flex flex-col items-center min-w-[76px] md:min-w-[88px] min-h-[48px] border-cosmic-magenta/40 hover:border-cosmic-magenta cursor-pointer transition active:scale-95 touch-manipulation overflow-hidden">
         <div id="cdFillW" class="absolute bottom-0 left-0 right-0 bg-cosmic-magenta/20 pointer-events-none transition-all duration-75" style="height: 0%;"></div>
         <div id="skillCdW" class="absolute inset-0 bg-slate-950/80 rounded-2xl flex items-center justify-center font-orbitron text-xs font-bold text-cosmic-magenta hidden z-10">
           0.0s
@@ -393,7 +497,7 @@
       </button>
 
       <!-- Skill E: Aegis Overdrive -->
-      <button id="btnSkillE" class="group glass-panel relative p-2 md:p-2.5 rounded-2xl flex flex-col items-center min-w-[76px] md:min-w-[88px] min-h-[48px] border-cosmic-gold/40 hover:border-cosmic-gold cursor-pointer transition active:scale-95 touch-manipulation overflow-hidden">
+      <button id="btnSkillE" class="group glass-panel cyber-chamfer relative p-2 md:p-2.5 rounded-2xl flex flex-col items-center min-w-[76px] md:min-w-[88px] min-h-[48px] border-cosmic-gold/40 hover:border-cosmic-gold cursor-pointer transition active:scale-95 touch-manipulation overflow-hidden">
         <div id="cdFillE" class="absolute bottom-0 left-0 right-0 bg-cosmic-gold/20 pointer-events-none transition-all duration-75" style="height: 0%;"></div>
         <div id="skillCdE" class="absolute inset-0 bg-slate-950/80 rounded-2xl flex items-center justify-center font-orbitron text-xs font-bold text-cosmic-gold hidden z-10">
           0.0s
@@ -404,7 +508,7 @@
       </button>
 
       <!-- Skill R: Deployable Orbital Structure -->
-      <button id="btnSkillR" class="group glass-panel relative p-2 md:p-2.5 rounded-2xl flex flex-col items-center min-w-[76px] md:min-w-[88px] min-h-[48px] border-emerald-400/40 hover:border-emerald-400 cursor-pointer transition active:scale-95 touch-manipulation overflow-hidden" title="Deploy Orbital Defense Structure (R)">
+      <button id="btnSkillR" class="group glass-panel cyber-chamfer relative p-2 md:p-2.5 rounded-2xl flex flex-col items-center min-w-[76px] md:min-w-[88px] min-h-[48px] border-emerald-400/40 hover:border-emerald-400 cursor-pointer transition active:scale-95 touch-manipulation overflow-hidden" title="Deploy Orbital Defense Structure (R)">
         <div id="cdFillR" class="absolute bottom-0 left-0 right-0 bg-emerald-400/20 pointer-events-none transition-all duration-75" style="height: 0%;"></div>
         <div id="skillCdR" class="absolute inset-0 bg-slate-950/80 rounded-2xl flex items-center justify-center font-orbitron text-xs font-bold text-emerald-400 hidden z-10">
           0.0s
@@ -415,7 +519,7 @@
       </button>
 
       <!-- Skill Parry: Aegis Phase-Parry Deflection [SHIFT / R-CLICK / C] -->
-      <button id="btnParry" class="group glass-panel relative p-2 md:p-2.5 rounded-2xl flex flex-col items-center min-w-[76px] md:min-w-[88px] min-h-[48px] border-cyan-400/40 hover:border-cyan-400 cursor-pointer transition active:scale-95 touch-manipulation overflow-hidden" title="Aegis Phase-Parry Deflection [SHIFT / R-CLICK / C] (Cooldown 2.2s)">
+      <button id="btnParry" class="group glass-panel cyber-chamfer relative p-2 md:p-2.5 rounded-2xl flex flex-col items-center min-w-[76px] md:min-w-[88px] min-h-[48px] border-cyan-400/40 hover:border-cyan-400 cursor-pointer transition active:scale-95 touch-manipulation overflow-hidden" title="Aegis Phase-Parry Deflection [SHIFT / R-CLICK / C] (Cooldown 2.2s)">
         <div id="parryCdFill" class="absolute bottom-0 left-0 right-0 bg-cyan-400/20 pointer-events-none transition-all duration-75" style="height: 0%;"></div>
         <div id="parryCdText" class="absolute inset-0 bg-slate-950/80 rounded-2xl flex items-center justify-center font-orbitron text-xs font-bold text-cyan-400 hidden z-10">
           0.0s
@@ -426,7 +530,7 @@
       </button>
 
       <!-- Planetary Cataclysm Superweapon [F / 5] -->
-      <button id="btnCataclysm" class="group glass-panel relative p-2 md:p-2.5 rounded-2xl flex flex-col items-center min-w-[76px] md:min-w-[88px] min-h-[48px] border-amber-400/40 hover:border-amber-400 cursor-pointer transition active:scale-95 touch-manipulation overflow-hidden" title="Fire Planetary Cataclysm Superweapon [F / 5]">
+      <button id="btnCataclysm" class="group glass-panel cyber-chamfer relative p-2 md:p-2.5 rounded-2xl flex flex-col items-center min-w-[76px] md:min-w-[88px] min-h-[48px] border-amber-400/40 hover:border-amber-400 cursor-pointer transition active:scale-95 touch-manipulation overflow-hidden" title="Fire Planetary Cataclysm Superweapon [F / 5]">
         <div id="cataclysmFill" class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-amber-500/40 to-amber-400/20 pointer-events-none transition-all duration-150" style="height: 0%;"></div>
         <div id="cataclysmReadyGlow" class="absolute inset-0 bg-amber-400/15 animate-pulse hidden pointer-events-none"></div>
         <div class="text-base md:text-lg mb-0.5 group-hover:scale-110 transition z-10">🌋</div>
@@ -437,7 +541,7 @@
 
     <!-- Right: Auto-Fire Toggle & Tactical Shortcuts -->
     <div class="glass-panel p-2.5 rounded-2xl flex items-center gap-2 pointer-events-auto border-cosmic-mint/30">
-      <button id="btnAutoFire" class="px-3.5 py-2 rounded-xl font-orbitron text-xs font-bold transition flex items-center gap-1.5 cursor-pointer bg-cosmic-mint/20 text-cosmic-mint border border-cosmic-mint/40 hover:bg-cosmic-mint/30" title="Toggle Auto-Fire (T)">
+      <button id="btnAutoFire" class="cyber-chamfer px-3.5 py-2 rounded-xl font-orbitron text-xs font-bold transition flex items-center gap-1.5 cursor-pointer bg-cosmic-mint/20 text-cosmic-mint border border-cosmic-mint/40 hover:bg-cosmic-mint/30" title="Toggle Auto-Fire (T)">
         <span class="w-2 h-2 rounded-full bg-cosmic-mint animate-ping"></span>
         <span id="autoFireLabel">AUTO: ON</span>
       </button>
@@ -456,8 +560,8 @@
           <img src="./assets/hero-key-art.jpg" alt="Orbital Guardian Defending Shielded Planet" class="w-full h-full object-cover group-hover:scale-105 transition duration-700" />
           <div class="absolute inset-0 bg-gradient-to-t from-[#050814] via-transparent to-transparent opacity-80"></div>
           <div class="absolute bottom-3 left-3 right-3 text-center">
-            <span class="inline-block px-3 py-1 rounded-full text-[10px] font-orbitron font-extrabold tracking-widest bg-cosmic-cyan/20 text-cosmic-cyan border border-cosmic-cyan/40">
-              🌟 v3.0 GALACTIC COMMAND EDITION
+            <span class="inline-block px-3 py-1 rounded-full text-[10px] font-orbitron font-extrabold tracking-widest bg-cosmic-cyan/20 text-cosmic-cyan border border-cosmic-cyan/40 cyber-chamfer">
+              🎨 v3.1 PRISMATIC ART EDITION
             </span>
           </div>
         </div>
@@ -473,7 +577,7 @@
           SPARK <span class="text-cosmic-cyan text-glow-cyan">PANIC</span>
         </h1>
         <h2 class="text-xs md:text-sm font-orbitron font-bold tracking-widest text-cosmic-gold mb-3">
-          🌟 v3.0 GALACTIC COMMAND EDITION
+          🎨 v3.1 PRISMATIC ART EDITION
         </h2>
 
         <p class="text-xs text-slate-300 leading-relaxed mb-4">
@@ -553,7 +657,7 @@
     <div class="glass-panel w-full max-w-5xl h-[92vh] rounded-3xl p-4 md:p-6 flex flex-col border border-cosmic-cyan/30 shadow-2xl relative">
       
       <!-- Star Map Header -->
-      <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800 cyber-chamfer p-1">
         <div class="flex items-center gap-3">
           <button id="btnStarMapBack" class="w-9 h-9 rounded-xl glass-panel flex items-center justify-center hover:border-cosmic-cyan transition cursor-pointer font-orbitron text-sm">
             <svg class="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
@@ -674,7 +778,7 @@
   <div id="modalArmory" class="fixed inset-0 z-40 flex items-center justify-center p-3 md:p-6 bg-cosmic-950/90 backdrop-blur-md hidden">
     <div class="glass-panel w-full max-w-4xl max-h-[92vh] rounded-3xl p-6 flex flex-col border border-cosmic-gold/30 shadow-2xl relative overflow-hidden">
       <!-- Armory Header -->
-      <div class="flex items-center justify-between pb-4 border-b border-slate-800">
+      <div class="flex items-center justify-between pb-4 border-b border-slate-800 cyber-chamfer p-1">
         <div class="flex items-center gap-3">
           <svg class="w-6 h-6 text-cosmic-gold shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
           <div>
@@ -802,7 +906,7 @@
   <div id="modalCodex" class="fixed inset-0 z-40 flex items-center justify-center p-3 md:p-6 bg-cosmic-950/90 backdrop-blur-md hidden">
     <div class="glass-panel w-full max-w-4xl max-h-[92vh] rounded-3xl p-6 flex flex-col border border-cosmic-mint/30 shadow-2xl relative overflow-hidden">
       <!-- Codex Header -->
-      <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800 cyber-chamfer p-1">
         <div class="flex items-center gap-3">
           <svg class="w-6 h-6 text-cosmic-mint shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
           <div>
@@ -872,7 +976,7 @@
   <div id="modalVictory" class="fixed inset-0 z-40 flex items-center justify-center p-4 bg-cosmic-950/85 backdrop-blur-md hidden">
     <div class="glass-panel w-full max-w-md rounded-3xl p-6 md:p-8 flex flex-col items-center text-center border border-cosmic-cyan/50 shadow-[0_0_40px_rgba(0,229,255,0.3)]">
       <div class="text-4xl mb-2 animate-bounce">🪐</div>
-      <h2 class="text-2xl font-black font-orbitron text-white tracking-wide mb-1">
+      <h2 class="text-2xl font-black font-orbitron text-white tracking-wide mb-1 cyber-chamfer px-4 py-1">
         PLANET <span class="text-cosmic-cyan text-glow-cyan">LIBERATED!</span>
       </h2>
       <p id="victoryPlanetTitle" class="text-xs font-orbitron text-cosmic-gold tracking-widest mb-4">
@@ -961,7 +1065,7 @@
   <div id="modalDefeat" class="fixed inset-0 z-40 flex items-center justify-center p-4 bg-cosmic-950/90 backdrop-blur-md hidden">
     <div class="glass-panel w-full max-w-md rounded-3xl p-6 md:p-8 flex flex-col items-center text-center border border-cosmic-crimson/50 shadow-[0_0_40px_rgba(255,51,102,0.35)]">
       <div class="text-4xl mb-2">💥</div>
-      <h2 class="text-2xl font-black font-orbitron text-cosmic-crimson tracking-wide mb-1">
+      <h2 class="text-2xl font-black font-orbitron text-cosmic-crimson tracking-wide mb-1 cyber-chamfer px-4 py-1">
         PLANET OVERRUN!
       </h2>
       <p id="defeatPlanetTitle" class="text-xs font-orbitron text-slate-400 tracking-widest mb-4">
@@ -1038,7 +1142,7 @@
   <!-- 7. TACTICAL PAUSE MODAL (#modalPause) -->
   <div id="modalPause" class="fixed inset-0 z-40 flex items-center justify-center p-4 bg-cosmic-950/85 backdrop-blur-md hidden">
     <div class="glass-panel w-full max-w-sm rounded-3xl p-6 flex flex-col items-center text-center border border-cosmic-cyan/40">
-      <h2 class="text-xl font-black font-orbitron text-white tracking-wider mb-1">
+      <h2 class="text-xl font-black font-orbitron text-white tracking-wider mb-1 cyber-chamfer px-4 py-1">
         TACTICAL PAUSE
       </h2>
       <p class="text-xs text-slate-400 mb-5">Defense systems suspended</p>
@@ -1064,7 +1168,7 @@
   <div id="modalDailyAnomaly" class="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-6 bg-cosmic-950/90 backdrop-blur-md hidden">
     <div class="glass-panel w-full max-w-xl max-h-[92vh] rounded-3xl p-5 md:p-7 flex flex-col border border-amber-500/40 shadow-[0_0_45px_rgba(245,158,11,0.25)] relative overflow-y-auto">
       <!-- Header -->
-      <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800 cyber-chamfer p-1">
         <div class="flex items-center gap-2.5">
           <span class="text-2xl animate-pulse">⚡</span>
           <div>
@@ -1131,7 +1235,7 @@
   <!-- 9. TACTICAL SETTINGS MODAL (#modalSettings) -->
   <div id="modalSettings" class="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-6 bg-cosmic-950/90 backdrop-blur-md hidden">
     <div class="glass-panel w-full max-w-lg rounded-3xl p-5 md:p-7 flex flex-col border border-cosmic-cyan/40 shadow-[0_0_45px_rgba(0,229,255,0.25)] relative max-h-[92vh] overflow-y-auto">
-      <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800 cyber-chamfer p-1">
         <div class="flex items-center gap-2.5">
           <svg class="w-6 h-6 text-cosmic-cyan shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
           <div>
@@ -1145,6 +1249,19 @@
       </div>
 
       <div class="space-y-4 my-4">
+        <!-- Visual Art Style Selector (v3.1) -->
+        <div class="glass-card p-3 rounded-2xl border border-slate-700/60 flex items-center justify-between">
+          <div>
+            <div class="font-orbitron font-bold text-xs text-white">VISUAL ART STYLE</div>
+            <div class="text-[10px] text-slate-400">Prismatic rendering: Astral, Vector, or Comic</div>
+          </div>
+          <div class="flex items-center gap-1.5" id="settingArtStyleBtns">
+            <button data-val="astral" class="btn-setting-style px-2.5 py-1 rounded-lg text-[10px] font-orbitron font-bold border transition cursor-pointer">💎 ASTRAL</button>
+            <button data-val="vector" class="btn-setting-style px-2.5 py-1 rounded-lg text-[10px] font-orbitron font-bold border transition cursor-pointer">🕹️ VECTOR</button>
+            <button data-val="comic" class="btn-setting-style px-2.5 py-1 rounded-lg text-[10px] font-orbitron font-bold border transition cursor-pointer">💥 COMIC</button>
+          </div>
+        </div>
+
         <!-- Screen Shake -->
         <div class="glass-card p-3 rounded-2xl border border-slate-700/60 flex items-center justify-between">
           <div>
@@ -1258,7 +1375,7 @@
       <div class="inline-block px-3 py-1 rounded-full text-[10px] font-orbitron font-extrabold tracking-widest bg-cosmic-cyan/20 text-cosmic-cyan border border-cosmic-cyan/40 mb-2">
         ROGUELIKE FIELD REINFORCEMENTS
       </div>
-      <h2 class="text-xl md:text-3xl font-black font-orbitron tracking-tight text-white mb-1">
+      <h2 class="text-xl md:text-3xl font-black font-orbitron tracking-tight text-white mb-1 cyber-chamfer px-4 py-1">
         🃏 TACTICAL COMMAND DRAFT
       </h2>
       <p class="text-xs font-orbitron font-bold text-cosmic-gold mb-6">

@@ -18,7 +18,7 @@ export class ParticleEngine {
     this.floaters = [];
   }
 
-  spawnNova(x, y, maxRadius, color, damage = 35, isPlayer = false) {
+  spawnNova(x, y, maxRadius, color, damage = 35, isPlayer = false, combo = 1) {
     this.novas.push({
       x,
       y,
@@ -28,12 +28,14 @@ export class ParticleEngine {
       color,
       damage,
       isPlayer,
+      combo: combo || 1,
+      rotation: 0,
       alpha: 1.0,
       hitAliens: new Set()
     });
   }
 
-  spawnNovaRing(x, y, color = '#00e5ff', maxRadius = 100) {
+  spawnNovaRing(x, y, color = '#00e5ff', maxRadius = 100, combo = 1) {
     this.novas.push({
       x,
       y,
@@ -43,6 +45,8 @@ export class ParticleEngine {
       color,
       damage: 0,
       isPlayer: false,
+      combo: combo || 1,
+      rotation: 0,
       alpha: 1.0,
       hitAliens: new Set()
     });
@@ -111,6 +115,7 @@ export class ParticleEngine {
     for (let i = this.novas.length - 1; i >= 0; i--) {
       const n = this.novas[i];
       n.radius += n.speed * dt;
+      n.rotation = (n.rotation || 0) + dt * 2.8;
       n.alpha = Math.max(0, 1 - (n.radius / n.maxRadius));
 
       // Damage aliens within expanding shockwave ring (Novas pierce boss shield)
@@ -194,31 +199,108 @@ export class ParticleEngine {
     }
   }
 
-  render(ctx) {
-    // 1. Render Multi-Ring Supernova Shockwaves (Outer distortion ring + Inner additive plasma ring)
+  render(ctx, artStyle = 'astral') {
+    // 1. Render Multi-Ring Supernova Shockwaves with Geometric Mandalas, Halftone Dots & Chromatic Aberration
     for (const n of this.novas) {
       ctx.save();
+
+      // Chromatic RGB ghost rings (offset cyan at x - 2.5, magenta at x + 2.5) for x5+ combo Novas
+      if ((n.combo && n.combo >= 5) || n.chromatic || artStyle === 'astral' && (n.combo && n.combo >= 5)) {
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        // Offset Cyan Ring (x - 2.5)
+        ctx.beginPath();
+        ctx.arc(n.x - 2.5, n.y, n.radius, 0, Math.PI * 2);
+        ctx.strokeStyle = '#00e5ff';
+        ctx.lineWidth = 2.5;
+        ctx.globalAlpha = n.alpha * 0.75;
+        ctx.stroke();
+
+        // Offset Magenta Ring (x + 2.5)
+        ctx.beginPath();
+        ctx.arc(n.x + 2.5, n.y, n.radius, 0, Math.PI * 2);
+        ctx.strokeStyle = '#e040fb';
+        ctx.lineWidth = 2.5;
+        ctx.globalAlpha = n.alpha * 0.75;
+        ctx.stroke();
+        ctx.restore();
+      }
 
       // Outer fast-expanding distortion ring
       ctx.beginPath();
       ctx.arc(n.x, n.y, n.radius, 0, Math.PI * 2);
-      ctx.strokeStyle = n.color;
-      ctx.lineWidth = 3.5;
+      ctx.strokeStyle = (artStyle === 'comic') ? '#000000' : n.color;
+      ctx.lineWidth = (artStyle === 'comic') ? 3.5 : 3.5;
       ctx.globalAlpha = n.alpha;
-      ctx.shadowColor = n.color;
-      ctx.shadowBlur = 18;
+      if (artStyle !== 'comic') {
+        ctx.shadowColor = n.color;
+        ctx.shadowBlur = 18;
+      }
       ctx.stroke();
 
       // Inner bright plasma ring with additive lighter glow
-      ctx.globalCompositeOperation = 'lighter';
+      ctx.globalCompositeOperation = (artStyle === 'comic') ? 'source-over' : 'lighter';
       ctx.beginPath();
       ctx.arc(n.x, n.y, Math.max(0, n.radius * 0.72), 0, Math.PI * 2);
-      ctx.strokeStyle = '#ffffff';
+      ctx.strokeStyle = (artStyle === 'comic') ? n.color : '#ffffff';
       ctx.lineWidth = 2.5;
       ctx.globalAlpha = n.alpha * 0.9;
-      ctx.shadowColor = '#ffffff';
-      ctx.shadowBlur = 12;
+      if (artStyle !== 'comic') {
+        ctx.shadowColor = '#ffffff';
+        ctx.shadowBlur = 12;
+      }
       ctx.stroke();
+
+      // Rotating 12-point star / octagonal fracture ring expanding with Nova
+      const starRot = n.rotation || (n.radius * 0.05);
+      const points = 12;
+      const outerR = n.radius * 0.88;
+      const innerR = n.radius * 0.62;
+      ctx.beginPath();
+      for (let p = 0; p < points * 2; p++) {
+        const ang = (p / (points * 2)) * Math.PI * 2 + starRot;
+        const r = p % 2 === 0 ? outerR : innerR;
+        const px = n.x + Math.cos(ang) * r;
+        const py = n.y + Math.sin(ang) * r;
+        if (p === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.closePath();
+      ctx.strokeStyle = n.color;
+      ctx.lineWidth = 2.0;
+      ctx.globalAlpha = n.alpha * 0.7;
+      ctx.stroke();
+
+      // Octagonal fracture ring chords
+      ctx.beginPath();
+      for (let oct = 0; oct < 8; oct++) {
+        const ang = (oct / 8) * Math.PI * 2 - starRot * 0.8;
+        const ox = n.x + Math.cos(ang) * (n.radius * 0.78);
+        const oy = n.y + Math.sin(ang) * (n.radius * 0.78);
+        if (oct === 0) ctx.moveTo(ox, oy);
+        else ctx.lineTo(ox, oy);
+      }
+      ctx.closePath();
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 1.2;
+      ctx.globalAlpha = n.alpha * 0.55;
+      ctx.stroke();
+
+      // Ring of procedural halftone energy dots along blast perimeter
+      const dotCount = 24;
+      ctx.fillStyle = (artStyle === 'comic') ? '#000000' : '#ffffff';
+      for (let d = 0; d < dotCount; d++) {
+        const dotAng = (d / dotCount) * Math.PI * 2 + starRot * 0.3;
+        const dotX = n.x + Math.cos(dotAng) * n.radius;
+        const dotY = n.y + Math.sin(dotAng) * n.radius;
+        const dotSize = 1.5 + Math.sin(dotAng * 4 + starRot) * 1.2;
+        if (dotSize > 0.5) {
+          ctx.beginPath();
+          ctx.arc(dotX, dotY, Math.max(0.8, dotSize), 0, Math.PI * 2);
+          ctx.globalAlpha = n.alpha * 0.85;
+          ctx.fill();
+        }
+      }
 
       ctx.restore();
     }
@@ -262,12 +344,44 @@ export class ParticleEngine {
       ctx.save();
       ctx.textAlign = 'center';
       for (const f of this.floaters) {
-        ctx.font = `bold ${f.size}px Orbitron, sans-serif`;
-        ctx.fillStyle = f.color;
-        ctx.globalAlpha = f.alpha;
-        ctx.shadowColor = f.color;
-        ctx.shadowBlur = 8;
-        ctx.fillText(f.text, f.x, f.y);
+        // Comic action bubbles for floaters in comic mode
+        if (artStyle === 'comic') {
+          ctx.save();
+          ctx.font = `bold ${f.size}px Orbitron, sans-serif`;
+          const textMetrics = ctx.measureText(f.text);
+          const tw = (textMetrics.width || 60) + 16;
+          const th = f.size + 10;
+          ctx.globalAlpha = f.alpha * 0.9;
+          ctx.fillStyle = '#fff9c4'; // vibrant comic bubble yellow
+          ctx.strokeStyle = '#000000';
+          ctx.lineWidth = 2.5;
+
+          ctx.beginPath();
+          ctx.rect(f.x - tw / 2, f.y - th / 2 - 2, tw, th);
+          ctx.fill();
+          ctx.stroke();
+
+          // Bubble pointer
+          ctx.beginPath();
+          ctx.moveTo(f.x - 4, f.y + th / 2 - 2);
+          ctx.lineTo(f.x, f.y + th / 2 + 5);
+          ctx.lineTo(f.x + 4, f.y + th / 2 - 2);
+          ctx.fillStyle = '#fff9c4';
+          ctx.fill();
+          ctx.stroke();
+
+          ctx.fillStyle = '#000000';
+          ctx.shadowBlur = 0;
+          ctx.fillText(f.text, f.x, f.y + (f.size * 0.35));
+          ctx.restore();
+        } else {
+          ctx.font = `bold ${f.size}px Orbitron, sans-serif`;
+          ctx.fillStyle = f.color;
+          ctx.globalAlpha = f.alpha;
+          ctx.shadowColor = f.color;
+          ctx.shadowBlur = 8;
+          ctx.fillText(f.text, f.x, f.y);
+        }
       }
       ctx.restore();
     }

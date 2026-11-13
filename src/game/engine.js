@@ -72,6 +72,20 @@ export class GameEngine {
     this.targetZoom = 1.0;
     this.zoomTimer = 0;
 
+    // v3.1 Art Direction, Spacetime Mesh & Impact Frames
+    this.artStyle = (typeof saveSystem !== 'undefined' && saveSystem?.getArtStyle)
+      ? (saveSystem.getArtStyle() || 'astral')
+      : 'astral';
+    this.impactFlash = 0;
+    this.impactFlashOrigin = { x: this.width * 0.5, y: this.height * 0.53 };
+    const self = this;
+    this.battle = {
+      get impactFlash() { return self.impactFlash; },
+      set impactFlash(v) { self.impactFlash = v; }
+    };
+    this.initSpacetimeGrid();
+    this.planet.drawPlanetEntity = (ctx) => this.drawPlanetEntity(ctx);
+
     // Tactical Telemetry & Damage Tracking
     this.telemetryHistory = [];
     this.telemetrySampleTimer = 0;
@@ -176,7 +190,8 @@ export class GameEngine {
     Object.defineProperty(this, 'battle', {
       get: () => ({
         bullets: this.projectiles ? this.projectiles.bolts : [],
-        wormholes: this.wormholes
+        wormholes: this.wormholes,
+        impactFlash: this.impactFlash
       })
     });
 
@@ -226,6 +241,552 @@ export class GameEngine {
 
     this.planet.resize(this.width, this.height);
     this.initStars();
+    this.initSpacetimeGrid();
+  }
+
+  setArtStyle(style) {
+    if (['astral', 'vector', 'comic'].includes(style)) {
+      this.artStyle = style;
+      if (typeof saveSystem !== 'undefined' && saveSystem?.setArtStyle) {
+        saveSystem.setArtStyle(style);
+      }
+    }
+  }
+
+  triggerImpactFlash(originX = null, originY = null) {
+    this.impactFlash = 0.035;
+    this.impactFlashOrigin = {
+      x: originX !== null ? originX : (this.planet?.x ?? this.width * 0.5),
+      y: originY !== null ? originY : (this.planet?.y ?? this.height * 0.53)
+    };
+  }
+
+  initSpacetimeGrid() {
+    const cols = 22;
+    const rows = 14;
+    const vertices = [];
+    const w = this.width || 800;
+    const h = this.height || 600;
+
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const baseX = (c / (cols - 1)) * w;
+        const baseY = (r / (rows - 1)) * h;
+        vertices.push({
+          c,
+          r,
+          baseX,
+          baseY,
+          x: baseX,
+          y: baseY,
+          vx: 0,
+          vy: 0,
+          displacement: 0
+        });
+      }
+    }
+    vertices.cols = cols;
+    vertices.rows = rows;
+    vertices.vertices = vertices;
+    this.spacetimeGrid = vertices;
+  }
+
+  updateSpacetimeGrid(dt) {
+    if (!this.spacetimeGrid || !this.spacetimeGrid.length) return;
+
+    const dtClamped = Math.min(dt, 0.05);
+    const planetX = this.planet ? this.planet.x : (this.width * 0.5);
+    const planetY = this.planet ? this.planet.y : (this.height * 0.53);
+
+    // Active Bosses
+    const activeBosses = this.aliens ? this.aliens.filter(a => a.alive && (a.isBoss || a.classKey === 'BOSS')) : [];
+
+    // Wormholes (alpha & beta)
+    const wormholes = this.wormholes;
+
+    // Grav-Well Anchors
+    const anchors = (this.structures && this.structures.structures)
+      ? this.structures.structures.filter(s => s.alive && s.type === 'anchor')
+      : [];
+
+    // Active Novas
+    const activeNovas = (this.particles && this.particles.novas) ? this.particles.novas : [];
+
+    // EMP shockwaves
+    const emp = (this.skills && this.skills.empActive) ? this.skills : null;
+
+    // Cataclysm shockwave
+    const cataclysm = this.cataclysmShockwave;
+
+    const springK = 32;
+    const damping = 0.88;
+
+    for (let i = 0; i < this.spacetimeGrid.length; i++) {
+      const v = this.spacetimeGrid[i];
+      let fx = 0;
+      let fy = 0;
+
+      // 1. Pull inward toward central Planet (curved 3D gravity funnel)
+      const pdx = planetX - v.x;
+      const pdy = planetY - v.y;
+      const pDist = Math.hypot(pdx, pdy) || 1;
+      const pPull = Math.max(0, 36000 / (pDist * pDist + 12000));
+      fx += (pdx / pDist) * pPull * 48;
+      fy += (pdy / pDist) * pPull * 48;
+
+      // 2. Pull inward toward active Bosses
+      for (const boss of activeBosses) {
+        const bdx = boss.x - v.x;
+        const bdy = boss.y - v.y;
+        const bDist = Math.hypot(bdx, bdy) || 1;
+        if (bDist < 350) {
+          const bPull = (350 - bDist) * 0.22;
+          fx += (bdx / bDist) * bPull * 20;
+          fy += (bdy / bDist) * bPull * 20;
+        }
+      }
+
+      // 3. Pull inward toward Wormholes (alpha & beta)
+      if (wormholes) {
+        for (const portal of [wormholes.a, wormholes.b]) {
+          if (!portal) continue;
+          const wdx = portal.x - v.x;
+          const wdy = portal.y - v.y;
+          const wDist = Math.hypot(wdx, wdy) || 1;
+          if (wDist < 260) {
+            const wPull = (260 - wDist) * 0.25;
+            fx += (wdx / wDist) * wPull * 18;
+            fy += (wdy / wDist) * wPull * 18;
+          }
+        }
+      }
+
+      // 4. Pull inward toward Grav-Well Anchors
+      for (const anc of anchors) {
+        const adx = anc.x - v.x;
+        const ady = anc.y - v.y;
+        const aDist = Math.hypot(adx, ady) || 1;
+        if (aDist < 220) {
+          const aPull = (220 - aDist) * 0.28;
+          fx += (adx / aDist) * aPull * 18;
+          fy += (ady / aDist) * aPull * 18;
+        }
+      }
+
+      // 5. Push outward from active Novas
+      for (const n of activeNovas) {
+        const ndx = v.x - n.x;
+        const ndy = v.y - n.y;
+        const nDist = Math.hypot(ndx, ndy) || 1;
+        const ringDist = Math.abs(nDist - n.radius);
+        if (ringDist < 60) {
+          const nPush = (1 - ringDist / 60) * (n.alpha || 1.0) * 120;
+          fx += (ndx / nDist) * nPush;
+          fy += (ndy / nDist) * nPush;
+        }
+      }
+
+      // 6. Push outward from EMP shockwaves
+      if (emp) {
+        const edx = v.x - emp.empOriginX;
+        const edy = v.y - emp.empOriginY;
+        const eDist = Math.hypot(edx, edy) || 1;
+        const eRingDist = Math.abs(eDist - emp.empRadius);
+        if (eRingDist < 80) {
+          const ePush = (1 - eRingDist / 80) * 160;
+          fx += (edx / eDist) * ePush;
+          fy += (edy / eDist) * ePush;
+        }
+      }
+
+      // 7. Push outward from Cataclysms
+      if (cataclysm) {
+        const cdx = v.x - planetX;
+        const cdy = v.y - planetY;
+        const cDist = Math.hypot(cdx, cdy) || 1;
+        const cRingDist = Math.abs(cDist - cataclysm.radius);
+        if (cRingDist < 100) {
+          const cPush = (1 - cRingDist / 100) * 220;
+          fx += (cdx / cDist) * cPush;
+          fy += (cdy / cDist) * cPush;
+        }
+      }
+
+      // Elastic restoring spring force
+      fx += (v.baseX - v.x) * springK;
+      fy += (v.baseY - v.y) * springK;
+
+      // Integration & damping
+      v.vx = (v.vx + fx * dtClamped) * damping;
+      v.vy = (v.vy + fy * dtClamped) * damping;
+
+      v.x += v.vx * dtClamped;
+      v.y += v.vy * dtClamped;
+
+      v.displacement = Math.hypot(v.x - v.baseX, v.y - v.baseY);
+    }
+  }
+
+  drawWarpedSpacetimeGrid(ctx) {
+    if (!this.spacetimeGrid || !this.spacetimeGrid.length) return;
+
+    const cols = this.spacetimeGrid.cols || 22;
+    const rows = this.spacetimeGrid.rows || 14;
+    const verts = this.spacetimeGrid.vertices || this.spacetimeGrid;
+    const artStyle = this.artStyle || 'astral';
+
+    ctx.save();
+    ctx.lineWidth = (artStyle === 'vector') ? 1.6 : 1.2;
+
+    const getTensionStyle = (disp) => {
+      const t = Math.min(1.0, disp / 28);
+      if (artStyle === 'vector') {
+        const a = Math.min(0.85, 0.25 + t * 0.6);
+        return `rgba(0, 229, 255, ${a})`;
+      }
+      if (t < 0.25) {
+        const a = 0.08 + t * 0.12;
+        return `rgba(0, 229, 255, ${a.toFixed(3)})`;
+      } else if (t < 0.65) {
+        const a = 0.18 + (t - 0.25) * 0.55;
+        return `rgba(224, 64, 251, ${Math.min(0.48, a).toFixed(3)})`;
+      } else {
+        const a = 0.38 + (t - 0.65) * 0.45;
+        return `rgba(255, 215, 0, ${Math.min(0.55, a).toFixed(3)})`;
+      }
+    };
+
+    // Horizontal lines
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols - 1; c++) {
+        const i1 = r * cols + c;
+        const i2 = i1 + 1;
+        const v1 = verts[i1];
+        const v2 = verts[i2];
+        const avgDisp = (v1.displacement + v2.displacement) * 0.5;
+
+        ctx.beginPath();
+        ctx.moveTo(v1.x, v1.y);
+        ctx.lineTo(v2.x, v2.y);
+        ctx.strokeStyle = getTensionStyle(avgDisp);
+        ctx.stroke();
+      }
+    }
+
+    // Vertical lines
+    for (let c = 0; c < cols; c++) {
+      for (let r = 0; r < rows - 1; r++) {
+        const i1 = r * cols + c;
+        const i2 = (r + 1) * cols + c;
+        const v1 = verts[i1];
+        const v2 = verts[i2];
+        const avgDisp = (v1.displacement + v2.displacement) * 0.5;
+
+        ctx.beginPath();
+        ctx.moveTo(v1.x, v1.y);
+        ctx.lineTo(v2.x, v2.y);
+        ctx.strokeStyle = getTensionStyle(avgDisp);
+        ctx.stroke();
+      }
+    }
+
+    ctx.restore();
+  }
+
+  drawPlanetEntity(ctx) {
+    if (!this.planet) return;
+    const p = this.planet;
+    const pData = p.data || (typeof PLANETS !== 'undefined' ? PLANETS[0] : { atmo: '#00e5ff', color1: '#0ea5e9', color2: '#10b981' });
+
+    const r = p.planetRadius || 75;
+    const sr = p.shieldRadius || 97;
+    const atmo = pData.atmo || '#00e5ff';
+    const c1 = pData.color1 || '#0ea5e9';
+    const c2 = pData.color2 || '#10b981';
+    const artStyle = this.artStyle || 'astral';
+    const timeSec = this.gameTime || 0;
+    const beatPulse = this.audio ? (this.audio.beatPulse || 0) : 0;
+    const isOverdrive = this.skills?.overdriveActive || false;
+    const coreCharge = this.coreCharge || 0;
+
+    ctx.save();
+
+    // 1. Outer Atmospheric Halo
+    const haloR = sr + 24 + (beatPulse * 6);
+    if (artStyle !== 'vector') {
+      const halo = ctx.createRadialGradient(p.x, p.y, r * 0.75, p.x, p.y, haloR);
+      halo.addColorStop(0, `${atmo}44`);
+      halo.addColorStop(0.7, `${atmo}18`);
+      halo.addColorStop(1, 'transparent');
+      ctx.fillStyle = halo;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, haloR, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // 2. Faceted Planet Body
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+    if (typeof ctx.clip === 'function') ctx.clip(); // clip to spherical disk
+
+    if (artStyle === 'vector') {
+      ctx.fillStyle = '#020408';
+      ctx.fillRect(p.x - r, p.y - r, r * 2, r * 2);
+    } else {
+      // Base dark mantle
+      ctx.fillStyle = '#060c1d';
+      ctx.fillRect(p.x - r, p.y - r, r * 2, r * 2);
+
+      // Inner bioluminescent core visible through crystal fissures
+      const corePulse = 1.0 + Math.sin(timeSec * 3) * 0.12;
+      const coreGrad = ctx.createRadialGradient(p.x, p.y, 4, p.x, p.y, r * 0.75 * corePulse);
+      coreGrad.addColorStop(0, '#ffffff');
+      coreGrad.addColorStop(0.3, atmo);
+      coreGrad.addColorStop(0.7, `${c2}bb`);
+      coreGrad.addColorStop(1, 'transparent');
+      ctx.fillStyle = coreGrad;
+      ctx.fillRect(p.x - r, p.y - r, r * 2, r * 2);
+
+      // Crisp faceted low-poly / stained-glass geometric tectonic plates with glowing seams
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rotation || 0);
+
+      const plateCount = 14;
+      const plateSeed = [
+        [-0.15, -0.2], [0.2, -0.35], [0.45, -0.1], [0.1, 0.15],
+        [-0.35, 0.1], [-0.5, -0.25], [-0.25, -0.55], [0.15, -0.65],
+        [0.6, -0.45], [0.7, 0.2], [0.35, 0.55], [-0.1, 0.65],
+        [-0.55, 0.45], [-0.75, 0.05]
+      ];
+
+      for (let i = 0; i < plateCount; i++) {
+        const a1 = (i / plateCount) * Math.PI * 2;
+        const a2 = ((i + 1) / plateCount) * Math.PI * 2;
+        const pInner = plateSeed[i % plateSeed.length];
+        const pNextInner = plateSeed[(i + 1) % plateSeed.length];
+
+        const x1 = Math.cos(a1) * (r * 1.05);
+        const y1 = Math.sin(a1) * (r * 1.05);
+        const x2 = Math.cos(a2) * (r * 1.05);
+        const y2 = Math.sin(a2) * (r * 1.05);
+        const xIn1 = pInner[0] * r;
+        const yIn1 = pInner[1] * r;
+        const xIn2 = pNextInner[0] * r;
+        const yIn2 = pNextInner[1] * r;
+
+        ctx.beginPath();
+        ctx.moveTo(xIn1 * 0.9, yIn1 * 0.9);
+        ctx.lineTo(xIn2 * 0.9, yIn2 * 0.9);
+        ctx.lineTo(x2 * 0.94, y2 * 0.94);
+        ctx.lineTo(x1 * 0.94, y1 * 0.94);
+        ctx.closePath();
+
+        const plateAlpha = 0.58 + ((i % 4) * 0.08);
+        ctx.fillStyle = (i % 2 === 0) ? c1 : c2;
+        ctx.globalAlpha = plateAlpha;
+        ctx.fill();
+
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1.4;
+        ctx.globalAlpha = 0.85;
+        ctx.stroke();
+
+        ctx.strokeStyle = atmo;
+        ctx.lineWidth = 2.4;
+        ctx.shadowColor = atmo;
+        ctx.shadowBlur = 8;
+        ctx.globalAlpha = 0.65;
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+      }
+      ctx.restore();
+      ctx.globalAlpha = 1.0;
+
+      // Dual-tone cel-shaded terminator shadow with neon atmospheric rim crescent on dark side
+      const shadowMid = ctx.createRadialGradient(
+        p.x - r * 0.45, p.y - r * 0.45, r * 0.25,
+        p.x, p.y, r * 1.05
+      );
+      shadowMid.addColorStop(0, 'rgba(0, 0, 0, 0)');
+      shadowMid.addColorStop(0.48, 'rgba(0, 0, 0, 0)');
+      shadowMid.addColorStop(0.52, 'rgba(6, 12, 28, 0.45)');
+      shadowMid.addColorStop(0.78, 'rgba(6, 12, 28, 0.45)');
+      shadowMid.addColorStop(0.82, 'rgba(2, 4, 12, 0.88)');
+      shadowMid.addColorStop(1, 'rgba(1, 2, 8, 0.95)');
+      ctx.fillStyle = shadowMid;
+      ctx.fillRect(p.x - r, p.y - r, r * 2, r * 2);
+    }
+
+    ctx.restore(); // restore clip
+
+    // Neon atmospheric rim crescent on the dark side
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, r, Math.PI * 0.35, Math.PI * 1.15);
+    ctx.strokeStyle = atmo;
+    ctx.lineWidth = 3.2;
+    ctx.shadowColor = atmo;
+    ctx.shadowBlur = 14;
+    ctx.stroke();
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+    ctx.restore();
+
+    // Edge boundary stroke
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+    ctx.strokeStyle = (artStyle === 'comic') ? '#000000' : atmo;
+    ctx.lineWidth = (artStyle === 'comic') ? 3.5 : 2.5;
+    ctx.stroke();
+
+    // 3. Crisp architectural silhouettes for 4 surface cyber-cities
+    const hpRatio = p.coreHp / (p.maxCoreHp || 100);
+    const isCritical = hpRatio < 0.35;
+    const isWarning = hpRatio >= 0.35 && hpRatio <= 0.70;
+
+    for (let i = 0; i < 4; i++) {
+      const cityAngle = (i * Math.PI * 0.5) + (p.rotation || 0);
+      const cx = p.x + Math.cos(cityAngle) * r;
+      const cy = p.y + Math.sin(cityAngle) * r;
+
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(cityAngle);
+
+      ctx.fillStyle = (artStyle === 'comic') ? '#000000' : '#080d1a';
+      ctx.strokeStyle = (artStyle === 'comic') ? '#000000' : atmo;
+      ctx.lineWidth = 1.0;
+
+      ctx.beginPath();
+      ctx.rect(0, -7, 6, 4);
+      ctx.rect(0, -3, 10, 6);
+      ctx.rect(10, -0.8, 4, 1.6);
+      ctx.rect(0, 3, 6, 4);
+      ctx.fill();
+      ctx.stroke();
+
+      const winColor = isCritical ? '#ff1744' : (isWarning ? '#ff9100' : '#00e5ff');
+      ctx.fillStyle = winColor;
+      ctx.fillRect(2, -5.5, 1.5, 1.5);
+      ctx.fillRect(4, -1.5, 1.5, 1.5);
+      ctx.fillRect(7, -1.5, 1.5, 1.5);
+      ctx.fillRect(2, 4.5, 1.5, 1.5);
+
+      ctx.beginPath();
+      if (typeof ctx.ellipse === 'function') {
+        ctx.ellipse(0, 0, 12, 8, 0, -Math.PI * 0.5, Math.PI * 0.5);
+      } else {
+        ctx.arc(0, 0, 10, -Math.PI * 0.5, Math.PI * 0.5);
+      }
+      ctx.fillStyle = isCritical ? 'rgba(255, 23, 68, 0.22)' : 'rgba(0, 229, 255, 0.16)';
+      ctx.fill();
+      ctx.strokeStyle = isCritical ? '#ff1744' : ((i % 2 === 0) ? '#00e5ff' : '#ffd700');
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(14, 0, 2.0, 0, Math.PI * 2);
+      ctx.fillStyle = isCritical ? '#ff1744' : '#ffffff';
+      ctx.fill();
+
+      ctx.restore();
+    }
+
+    // 4. Cataclysm Gauge & Aegis Shield
+    const coreR = r * 0.48;
+    const chargePct = Math.min(1.0, Math.max(0, (coreCharge || 0) / 100));
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, coreR, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.14)';
+    ctx.lineWidth = 3.5;
+    ctx.stroke();
+
+    if (chargePct > 0) {
+      const startA = -Math.PI * 0.5;
+      const endA = startA + chargePct * Math.PI * 2;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, coreR, startA, endA);
+      ctx.strokeStyle = chargePct >= 1.0 ? '#ffd700' : '#ff9100';
+      ctx.lineWidth = 4.0;
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    // Aegis Energy Shield
+    if (p.shield > 0) {
+      const shieldPct = p.shield / p.maxShield;
+      const pulse = Math.sin(p.pulsePhase || 0) * 1.5;
+      const curSr = sr + pulse;
+      const shieldColor = isOverdrive ? '#ffd700' : (shieldPct > 0.4 ? '#00e5ff' : '#ff3366');
+
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, curSr, 0, Math.PI * 2);
+      ctx.fillStyle = isOverdrive
+        ? 'rgba(255, 215, 0, 0.16)'
+        : (shieldPct > 0.4 ? 'rgba(0, 229, 255, 0.14)' : 'rgba(255, 51, 102, 0.18)');
+      ctx.fill();
+
+      ctx.strokeStyle = shieldColor;
+      ctx.lineWidth = isOverdrive ? 3 : 2;
+      ctx.stroke();
+
+      const nodeCount = 16;
+      for (let i = 0; i < nodeCount; i++) {
+        const ang = (i / nodeCount) * Math.PI * 2 + ((p.pulsePhase || 0) * 0.1);
+        const nx = p.x + Math.cos(ang) * curSr;
+        const ny = p.y + Math.sin(ang) * curSr;
+        ctx.beginPath();
+        ctx.arc(nx, ny, 2.5, 0, Math.PI * 2);
+        ctx.fillStyle = '#ffffff';
+        ctx.fill();
+      }
+    }
+
+    ctx.restore();
+  }
+
+  drawImpactFrames(ctx) {
+    const ox = this.impactFlashOrigin?.x ?? (this.width * 0.5);
+    const oy = this.impactFlashOrigin?.y ?? (this.height * 0.53);
+    const maxR = Math.max(this.width, this.height) * 1.2;
+
+    ctx.save();
+    // High-contrast stark flash backdrop
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+    ctx.fillRect(0, 0, this.width, this.height);
+
+    // Radial speed lines / starburst spikes
+    const spikes = 28;
+    ctx.fillStyle = '#ffffff';
+    ctx.strokeStyle = '#00e5ff';
+    ctx.lineWidth = 2.0;
+
+    for (let i = 0; i < spikes; i++) {
+      const ang = (i / spikes) * Math.PI * 2;
+      const spikeLen = maxR * (0.65 + ((i % 3) * 0.18));
+      const halfWidth = 0.045;
+
+      ctx.beginPath();
+      ctx.moveTo(ox, oy);
+      ctx.lineTo(ox + Math.cos(ang - halfWidth) * spikeLen, oy + Math.sin(ang - halfWidth) * spikeLen);
+      ctx.lineTo(ox + Math.cos(ang + halfWidth) * spikeLen, oy + Math.sin(ang + halfWidth) * spikeLen);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+    }
+
+    // Central starburst core
+    ctx.beginPath();
+    ctx.arc(ox, oy, 24, 0, Math.PI * 2);
+    ctx.fillStyle = '#ffffff';
+    ctx.shadowColor = '#00e5ff';
+    ctx.shadowBlur = 24;
+    ctx.fill();
+    ctx.restore();
   }
 
   applyUpgrades() {
@@ -384,6 +945,7 @@ export class GameEngine {
     this.coreCharge = 0;
     audio.playCataclysm();
     this.addScreenShake(20, 0.7);
+    this.triggerImpactFlash(this.planet.x, this.planet.y);
 
     // Zoom trigger: [F] Cataclysm (1.15x for 0.9s)
     if (this.getSettings().screenShake !== false && this.getSettings().screenShake !== 0) {
@@ -1058,7 +1620,7 @@ export class GameEngine {
       this.advanceTutorial(3);
     }
 
-    this.particles.spawnNova(targetX, targetY, blastRadius, color, damage, true);
+    this.particles.spawnNova(targetX, targetY, blastRadius, color, damage, true, this.combo);
 
     // v2.8 Split-Nova Catalyst Draft Perk: Splits into 4 homing mini-plasmas
     if (this.hasPerk('splitNova')) {
@@ -1430,7 +1992,7 @@ export class GameEngine {
       nRadius *= 1.35;
     }
 
-    this.particles.spawnNova(alien.x, alien.y, nRadius, alien.color, nDmg, false);
+    this.particles.spawnNova(alien.x, alien.y, nRadius, alien.color, nDmg, false, this.combo);
     this.particles.spawnDebris(alien.x, alien.y, alien.color, 14);
 
     // Class specific death payload mechanics
@@ -1510,6 +2072,16 @@ export class GameEngine {
     if (this.vignettePulse > 0) {
       this.vignettePulse = Math.max(0, this.vignettePulse - dt * 4.5);
     }
+
+    // v3.1 Impact Flash timer decay
+    if (this.impactFlash > 0) {
+      this.impactFlash = Math.max(0, this.impactFlash - dt);
+      if (this.battle) this.battle.impactFlash = this.impactFlash;
+    }
+
+    // v3.1 Reactive Spacetime Gravity Grid (22x14 vertex mesh)
+    this.updateSpacetimeGrid(dt);
+
     const effectiveDt = dt * this.timeScale;
     this.gameTime += dt;
     this.turretRecoil = this.turret ? (this.turret.recoil || 0) : 0;
@@ -2553,16 +3125,39 @@ export class GameEngine {
   }
 
   drawBattleScene(ctx) {
-    // 1. Render Deep Space Background Void & 3-Layer Parallax Starfield
-    const bgGrad = ctx.createRadialGradient(
-      this.planet.x, this.planet.y, 80,
-      this.planet.x, this.planet.y, Math.max(this.width, this.height) * 0.75
-    );
-    bgGrad.addColorStop(0, '#0c132c');
-    bgGrad.addColorStop(0.5, '#070b1a');
-    bgGrad.addColorStop(1, '#03050c');
-    ctx.fillStyle = bgGrad;
-    ctx.fillRect(0, 0, this.width, this.height);
+    const isOverdrive = this.skills?.overdriveActive || false;
+    // 1. Render Deep Space Background Void & Art Style Variations
+    if (this.artStyle === 'vector') {
+      ctx.fillStyle = '#020408';
+      ctx.fillRect(0, 0, this.width, this.height);
+    } else {
+      const bgGrad = ctx.createRadialGradient(
+        this.planet.x, this.planet.y, 80,
+        this.planet.x, this.planet.y, Math.max(this.width, this.height) * 0.75
+      );
+      bgGrad.addColorStop(0, '#0c132c');
+      bgGrad.addColorStop(0.5, '#070b1a');
+      bgGrad.addColorStop(1, '#03050c');
+      ctx.fillStyle = bgGrad;
+      ctx.fillRect(0, 0, this.width, this.height);
+    }
+
+    // Comic Ben-Day halftone dots pattern on background
+    if (this.artStyle === 'comic') {
+      ctx.save();
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+      for (let bx = 8; bx < this.width; bx += 16) {
+        for (let by = 8; by < this.height; by += 16) {
+          ctx.beginPath();
+          ctx.arc(bx, by, 1.2, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+      ctx.restore();
+    }
+
+    // Reactive Spacetime Gravity Grid (22x14 vertex mesh)
+    this.drawWarpedSpacetimeGrid(ctx);
 
     // 3-Layer Parallax Starfield & Nebula Clouds
     ctx.save();
@@ -2647,10 +3242,8 @@ export class GameEngine {
       ctx.restore();
     }
 
-    // 3. Render Living Central Planet & Aegis Shield
-    const isOverdrive = this.skills.overdriveActive;
-    const beatPulse = this.audio ? (this.audio.beatPulse || 0) : (audio ? (audio.beatPulse || 0) : 0);
-    this.planet.render(ctx, isOverdrive, this.gameTime, beatPulse, this.coreCharge || 0);
+    // 3. Render Living Central Planet & Aegis Shield (Faceted Stained-Glass Planet & Cities)
+    this.drawPlanetEntity(ctx);
 
     // 4. Render Orbital Guardian Turret
     this.turret.render(ctx, this.planet.x, this.planet.y, this.planet.planetRadius, isOverdrive);
@@ -2786,9 +3379,9 @@ export class GameEngine {
     this.renderPlasmaBarrels(ctx);
     this.renderOmegaDrones(ctx);
 
-    // 8. Render Aliens
+    // 8. Render Aliens (Stained-Glass Vector Chassis & 2.5D Rim Lighting)
     for (const alien of this.aliens) {
-      alien.render(ctx);
+      alien.render(ctx, this, this.gameTime);
     }
 
     // Void Weaver Graviton Web Tethers (slows turret by 30%)
@@ -3041,7 +3634,7 @@ export class GameEngine {
     this.projectiles.render(ctx, this.planet.x, this.planet.y, this.planet.shieldRadius, this.getSettings().threatRings !== false);
 
     // 10. Render Particles, Chain Novas, Sparks, and Floating Combat Callouts
-    this.particles.render(ctx);
+    this.particles.render(ctx, this.artStyle);
 
     // Edge Vignette Pulse on Mega Chains
     if (this.vignettePulse > 0.02) {
@@ -3065,6 +3658,21 @@ export class GameEngine {
       ctx.save();
       ctx.fillStyle = `rgba(255, 245, 220, ${this.cataclysmFlashAlpha * 0.85})`;
       ctx.fillRect(0, 0, this.width, this.height);
+      ctx.restore();
+    }
+
+    // v3.1 Impact Frames: 2 frames of radial speed lines / starburst spikes on Perfect Parry, Crit Breach, or Cataclysm
+    if (this.impactFlash > 0) {
+      this.drawImpactFrames(ctx);
+    }
+
+    // v3.1 Vector Art Style: CRT Scanlines overlay
+    if (this.artStyle === 'vector') {
+      ctx.save();
+      ctx.fillStyle = 'rgba(0, 229, 255, 0.035)';
+      for (let sy = 0; sy < this.height; sy += 3.5) {
+        ctx.fillRect(0, sy, this.width, 1.2);
+      }
       ctx.restore();
     }
   }
@@ -3477,6 +4085,7 @@ export class GameEngine {
     // Award floating combat text, micro hit-stop flash, +20% Nova, +8% Cataclysm, +5% Shield
     this.particles.addFloater(torpX, torpY - 20, '⚡ PERFECT PARRY! +20% NOVA', '#ffd700', 16);
     this.hitStopTimer = 0.08;
+    this.triggerImpactFlash(torpX, torpY);
     this.timeScale = 0.4;
     audio.playParry();
 
@@ -3610,6 +4219,7 @@ export class GameEngine {
     this.spawnSparks(alien.x, alien.y, 2);
     this.particles.addFloater(alien.x, alien.y - 25, '💥 CRITICAL BREACH! x2.5', '#ff9100', 17);
     this.hitStopTimer = 0.08;
+    this.triggerImpactFlash(alien.x, alien.y);
     audio.playCritBreach();
     // v2.9 Frenzy Overdrive: +15% on Critical Weak-Spot Breach
     this.addFrenzy(15.0);

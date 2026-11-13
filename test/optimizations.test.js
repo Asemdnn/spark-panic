@@ -20,6 +20,8 @@ describe('Canvas Game Optimizer & Engine Efficiency Suite', () => {
       moveTo: vi.fn(),
       lineTo: vi.fn(),
       arc: vi.fn(),
+      rect: vi.fn(),
+      clip: vi.fn(),
       stroke: vi.fn(),
       fill: vi.fn(),
       fillRect: vi.fn(),

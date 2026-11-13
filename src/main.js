@@ -19,6 +19,7 @@ if ('serviceWorker' in navigator) {
 window.addEventListener('DOMContentLoaded', () => {
   const canvas = document.getElementById('gameCanvas');
   const engine = new GameEngine(canvas);
+  engine.artStyle = saveSystem.getArtStyle ? saveSystem.getArtStyle() : 'astral';
 
   // Selected Sector & Planet in Star Map
   let selectedSector = 1;
@@ -274,7 +275,41 @@ window.addEventListener('DOMContentLoaded', () => {
     }).join('');
   };
 
+  // Visual Art Style Switcher (v3.1)
+  function updateArtStyleButton(style) {
+    const btn = document.getElementById('btnArtStyle');
+    if (!btn) return;
+    const labels = {
+      astral: '🎨 STYLE: ASTRAL',
+      vector: '🕹️ STYLE: VECTOR',
+      comic: '💥 STYLE: COMIC'
+    };
+    btn.textContent = labels[style] || '🎨 STYLE: ASTRAL';
+    btn.setAttribute('data-art-style', style);
+  }
+
+  function cycleArtStyle() {
+    audio.init();
+    const current = saveSystem.getArtStyle ? saveSystem.getArtStyle() : 'astral';
+    const order = ['astral', 'vector', 'comic'];
+    const idx = order.indexOf(current);
+    const next = order[(idx + 1) % order.length];
+    if (saveSystem.setArtStyle) {
+      saveSystem.setArtStyle(next);
+    }
+    engine.artStyle = next;
+    updateArtStyleButton(next);
+    syncSettingsUI();
+    const toastMap = { astral: '💎 ASTRAL', vector: '🕹️ VECTOR', comic: '💥 COMIC' };
+    engine.showToast(`🎨 ART STYLE: ${toastMap[next]}`, '#00e5ff');
+  }
+
+  updateArtStyleButton(engine.artStyle);
+
   // Top HUD Controls
+  document.getElementById('btnArtStyle')?.addEventListener('click', () => {
+    cycleArtStyle();
+  });
   document.getElementById('btnSettings')?.addEventListener('click', () => {
     openSettingsModal();
   });
@@ -1892,6 +1927,17 @@ window.addEventListener('DOMContentLoaded', () => {
       }`;
     });
 
+    // Art Style (v3.1)
+    const currentStyle = s.artStyle || 'astral';
+    document.querySelectorAll('.btn-setting-style').forEach(btn => {
+      const val = btn.getAttribute('data-val');
+      const active = (currentStyle === val);
+      btn.className = `btn-setting-style px-2.5 py-1 rounded-lg text-[10px] font-orbitron font-bold border transition cursor-pointer ${
+        active ? 'bg-cosmic-cyan text-slate-950 border-cosmic-cyan shadow-[0_0_10px_rgba(0,229,255,0.4)]' : 'bg-slate-900 text-slate-400 border-slate-700 hover:border-slate-500'
+      }`;
+    });
+    updateArtStyleButton(currentStyle);
+
     updateGamepadBadge();
   }
 
@@ -1954,6 +2000,22 @@ window.addEventListener('DOMContentLoaded', () => {
       const val = e.currentTarget.getAttribute('data-val');
       saveSystem.updateSettings({ floatingText: val });
       syncSettingsUI();
+    });
+  });
+
+  document.querySelectorAll('.btn-setting-style').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      audio.init();
+      const val = e.currentTarget.getAttribute('data-val');
+      if (saveSystem.setArtStyle) {
+        saveSystem.setArtStyle(val);
+      } else {
+        saveSystem.updateSettings({ artStyle: val });
+      }
+      engine.artStyle = val;
+      syncSettingsUI();
+      const toastMap = { astral: '💎 ASTRAL', vector: '🕹️ VECTOR', comic: '💥 COMIC' };
+      engine.showToast(`🎨 ART STYLE: ${toastMap[val] || val.toUpperCase()}`, '#00e5ff');
     });
   });
 
