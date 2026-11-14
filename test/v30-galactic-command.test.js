@@ -577,15 +577,15 @@ describe('Spark Panic v3.0: Galactic Command Edition Suite', () => {
         const cardCanvas = BattleCardGenerator.renderCard(historicalEngine, saveSystem);
         expect(cardCanvas).toBeDefined();
 
-        // Check v3.0 or v3.1 badge
-        const badge = fillTextCalls.find(c => c.text.includes('v3.0 GALACTIC COMMAND EDITION') || c.text.includes('v3.1 PRISMATIC ART EDITION'));
+        // Check v3.0, v3.1, or v3.2 badge
+        const badge = fillTextCalls.find(c => c.text.includes('v3.0 GALACTIC COMMAND EDITION') || c.text.includes('v3.1 PRISMATIC ART EDITION') || c.text.includes('v3.2 HYPER-VFX & NEBULA SHADER EDITION'));
         expect(badge).toBeDefined();
 
         // Check Incursion mission status text
         const statusCall = fillTextCalls.find(c => c.text.includes('INCURSION REPELLED'));
         expect(statusCall).toBeDefined();
 
-        // Check share text includes v3.0 or v3.1 via copyCardToClipboard fallback
+        // Check share text includes v3.0, v3.1, or v3.2 via copyCardToClipboard fallback
         let copiedText = '';
         Object.defineProperty(navigator, 'clipboard', {
           value: {
@@ -598,7 +598,7 @@ describe('Spark Panic v3.0: Galactic Command Edition Suite', () => {
 
         const copyResult = await BattleCardGenerator.copyCardToClipboard(cardCanvas, historicalEngine);
         expect(copyResult).toBe('TEXT_COPIED');
-        expect(copiedText).toMatch(/(🌟 v3\.0 GALACTIC COMMAND|🎨 v3\.1 PRISMATIC ART) EDITION/);
+        expect(copiedText).toMatch(/(🌟 v3\.0 GALACTIC COMMAND|🎨 v3\.1 PRISMATIC ART|✨ v3\.2 HYPER-VFX & NEBULA SHADER) EDITION/);
         expect(copiedText).toContain('32,000 pts');
       } finally {
         document.createElement = originalCreateElement;
@@ -618,8 +618,8 @@ describe('Spark Panic v3.0: Galactic Command Edition Suite', () => {
       const html = fs.readFileSync(htmlPath, 'utf-8');
 
       // Title & Badges
-      expect(html).toMatch(/(🌟 v3\.0 Galactic Command|🎨 v3\.1 Prismatic Art) Edition/i);
-      expect(html).toMatch(/(🌟 v3\.0 GALACTIC COMMAND|🎨 v3\.1 PRISMATIC ART) EDITION/);
+      expect(html).toMatch(/(🌟 v3\.0 Galactic Command|🎨 v3\.1 Prismatic Art|✨ v3\.2 Hyper-VFX & Nebula Shader) Edition/i);
+      expect(html).toMatch(/(🌟 v3\.0 GALACTIC COMMAND|🎨 v3\.1 PRISMATIC ART|✨ v3\.2 HYPER-VFX & NEBULA SHADER) EDITION/);
 
       // Modular Shipyard Deck
       expect(html).toContain('id="shipyardContainer"');
@@ -634,11 +634,11 @@ describe('Spark Panic v3.0: Galactic Command Edition Suite', () => {
       expect(html.toUpperCase()).toContain('HALL OF CHAMPIONS');
     });
 
-    it('battle-card.js should declare v3.0 or v3.1 edition badge and share text', () => {
+    it('battle-card.js should declare v3.0, v3.1, or v3.2 edition badge and share text', () => {
       const battleCardPath = path.resolve(__dirname, '../src/ui/battle-card.js');
       const battleCardSrc = fs.readFileSync(battleCardPath, 'utf-8');
 
-      expect(battleCardSrc).toMatch(/(🌟 v3\.0 GALACTIC COMMAND|🎨 v3\.1 PRISMATIC ART) EDITION/);
+      expect(battleCardSrc).toMatch(/(🌟 v3\.0 GALACTIC COMMAND|🎨 v3\.1 PRISMATIC ART|✨ v3\.2 HYPER-VFX & NEBULA SHADER) EDITION/);
       expect(battleCardSrc).toContain('INCURSION REPELLED');
     });
 
@@ -646,7 +646,7 @@ describe('Spark Panic v3.0: Galactic Command Edition Suite', () => {
       const readmePath = path.resolve(__dirname, '../README.md');
       const readmeSrc = fs.readFileSync(readmePath, 'utf-8');
 
-      expect(readmeSrc).toMatch(/Spark Panic: Planetary Invasion Defense — Guardian of the Universe \((🌟 v3\.0 Galactic Command|🎨 v3\.1 Prismatic Art) Edition\)/);
+      expect(readmeSrc).toMatch(/Spark Panic: Planetary Invasion Defense — Guardian of the Universe \((🌟 v3\.0 Galactic Command|🎨 v3\.1 Prismatic Art|✨ v3\.2 Hyper-VFX & Nebula Shader) Edition\)/);
       expect(readmeSrc).toContain('What\'s New in v3.0: Galactic Command Edition');
       expect(readmeSrc).toContain('Modular Orbital Shipyard');
       expect(readmeSrc).toContain('Living Star Map Incursions');

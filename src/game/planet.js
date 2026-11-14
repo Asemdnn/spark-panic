@@ -896,6 +896,33 @@ export class Planet {
         ctx.shadowBlur = 14;
         ctx.fill();
       });
+
+      // Reflective crystal hexagonal prism shield facets
+      const hexFacetCount = 5;
+      for (let h = 0; h < hexFacetCount; h++) {
+        const hPct = h / (hexFacetCount - 1);
+        const hAng = startAngle + (endAngle - startAngle) * hPct;
+        const hx = this.x + Math.cos(hAng) * parryR;
+        const hy = this.y + Math.sin(hAng) * parryR;
+        ctx.save();
+        ctx.translate(hx, hy);
+        ctx.rotate(hAng + Math.PI * 0.5);
+        ctx.beginPath();
+        for (let p = 0; p < 6; p++) {
+          const pAng = (p / 6) * Math.PI * 2;
+          const px = Math.cos(pAng) * 4.5;
+          const py = Math.sin(pAng) * 4.5;
+          if (p === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+        ctx.fillStyle = 'rgba(0, 229, 255, 0.35)';
+        ctx.fill();
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1.0;
+        ctx.stroke();
+        ctx.restore();
+      }
       ctx.restore();
     }
 

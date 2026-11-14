@@ -338,7 +338,7 @@ describe('v2.8 Tactical Combat Mastery Suite', () => {
       const htmlPath = path.resolve(__dirname, '../index.html');
       const html = fs.readFileSync(htmlPath, 'utf-8');
 
-      expect(html).toMatch(/(⚡ v2\.[89] (TACTICAL MASTERY|SYNERGY OVERDRIVE)|🌟 v3\.0 GALACTIC COMMAND|🎨 v3\.1 PRISMATIC ART) EDITION/);
+      expect(html).toMatch(/(⚡ v2\.[89] (TACTICAL MASTERY|SYNERGY OVERDRIVE)|🌟 v3\.0 GALACTIC COMMAND|🎨 v3\.1 PRISMATIC ART|✨ v3\.2 HYPER-VFX & NEBULA SHADER) EDITION/);
       expect(html).toContain('id="btnParry"');
       expect(html).toContain('id="hudDraftPerks"');
       expect(html).toContain('id="modalWaveDraft"');
@@ -389,7 +389,7 @@ describe('v2.8 Tactical Combat Mastery Suite', () => {
 
       try {
         BattleCardGenerator.renderCard(engine, saveSystem);
-        const vBadge = fillTextCalls.find(c => c.text === "🎨 v3.1 PRISMATIC ART EDITION" || c.text === "🌟 v3.0 GALACTIC COMMAND EDITION" || c.text === "⚡ v2.8 TACTICAL MASTERY EDITION" || c.text === "⚡ v2.9 SYNERGY OVERDRIVE EDITION");
+        const vBadge = fillTextCalls.find(c => c.text === "✨ v3.2 HYPER-VFX & NEBULA SHADER EDITION" || c.text === "🎨 v3.1 PRISMATIC ART EDITION" || c.text === "🌟 v3.0 GALACTIC COMMAND EDITION" || c.text === "⚡ v2.8 TACTICAL MASTERY EDITION" || c.text === "⚡ v2.9 SYNERGY OVERDRIVE EDITION");
         expect(vBadge).toBeDefined();
         expect(vBadge.x).toBe(48);
         expect(vBadge.y).toBe(76);

@@ -128,6 +128,7 @@ export class Alien {
         // Massive 110px chain Nova explosion
         engine.particles.spawnNova(sub.x, sub.y, 110, sub.color, 65, true);
         engine.particles.spawnDebris(sub.x, sub.y, sub.color, 16);
+        engine.particles.spawnHullFragments?.(sub.x, sub.y, sub.color, 14, 180);
         engine.addScreenShake(10, 0.25);
 
         if (sub.type === 'weapons') {
@@ -532,6 +533,58 @@ export class Alien {
         ctx.lineTo(edge.x2, edge.y2);
         ctx.stroke();
       }
+    }
+    ctx.restore();
+  }
+
+  drawDamageScars(ctx, r, damagePct, timeSec, artStyle = 'astral') {
+    ctx.save();
+    const scarGlow = 0.65 + Math.sin(timeSec * 14 + (this.pulsePhase || 0)) * 0.35;
+    ctx.globalAlpha = Math.min(1.0, damagePct * 1.3) * scarGlow;
+    ctx.strokeStyle = '#ff3d00';
+    ctx.shadowColor = '#ff1744';
+    ctx.shadowBlur = (artStyle === 'comic') ? 0 : 8;
+    ctx.lineWidth = 1.6;
+
+    // 2-3 jagged glowing crack lines / damage scars across the hull
+    const numScars = damagePct > 0.6 ? 3 : 2;
+    for (let s = 0; s < numScars; s++) {
+      const sAng = s * 2.1 + (this.pulsePhase || 1.2);
+      const startX = Math.cos(sAng) * (r * 0.75);
+      const startY = Math.sin(sAng) * (r * 0.75);
+      const midX = Math.cos(sAng + 1.2) * (r * 0.25) + Math.sin(timeSec * 8 + s) * 2;
+      const midY = Math.sin(sAng + 1.2) * (r * 0.25);
+      const endX = -Math.cos(sAng) * (r * 0.65);
+      const endY = -Math.sin(sAng) * (r * 0.65);
+
+      ctx.beginPath();
+      ctx.moveTo(startX, startY);
+      ctx.lineTo((startX + midX) * 0.5 + Math.sin(sAng * 3) * 3, (startY + midY) * 0.5);
+      ctx.lineTo(midX, midY);
+      ctx.lineTo((midX + endX) * 0.5 - Math.cos(sAng * 2) * 3, (midY + endY) * 0.5);
+      ctx.lineTo(endX, endY);
+      ctx.stroke();
+
+      // Branching micro-fissure
+      if (damagePct > 0.4) {
+        ctx.beginPath();
+        ctx.moveTo(midX, midY);
+        ctx.lineTo(midX + Math.cos(sAng + 0.8) * (r * 0.35), midY + Math.sin(sAng + 0.8) * (r * 0.35));
+        ctx.strokeStyle = '#ff9100';
+        ctx.lineWidth = 1.0;
+        ctx.stroke();
+      }
+
+      // Hot white-orange molten core along crack
+      ctx.save();
+      ctx.strokeStyle = '#fff7ed';
+      ctx.lineWidth = 0.7;
+      ctx.beginPath();
+      ctx.moveTo(startX, startY);
+      ctx.lineTo(midX, midY);
+      ctx.lineTo(endX, endY);
+      ctx.stroke();
+      ctx.restore();
     }
     ctx.restore();
   }
@@ -1425,6 +1478,12 @@ export class Alien {
       ctx.fillRect(-barW / 2, -r - 10, barW * pct, barH);
     }
 
+    // Dynamic damage scars / glowing crack lines when ships drop below 50% HP
+    if (this.hp < this.maxHp * 0.5) {
+      const damagePct = (0.5 - (this.hp / this.maxHp)) / 0.5;
+      this.drawDamageScars(ctx, r, damagePct, t, artStyle);
+    }
+
     ctx.restore();
 
     // Phase 2 Rotating 110° Front Energy Shield Arc
@@ -1459,6 +1518,8 @@ export class Alien {
     if (this.isBoss && this.subsystems) {
       for (const sub of this.subsystems) {
         ctx.save();
+        const tearSeverity = Math.max(0, 1 - (sub.hp / sub.maxHp));
+
         // Energy tether to boss center
         ctx.beginPath();
         ctx.moveTo(this.x, this.y);
@@ -1468,6 +1529,28 @@ export class Alien {
         ctx.setLineDash([3, 3]);
         ctx.stroke();
         ctx.setLineDash([]);
+
+        // Boss hardpoint tear lines when subsystem is damaged
+        if (tearSeverity > 0) {
+          ctx.save();
+          ctx.strokeStyle = '#ff3d00';
+          ctx.shadowColor = '#ff1744';
+          ctx.shadowBlur = 10;
+          ctx.lineWidth = 2.0;
+          ctx.beginPath();
+          const tearSteps = 5;
+          for (let st = 0; st <= tearSteps; st++) {
+            const pct = st / tearSteps;
+            const jX = (Math.sin(t * 16 + st * 4 + sub.id.length) * 3.5) * tearSeverity;
+            const jY = (Math.cos(t * 16 + st * 4 + sub.id.length) * 3.5) * tearSeverity;
+            const px = this.x + (sub.x - this.x) * pct + jX;
+            const py = this.y + (sub.y - this.y) * pct + jY;
+            if (st === 0) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
+          }
+          ctx.stroke();
+          ctx.restore();
+        }
 
         ctx.translate(sub.x, sub.y);
         const subR = sub.radius || 14;
@@ -1527,6 +1610,62 @@ export class Alien {
           ctx.lineWidth = 1.5;
           ctx.stroke();
         }
+
+        // Hardpoint venting plasma fire and electrical arcs when damaged
+        if (tearSeverity > 0) {
+          // Venting plasma fire plume
+          ctx.save();
+          const ventAngle = Math.atan2(sub.y - this.y, sub.x - this.x) + (Math.sin(t * 18 + sub.id.length) * 0.25);
+          ctx.rotate(ventAngle);
+          const flameLen = (14 + Math.sin(t * 22) * 6) * (0.6 + tearSeverity * 0.7);
+          const flameWidth = (5 + Math.sin(t * 26) * 3) * (0.6 + tearSeverity * 0.6);
+
+          ctx.beginPath();
+          ctx.moveTo(0, -flameWidth * 0.5);
+          ctx.lineTo(flameLen, 0);
+          ctx.lineTo(0, flameWidth * 0.5);
+          ctx.closePath();
+          ctx.fillStyle = '#ff5722';
+          ctx.shadowColor = '#ff1744';
+          ctx.shadowBlur = 12;
+          ctx.fill();
+
+          ctx.beginPath();
+          ctx.moveTo(0, -flameWidth * 0.25);
+          ctx.lineTo(flameLen * 0.6, 0);
+          ctx.lineTo(0, flameWidth * 0.25);
+          ctx.closePath();
+          ctx.fillStyle = '#ffffff';
+          ctx.fill();
+          ctx.restore();
+
+          // Electrical arcs crackling around damaged hardpoint
+          ctx.save();
+          ctx.strokeStyle = '#00e5ff';
+          ctx.shadowColor = '#00e5ff';
+          ctx.shadowBlur = 12;
+          ctx.lineWidth = 1.8;
+          const arcCount = sub.alive ? 2 : 4;
+          for (let a = 0; a < arcCount; a++) {
+            const aAng = t * 14 + a * (Math.PI * 2 / arcCount);
+            const arcR = subR * (1.1 + Math.sin(t * 20 + a * 2) * 0.45);
+            const jX = (Math.sin(t * 30 + a * 5) * 6) * tearSeverity;
+            const jY = (Math.cos(t * 30 + a * 5) * 6) * tearSeverity;
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.lineTo(
+              Math.cos(aAng) * arcR * 0.5 + jX,
+              Math.sin(aAng) * arcR * 0.5 + jY
+            );
+            ctx.lineTo(
+              Math.cos(aAng) * arcR,
+              Math.sin(aAng) * arcR
+            );
+            ctx.stroke();
+          }
+          ctx.restore();
+        }
+
         ctx.restore();
       }
 

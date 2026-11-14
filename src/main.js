@@ -1938,6 +1938,36 @@ window.addEventListener('DOMContentLoaded', () => {
     });
     updateArtStyleButton(currentStyle);
 
+    // Volumetric Cosmic Nebulae (v3.2)
+    const nebulaActive = s.volumetricNebula !== false;
+    document.querySelectorAll('.btn-setting-nebula').forEach(btn => {
+      const val = (btn.getAttribute('data-val') === 'true');
+      const active = (nebulaActive === val);
+      btn.className = `btn-setting-nebula px-3 py-1 rounded-lg text-[10px] font-orbitron font-bold border transition cursor-pointer ${
+        active ? 'bg-cosmic-cyan text-slate-950 border-cosmic-cyan shadow-[0_0_10px_rgba(0,229,255,0.4)]' : 'bg-slate-900 text-slate-400 border-slate-700 hover:border-slate-500'
+      }`;
+    });
+
+    // CRT & Cinematic Shaders (v3.2)
+    const crtActive = s.crtPostProcessing !== false;
+    document.querySelectorAll('.btn-setting-crt').forEach(btn => {
+      const val = (btn.getAttribute('data-val') === 'true');
+      const active = (crtActive === val);
+      btn.className = `btn-setting-crt px-3 py-1 rounded-lg text-[10px] font-orbitron font-bold border transition cursor-pointer ${
+        active ? 'bg-cosmic-cyan text-slate-950 border-cosmic-cyan shadow-[0_0_10px_rgba(0,229,255,0.4)]' : 'bg-slate-900 text-slate-400 border-slate-700 hover:border-slate-500'
+      }`;
+    });
+
+    // Hull Debris Fragmentation Shards (v3.2)
+    const debrisActive = s.hullDebrisShards !== false;
+    document.querySelectorAll('.btn-setting-debris').forEach(btn => {
+      const val = (btn.getAttribute('data-val') === 'true');
+      const active = (debrisActive === val);
+      btn.className = `btn-setting-debris px-3 py-1 rounded-lg text-[10px] font-orbitron font-bold border transition cursor-pointer ${
+        active ? 'bg-cosmic-cyan text-slate-950 border-cosmic-cyan shadow-[0_0_10px_rgba(0,229,255,0.4)]' : 'bg-slate-900 text-slate-400 border-slate-700 hover:border-slate-500'
+      }`;
+    });
+
     updateGamepadBadge();
   }
 
@@ -2016,6 +2046,36 @@ window.addEventListener('DOMContentLoaded', () => {
       syncSettingsUI();
       const toastMap = { astral: '💎 ASTRAL', vector: '🕹️ VECTOR', comic: '💥 COMIC' };
       engine.showToast(`🎨 ART STYLE: ${toastMap[val] || val.toUpperCase()}`, '#00e5ff');
+    });
+  });
+
+  document.querySelectorAll('.btn-setting-nebula').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      audio.init();
+      const val = (e.currentTarget.getAttribute('data-val') === 'true');
+      saveSystem.updateSettings({ volumetricNebula: val });
+      syncSettingsUI();
+      engine.showToast(`🌌 NEBULA SHADERS: ${val ? 'ENABLED' : 'DISABLED'}`, '#00e5ff');
+    });
+  });
+
+  document.querySelectorAll('.btn-setting-crt').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      audio.init();
+      const val = (e.currentTarget.getAttribute('data-val') === 'true');
+      saveSystem.updateSettings({ crtPostProcessing: val });
+      syncSettingsUI();
+      engine.showToast(`📺 CRT POST-PROCESSING: ${val ? 'ENABLED' : 'DISABLED'}`, '#00e5ff');
+    });
+  });
+
+  document.querySelectorAll('.btn-setting-debris').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      audio.init();
+      const val = (e.currentTarget.getAttribute('data-val') === 'true');
+      saveSystem.updateSettings({ hullDebrisShards: val });
+      syncSettingsUI();
+      engine.showToast(`💥 HULL DEBRIS SHARDS: ${val ? 'ENABLED' : 'DISABLED'}`, '#00e5ff');
     });
   });
 

@@ -1,13 +1,54 @@
-# Spark Panic: Planetary Invasion Defense — Guardian of the Universe (🎨 v3.1 Prismatic Art Edition)
+# Spark Panic: Planetary Invasion Defense — Guardian of the Universe (✨ v3.2 Hyper-VFX & Nebula Shader Edition)
 
 [![Deploy to GitHub Pages](https://github.com/Asemdnn/spark-panic/actions/workflows/deploy.yml/badge.svg)](https://github.com/Asemdnn/spark-panic/actions/workflows/deploy.yml)
 [![Live Demo](https://img.shields.io/badge/Play_Live-GitHub_Pages-00e5ff?style=flat&logo=github)](https://asemdnn.github.io/spark-panic/)
 [![PWA Ready](https://img.shields.io/badge/PWA-Ready-00e676?style=flat&logo=pwa)](https://asemdnn.github.io/spark-panic/)
 
-**Spark Panic 3.1 ("Prismatic Art Edition")** is a high-octane, self-contained HTML5 Canvas + Tailwind CSS arcade strategy and action planetary defense game. You are the **Orbital Guardian**, defending living celestial worlds and their cyber-cities against 360° incoming waves of relentless alien invasion fleets.
+**Spark Panic 3.2 ("Hyper-VFX & Nebula Shader Edition")** is a high-octane, self-contained HTML5 Canvas + Tailwind CSS arcade strategy and action planetary defense game. You are the **Orbital Guardian**, defending living celestial worlds and their cyber-cities against 360° incoming waves of relentless alien invasion fleets.
 
 - 🎮 **Play Online**: [https://asemdnn.github.io/spark-panic/](https://asemdnn.github.io/spark-panic/)
 - 📦 **GitHub Repository**: [https://github.com/Asemdnn/spark-panic](https://github.com/Asemdnn/spark-panic)
+
+---
+
+## ✨ What's New in v3.2: Hyper-VFX & Nebula Shader Edition
+
+1. **🌌 Multi-Octave Volumetric Cosmic Nebulae (`volumetricNebula`)**:
+   - **Procedural Gaseous Nebula Layers**: Multi-octave celestial nebula clouds rendered dynamically behind the starfield and spacetime gravity grid.
+   - **Sector-Themed Color Palettes**:
+     - *Sector I (Inner Sanctuaries)*: Cyan & Aquamarine Celestial Aurora (`#00e5ff`, `#0284c7`).
+     - *Sector II (Solar Citadel)*: Amber & Solar Crimson Magma Clouds (`#ff3d00`, `#f59e0b`).
+     - *Sector III (Twilight Abyss)*: Deep Amethyst & Indigo Quantum Nebulae (`#a855f7`, `#6366f1`).
+     - *Sector IV (Singularity Horizon)*: Emerald & Electric Violet Accretion Swirls (`#10b981`, `#7c3aed`).
+   - **Dynamic Kinetic Shockwave Displacement**: Detonating Spark Novas and Cataclysms ripples real-time radial gaseous displacements through the nebula cloud sheet with smooth spring restoration.
+
+2. **🪐 Planetary Atmospheric Weather Shaders & Dynamic Rayleigh Glow**:
+   - **Dynamic Rayleigh Scattering Rim Glow**: Atmospheric rim lighting dynamically rotating with time and solar orientation.
+   - **Sector-Specific Living Weather Overlays**:
+     - *Sector I*: Drifting translucent cloud whorls with soft continental shadow projection.
+     - *Sector II*: Molten tectonic magma rivers glowing between continental fissures with heat shimmer.
+     - *Sector III*: Shimmering bioluminescent polar aurora curtains waving across planetary poles.
+     - *Sector IV*: Gravitational accretion disc ring matter spiraling inward toward the planetary core.
+
+3. **💥 Polygonal Hull Fragmentation Physics & Shard Ricochets (`hullDebrisShards`)**:
+   - **Tumbling Geometric Shards**: Ship and subsystem destructions spawn physically authentic tumbling stained-glass polygon shards matching the destroyed vessel's color profile.
+   - **Kinetic Physics Simulation**: Individual shards feature authentic velocity, angular velocity, drag, and lifespan decay.
+   - **Planetary Shield Deflection**: Shards ricochet off the planetary energy barrier with mini-sparks and fading micro-smoke trails before dissolving into energy dust.
+
+4. **⚡ Multi-Layer Weapon Core VFX & Projectile Shaders**:
+   - **Multi-Stage Glowing Plasma Bolts**: Animated high-luminance energy core with high-frequency oscillating lightning tendrils and sparkling engine wakes.
+   - **Ionizing Hyper-Penetration Railgun Line**: Lingering ionized laser beam trail splintering into prismatic secondary sparks upon piercing alien hulls.
+   - **Procedural Helical Ion Beam ([Q])**: True double-helix intertwining energy coils with procedural lightning arcs leaping between twin spirals.
+   - **Reflective Crystal Aegis Phase-Parry Prism**: Multi-faceted crystalline hexagonal prism shield flash that shatters into holographic sparks on successful deflection.
+
+5. **📺 Enhanced Cinematic Post-Processing & CRT Shaders (`crtPostProcessing`)**:
+   - **Vector Oscilloscope Mode**: Authentic CRT curvature, raster scanline flicker, and phosphor persistence trails.
+   - **Comic Pop-Art Mode**: Stylized vignette frame and enhanced Ben-Day halftone shading across shockwaves.
+   - **Astral Mode**: Edge chromatic aberration lens flare on mega-combos (x5+) and heavy screen shakes.
+
+6. **🛠️ Granular Graphics Settings & Chamfered Mecha-Cockpit Visor Polish**:
+   - **Granular Toggles in Tactical Settings (`#modalSettings`)**: Directly toggle Volumetric Nebulae, CRT Post-Processing, and Hull Debris Shards with persistent save across sessions.
+   - **Chamfered Mecha-Cockpit Visor HUD Upgrade**: Glowing SVG corner brackets with tactical telemetry status readouts, lateral azimuth coordinate reticles, and polished combat floating text typography.
 
 ---
 

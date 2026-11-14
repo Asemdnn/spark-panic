@@ -89,7 +89,7 @@ export class BattleCardGenerator {
     ctx.font = '700 12px Orbitron, sans-serif';
     ctx.fillStyle = '#ffd700';
     ctx.textAlign = 'left';
-    ctx.fillText("🎨 v3.1 PRISMATIC ART EDITION", 48, 76);
+    ctx.fillText("✨ v3.2 HYPER-VFX & NEBULA SHADER EDITION", 48, 76);
 
     // Top Divider
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
@@ -433,7 +433,7 @@ export class BattleCardGenerator {
     const score = (engine.score || 0).toLocaleString();
     const combo = engine.maxCombo || 1;
     const wave = engine.currentWave || 1;
-    const text = `🪐 SPARK PANIC: PLANETARY INVASION DEFENSE (🎨 v3.1 PRISMATIC ART EDITION)\n` +
+    const text = `🪐 SPARK PANIC: PLANETARY INVASION DEFENSE (✨ v3.2 HYPER-VFX & NEBULA SHADER EDITION)\n` +
       `🛡️ Mission Score: ${score} pts • Max Chain Combo: x${combo} • Wave Reached: ${wave}\n` +
       `🎮 Defend 20 living worlds: https://asemdnn.github.io/spark-panic/`;
 

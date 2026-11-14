@@ -647,6 +647,34 @@ export class SaveSystem {
     return chosen;
   }
 
+  // Graphics Settings Toggles (v3.2)
+  getVolumetricNebula() {
+    const s = this.getSettings();
+    return s.volumetricNebula !== false;
+  }
+
+  setVolumetricNebula(enabled) {
+    return this.updateSettings({ volumetricNebula: !!enabled });
+  }
+
+  getCrtPostProcessing() {
+    const s = this.getSettings();
+    return s.crtPostProcessing !== false;
+  }
+
+  setCrtPostProcessing(enabled) {
+    return this.updateSettings({ crtPostProcessing: !!enabled });
+  }
+
+  getHullDebrisShards() {
+    const s = this.getSettings();
+    return s.hullDebrisShards !== false;
+  }
+
+  setHullDebrisShards(enabled) {
+    return this.updateSettings({ hullDebrisShards: !!enabled });
+  }
+
   // Wingman System
   isWingmanUnlocked() {
     return !!this.data.wingmanUnlocked || (this.data.upgrades && (this.data.upgrades.satellites || 0) >= WINGMAN_CONFIG.unlockSatelliteReq);

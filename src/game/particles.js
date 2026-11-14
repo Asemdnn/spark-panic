@@ -9,6 +9,11 @@ export class ParticleEngine {
     this.debris = [];
     this.sparks = [];
     this.floaters = [];
+    this.hullFragments = [];
+  }
+
+  getSettings() {
+    return saveSystem?.getSettings ? saveSystem.getSettings() : null;
   }
 
   clear() {
@@ -16,6 +21,7 @@ export class ParticleEngine {
     this.debris = [];
     this.sparks = [];
     this.floaters = [];
+    this.hullFragments = [];
   }
 
   spawnNova(x, y, maxRadius, color, damage = 35, isPlayer = false, combo = 1) {
@@ -70,6 +76,53 @@ export class ParticleEngine {
         color,
         alpha: 1.0,
         decay: 1.2 + Math.random() * 1.5
+      });
+    }
+  }
+
+  spawnHullFragments(x, y, color = '#00e5ff', count = 8, speed = 150) {
+    const settings = this.getSettings ? this.getSettings() : (saveSystem?.getSettings ? saveSystem.getSettings() : null);
+    const enabled = settings && settings.hullDebrisShards !== undefined ? settings.hullDebrisShards : true;
+    if (!enabled) return;
+
+    let actualCount = count;
+    if (settings && settings.particleDensity === 'low') {
+      actualCount = Math.max(2, Math.round(count * 0.5));
+    }
+
+    const stainedGlassPalettes = [color, '#ffffff', '#ffd700', color, color];
+
+    for (let i = 0; i < actualCount; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const shardSpeed = (speed || 150) * (0.6 + Math.random() * 0.8);
+
+      // Generate physically authentic tumbling geometric polygon shard vertices
+      const numVertices = Math.random() < 0.65 ? 3 : 4;
+      const vertices = [];
+      const baseRadius = 4 + Math.random() * 6;
+      for (let v = 0; v < numVertices; v++) {
+        const vAng = (v / numVertices) * Math.PI * 2 + (Math.random() - 0.5) * 0.5;
+        const vDist = baseRadius * (0.55 + Math.random() * 0.7);
+        vertices.push({ x: Math.cos(vAng) * vDist, y: Math.sin(vAng) * vDist });
+      }
+
+      const shardColor = stainedGlassPalettes[Math.floor(Math.random() * stainedGlassPalettes.length)];
+      const maxLife = 0.85 + Math.random() * 0.55;
+
+      this.hullFragments.push({
+        x,
+        y,
+        vx: Math.cos(angle) * shardSpeed,
+        vy: Math.sin(angle) * shardSpeed,
+        rotation: Math.random() * Math.PI * 2,
+        angularVelocity: (Math.random() - 0.5) * 12,
+        color: shardColor,
+        life: maxLife,
+        maxLife,
+        vertices,
+        trail: [],
+        bounced: false,
+        alive: true
       });
     }
   }
@@ -195,6 +248,80 @@ export class ParticleEngine {
       f.alpha = Math.max(0, f.life / 0.95);
       if (f.life <= 0) {
         this.floaters.splice(i, 1);
+      }
+    }
+
+    // 5. Update Polygonal Hull Fragments with Shield Bouncing & Fading Micro-Smoke Trails
+    const shieldRadius = turretRadius ? (turretRadius + 14) : 90;
+    for (let i = this.hullFragments.length - 1; i >= 0; i--) {
+      const f = this.hullFragments[i];
+      f.x += f.vx * dt;
+      f.y += f.vy * dt;
+      f.rotation += f.angularVelocity * dt;
+      f.life -= dt;
+
+      // Atmospheric space drag
+      f.vx *= Math.pow(0.96, dt * 60);
+      f.vy *= Math.pow(0.96, dt * 60);
+
+      // Micro-smoke trail points
+      f.trail.push({ x: f.x, y: f.y, alpha: 0.55, size: 2.2 });
+      if (f.trail.length > 5) f.trail.shift();
+      for (const tp of f.trail) {
+        tp.alpha -= dt * 1.8;
+      }
+
+      // Bounce off planet shield with mini-sparks
+      if (planetX !== undefined && planetY !== undefined) {
+        const dPlanet = Math.hypot(f.x - planetX, f.y - planetY);
+        if (dPlanet <= shieldRadius && !f.bounced) {
+          f.bounced = true;
+          const normAng = Math.atan2(f.y - planetY, f.x - planetX);
+          const nx = Math.cos(normAng);
+          const ny = Math.sin(normAng);
+          const dot = f.vx * nx + f.vy * ny;
+          if (dot < 0) {
+            f.vx = (f.vx - 2 * dot * nx) * 0.65;
+            f.vy = (f.vy - 2 * dot * ny) * 0.65;
+          }
+          f.x = planetX + nx * (shieldRadius + 2);
+          f.y = planetY + ny * (shieldRadius + 2);
+
+          // Mini-sparks on shield bounce
+          for (let s = 0; s < 3; s++) {
+            const sAng = normAng + (Math.random() - 0.5) * 1.4;
+            const sSpd = 50 + Math.random() * 80;
+            this.debris.push({
+              x: f.x,
+              y: f.y,
+              vx: Math.cos(sAng) * sSpd,
+              vy: Math.sin(sAng) * sSpd,
+              size: 1.5 + Math.random() * 2,
+              color: '#00e5ff',
+              alpha: 0.9,
+              decay: 3.0
+            });
+          }
+        }
+      }
+
+      // Dissolve into energy dust when lifespan expires
+      if (f.life <= 0) {
+        for (let s = 0; s < 2; s++) {
+          const eAng = Math.random() * Math.PI * 2;
+          const eSpd = 20 + Math.random() * 40;
+          this.debris.push({
+            x: f.x,
+            y: f.y,
+            vx: Math.cos(eAng) * eSpd,
+            vy: Math.sin(eAng) * eSpd,
+            size: 1.2,
+            color: f.color,
+            alpha: 0.75,
+            decay: 2.5
+          });
+        }
+        this.hullFragments.splice(i, 1);
       }
     }
   }
@@ -384,6 +511,52 @@ export class ParticleEngine {
         }
       }
       ctx.restore();
+    }
+
+    // 5. Render Polygonal Hull Fragmentation Physics (Micro-smoke trails & Stained-Glass Shards)
+    if (this.hullFragments.length > 0) {
+      // 5a. Micro-smoke trails
+      for (const f of this.hullFragments) {
+        if (!f.trail || f.trail.length === 0) continue;
+        for (const tp of f.trail) {
+          if (tp.alpha <= 0.02) continue;
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(tp.x, tp.y, tp.size, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(148, 163, 184, ${Math.max(0, tp.alpha * 0.4)})`;
+          ctx.fill();
+          ctx.restore();
+        }
+      }
+
+      // 5b. Stained-glass tumbling polygonal shards
+      for (const f of this.hullFragments) {
+        const alpha = Math.max(0, f.life / f.maxLife);
+        ctx.save();
+        ctx.translate(f.x, f.y);
+        ctx.rotate(f.rotation);
+        ctx.globalAlpha = alpha;
+
+        // Geometric polygon shard fill
+        ctx.beginPath();
+        for (let v = 0; v < f.vertices.length; v++) {
+          const vert = f.vertices[v];
+          if (v === 0) ctx.moveTo(vert.x, vert.y);
+          else ctx.lineTo(vert.x, vert.y);
+        }
+        ctx.closePath();
+        ctx.fillStyle = f.color;
+        ctx.shadowColor = f.color;
+        ctx.shadowBlur = (artStyle === 'comic') ? 0 : 8;
+        ctx.fill();
+
+        // Stained-glass crystalline facet rim
+        ctx.strokeStyle = (artStyle === 'comic') ? '#000000' : '#ffffff';
+        ctx.lineWidth = 1.0;
+        ctx.stroke();
+
+        ctx.restore();
+      }
     }
   }
 }

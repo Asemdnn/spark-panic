@@ -7,6 +7,7 @@ export class ProjectileManager {
     this.satelliteLasers = [];
     this.teslaArcs = [];
     this.railgunTrails = [];
+    this.parryFlashes = [];
   }
 
   clear() {
@@ -15,6 +16,39 @@ export class ProjectileManager {
     this.satelliteLasers = [];
     this.teslaArcs = [];
     this.railgunTrails = [];
+    this.parryFlashes = [];
+  }
+
+  spawnParryShieldFlash(x, y, angle = 0) {
+    const holographicColors = ['#00e5ff', '#ffd700', '#e040fb', '#ffffff', '#38bdf8', '#00ffcc'];
+    const sparks = [];
+    const sparkCount = 24;
+    for (let i = 0; i < sparkCount; i++) {
+      const spAng = angle + (Math.random() - 0.5) * 2.2;
+      const spSpd = 120 + Math.random() * 260;
+      sparks.push({
+        x,
+        y,
+        vx: Math.cos(spAng) * spSpd,
+        vy: Math.sin(spAng) * spSpd,
+        color: holographicColors[Math.floor(Math.random() * holographicColors.length)],
+        life: 0.45 + Math.random() * 0.35,
+        maxLife: 0.8,
+        size: 2.0 + Math.random() * 3.0,
+        rotation: Math.random() * Math.PI * 2,
+        vRot: (Math.random() - 0.5) * 16
+      });
+    }
+
+    this.parryFlashes.push({
+      x,
+      y,
+      angle,
+      timer: 0.35,
+      maxTimer: 0.35,
+      radius: 38,
+      sparks
+    });
   }
 
   spawnTurretBolts(planetX, planetY, turretRadius, boltConfigs) {
@@ -130,16 +164,43 @@ export class ProjectileManager {
       b.x += b.vx * dt;
       b.y += b.vy * dt;
 
-      // Lingering golden rail-wake line for Railgun Lancer shots
+      // Lingering ionizing laser trail that splinters into secondary prismatic sparks
       if (b.isRailgun && b.alive) {
+        const dx = b.x - prevX;
+        const dy = b.y - prevY;
+        const len = Math.hypot(dx, dy);
+        const normX = len > 0 ? -dy / len : 0;
+        const normY = len > 0 ? dx / len : 1;
+
+        const sparks = [];
+        const sparkCount = 2 + Math.floor(Math.random() * 3);
+        const prismaticColors = ['#00e5ff', '#ffd700', '#e040fb', '#ffffff', '#00ffcc'];
+        for (let s = 0; s < sparkCount; s++) {
+          const side = Math.random() < 0.5 ? -1 : 1;
+          const perpSpeed = 40 + Math.random() * 75;
+          const alongSpeed = (Math.random() - 0.5) * 35;
+          const pct = Math.random();
+          sparks.push({
+            x: prevX + dx * pct,
+            y: prevY + dy * pct,
+            vx: normX * side * perpSpeed + (len > 0 ? (dx / len) * alongSpeed : 0),
+            vy: normY * side * perpSpeed + (len > 0 ? (dy / len) * alongSpeed : 0),
+            color: prismaticColors[Math.floor(Math.random() * prismaticColors.length)],
+            life: 0.22,
+            maxLife: 0.22,
+            size: 1.5 + Math.random() * 1.5
+          });
+        }
+
         this.railgunTrails.push({
           x1: prevX,
           y1: prevY,
           x2: b.x,
           y2: b.y,
-          timer: 0.18,
-          maxTimer: 0.18,
-          color: b.color || '#ffd700'
+          timer: 0.22,
+          maxTimer: 0.22,
+          color: b.color || '#ffd700',
+          sparks
         });
       }
 
@@ -361,15 +422,33 @@ export class ProjectileManager {
               const destroyed = alien.takeDamage(hitDmg, b.x, b.y, true, onBossPhase2Callback);
               if (onAlienHitCallback) onAlienHitCallback(alien, destroyed, b.x, b.y, hitDmg, b.source || 'turret');
 
-              // Add fading golden laser wake trail
+              // Add lingering ionizing laser wake trail that splinters into secondary prismatic sparks
+              const hitSparks = [];
+              const prismaticColors = ['#00e5ff', '#ffd700', '#e040fb', '#ffffff', '#00ffcc'];
+              for (let s = 0; s < 4; s++) {
+                const sAng = b.angle + Math.PI + (Math.random() - 0.5) * 1.8;
+                const sSpd = 50 + Math.random() * 90;
+                hitSparks.push({
+                  x: b.x,
+                  y: b.y,
+                  vx: Math.cos(sAng) * sSpd,
+                  vy: Math.sin(sAng) * sSpd,
+                  color: prismaticColors[Math.floor(Math.random() * prismaticColors.length)],
+                  life: 0.25,
+                  maxLife: 0.25,
+                  size: 2.0 + Math.random() * 1.5
+                });
+              }
+
               this.railgunTrails.push({
                 x1: b.x - Math.cos(b.angle) * 45,
                 y1: b.y - Math.sin(b.angle) * 45,
                 x2: b.x + Math.cos(b.angle) * 15,
                 y2: b.y + Math.sin(b.angle) * 15,
-                timer: 0.16,
-                maxTimer: 0.16,
-                color: b.color || '#ffd700'
+                timer: 0.20,
+                maxTimer: 0.20,
+                color: b.color || '#ffd700',
+                sparks: hitSparks
               });
             } else if (b.isTesla) {
               // Tesla Arc Cannon: Chain-lightning to up to 2 (or 3 at Lv.5+) nearby targets within 115px
@@ -512,11 +591,43 @@ export class ProjectileManager {
       if (arc.timer <= 0) this.teslaArcs.splice(i, 1);
     }
 
-    // Update Railgun Trails
+    // Update Railgun Trails and splintering prismatic sparks
     for (let i = this.railgunTrails.length - 1; i >= 0; i--) {
       const trail = this.railgunTrails[i];
       trail.timer -= dt;
-      if (trail.timer <= 0) this.railgunTrails.splice(i, 1);
+      if (trail.sparks) {
+        for (let s = trail.sparks.length - 1; s >= 0; s--) {
+          const sp = trail.sparks[s];
+          sp.x += sp.vx * dt;
+          sp.y += sp.vy * dt;
+          sp.life -= dt;
+          if (sp.life <= 0) trail.sparks.splice(s, 1);
+        }
+      }
+      if (trail.timer <= 0 && (!trail.sparks || trail.sparks.length === 0)) {
+        this.railgunTrails.splice(i, 1);
+      }
+    }
+
+    // Update Aegis Phase-Parry Flashes & Holographic Sparks
+    for (let i = this.parryFlashes.length - 1; i >= 0; i--) {
+      const pf = this.parryFlashes[i];
+      pf.timer -= dt;
+      if (pf.sparks) {
+        for (let s = pf.sparks.length - 1; s >= 0; s--) {
+          const sp = pf.sparks[s];
+          sp.x += sp.vx * dt;
+          sp.y += sp.vy * dt;
+          sp.rotation += sp.vRot * dt;
+          sp.vx *= Math.pow(0.92, dt * 60);
+          sp.vy *= Math.pow(0.92, dt * 60);
+          sp.life -= dt;
+          if (sp.life <= 0) pf.sparks.splice(s, 1);
+        }
+      }
+      if (pf.timer <= 0 && (!pf.sparks || pf.sparks.length === 0)) {
+        this.parryFlashes.splice(i, 1);
+      }
     }
 
     // 2. Update Enemy Torpedoes (affected by Cryo Time-Warp speedScale; warm-up + in-place mutation)
@@ -552,6 +663,7 @@ export class ProjectileManager {
           const halfArc = (parryArcDeg * Math.PI) / 360;
           if (diff <= halfArc) {
             torp.alive = false;
+            this.spawnParryShieldFlash(torp.x, torp.y, tAng);
             planet.engine.onPerfectParry(torp.x, torp.y, torp.damage);
             this.torpedoes.splice(i, 1);
             continue;
@@ -626,26 +738,57 @@ export class ProjectileManager {
       ctx.restore();
     }
 
-    // 2. Render Railgun Golden Wake Trails
+    // 2. Render Railgun Lingering Ionizing Laser Trails & Secondary Prismatic Sparks
     for (const tr of this.railgunTrails) {
       const alpha = Math.max(0, tr.timer / tr.maxTimer);
       ctx.save();
       ctx.globalAlpha = alpha;
+
+      // Outer ionizing cyan corona
       ctx.beginPath();
       ctx.moveTo(tr.x1, tr.y1);
       ctx.lineTo(tr.x2, tr.y2);
-      ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = 2.5;
+      ctx.strokeStyle = '#00e5ff';
+      ctx.lineWidth = 8.5;
+      ctx.shadowColor = '#00e5ff';
+      ctx.shadowBlur = 18;
       ctx.stroke();
 
+      // Golden ionized mid-trail
       ctx.beginPath();
       ctx.moveTo(tr.x1, tr.y1);
       ctx.lineTo(tr.x2, tr.y2);
       ctx.strokeStyle = tr.color || '#ffd700';
-      ctx.lineWidth = 5.0;
+      ctx.lineWidth = 4.5;
       ctx.shadowColor = '#ffd700';
       ctx.shadowBlur = 14;
       ctx.stroke();
+
+      // Central pure white hyper-penetration line
+      ctx.beginPath();
+      ctx.moveTo(tr.x1, tr.y1);
+      ctx.lineTo(tr.x2, tr.y2);
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2.0;
+      ctx.stroke();
+
+      // Splintering secondary prismatic sparks
+      if (tr.sparks && tr.sparks.length > 0) {
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        for (const sp of tr.sparks) {
+          const spAlpha = Math.max(0, sp.life / sp.maxLife);
+          ctx.beginPath();
+          ctx.arc(sp.x, sp.y, sp.size, 0, Math.PI * 2);
+          ctx.fillStyle = sp.color;
+          ctx.shadowColor = sp.color;
+          ctx.shadowBlur = 8;
+          ctx.globalAlpha = spAlpha * alpha;
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+
       ctx.restore();
     }
 
@@ -697,7 +840,7 @@ export class ProjectileManager {
         ctx.translate(b.x, b.y);
         ctx.rotate(angle);
 
-        // Outer glowing plasma capsule trail
+        // Stage 1: Outer glowing plasma capsule trail
         ctx.beginPath();
         ctx.moveTo(-trailLen, 0);
         ctx.lineTo(coreLen * 0.5, 0);
@@ -707,7 +850,18 @@ export class ProjectileManager {
         ctx.shadowBlur = b.isOverchargeLance ? 24 : (b.isOvercharged ? 20 : 14);
         ctx.stroke();
 
-        // Pure white hot core
+        // Stage 2: Animated intermediate energy corona
+        const corePulse = Math.sin(Date.now() * 0.035 + (b.x * 0.05 + b.y * 0.05));
+        ctx.beginPath();
+        ctx.moveTo(-coreLen * 1.3, 0);
+        ctx.lineTo(coreLen * 0.6, 0);
+        ctx.strokeStyle = boltColor;
+        ctx.lineWidth = r * 1.5 + corePulse * 1.0;
+        ctx.shadowColor = boltColor;
+        ctx.shadowBlur = 10;
+        ctx.stroke();
+
+        // Stage 3: Pure white hot energy core
         ctx.beginPath();
         ctx.moveTo(-coreLen, 0);
         ctx.lineTo(coreLen * 0.5, 0);
@@ -716,6 +870,33 @@ export class ProjectileManager {
         ctx.shadowColor = '#ffffff';
         ctx.shadowBlur = 8;
         ctx.stroke();
+
+        // High-frequency oscillating lightning tendril
+        ctx.beginPath();
+        const tendrilSteps = 5;
+        const tendrilLen = trailLen * 0.85;
+        const freq = Date.now() * 0.045 + (b.x + b.y) * 0.02;
+        for (let s = 0; s <= tendrilSteps; s++) {
+          const tx = -tendrilLen + (s / tendrilSteps) * (tendrilLen + coreLen * 0.4);
+          const ty = Math.sin(freq + s * 2.3) * (r * 0.75);
+          if (s === 0) ctx.moveTo(tx, ty);
+          else ctx.lineTo(tx, ty);
+        }
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1.1;
+        ctx.stroke();
+
+        // Sparkling engine wake
+        const wakeSeed = Math.floor(Date.now() / 45);
+        for (let w = 1; w <= 3; w++) {
+          const wx = -trailLen - (w * 5) - ((wakeSeed * 7 + w * 11) % 7);
+          const wy = (((wakeSeed * 13 + w * 17) % 9) - 4) * 0.35 * r;
+          const wSize = Math.max(0.7, (2.2 - w * 0.5));
+          ctx.beginPath();
+          ctx.arc(wx, wy, wSize, 0, Math.PI * 2);
+          ctx.fillStyle = (w === 1) ? '#ffffff' : boltColor;
+          ctx.fill();
+        }
 
         // For Overcharge Plasma Lance: electric distortion arcs
         if (b.isOverchargeLance) {
@@ -842,5 +1023,136 @@ export class ProjectileManager {
 
       ctx.restore();
     }
+
+    // 6. Render Aegis Phase-Parry Shield: Reflective Crystal Hexagonal Prism Flashes & Holographic Sparks
+    for (const pf of this.parryFlashes) {
+      if (pf.timer > 0) {
+        const tNorm = pf.timer / pf.maxTimer; // 1.0 -> 0.0
+        const flashR = pf.radius * (1.6 - tNorm * 0.6);
+        ctx.save();
+        ctx.translate(pf.x, pf.y);
+        ctx.rotate(pf.angle);
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.globalAlpha = Math.max(0, tNorm);
+
+        // Reflective crystal hexagonal prism facet
+        ctx.beginPath();
+        for (let h = 0; h < 6; h++) {
+          const hAng = (h / 6) * Math.PI * 2;
+          const hx = Math.cos(hAng) * flashR;
+          const hy = Math.sin(hAng) * flashR;
+          if (h === 0) ctx.moveTo(hx, hy);
+          else ctx.lineTo(hx, hy);
+        }
+        ctx.closePath();
+        ctx.fillStyle = 'rgba(0, 229, 255, 0.28)';
+        ctx.fill();
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2.5;
+        ctx.shadowColor = '#00e5ff';
+        ctx.shadowBlur = 18;
+        ctx.stroke();
+
+        // Crystal facet prism refraction chords
+        ctx.beginPath();
+        for (let h = 0; h < 6; h += 2) {
+          const hAng = (h / 6) * Math.PI * 2;
+          ctx.moveTo(0, 0);
+          ctx.lineTo(Math.cos(hAng) * flashR, Math.sin(hAng) * flashR);
+        }
+        ctx.strokeStyle = '#ffd700';
+        ctx.lineWidth = 1.5;
+        ctx.shadowColor = '#ffd700';
+        ctx.shadowBlur = 10;
+        ctx.stroke();
+
+        ctx.restore();
+      }
+
+      // Render holographic shattering sparks
+      if (pf.sparks && pf.sparks.length > 0) {
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        for (const sp of pf.sparks) {
+          const spAlpha = Math.max(0, sp.life / sp.maxLife);
+          ctx.save();
+          ctx.translate(sp.x, sp.y);
+          ctx.rotate(sp.rotation);
+          ctx.globalAlpha = spAlpha;
+
+          // Diamond crystal holographic shard
+          ctx.beginPath();
+          ctx.moveTo(0, -sp.size);
+          ctx.lineTo(sp.size * 0.6, 0);
+          ctx.lineTo(0, sp.size);
+          ctx.lineTo(-sp.size * 0.6, 0);
+          ctx.closePath();
+          ctx.fillStyle = sp.color;
+          ctx.shadowColor = sp.color;
+          ctx.shadowBlur = 8;
+          ctx.fill();
+
+          ctx.strokeStyle = '#ffffff';
+          ctx.lineWidth = 0.8;
+          ctx.stroke();
+          ctx.restore();
+        }
+        ctx.restore();
+      }
+    }
+  }
+
+  renderHelicalIonBeam(ctx, originDist, length, width, timeSec) {
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+
+    // True double-helix intertwining energy coils
+    const helixStep = 12;
+    const waveFreq = 0.055;
+    const waveSpeed = 28;
+    const amp = width * 0.85;
+
+    // Twin Helices with 3D Depth Modulation
+    for (let h = 0; h < 2; h++) {
+      const phaseOffset = h * Math.PI;
+      const helixColor = h === 0 ? '#00e5ff' : 'rgba(255, 255, 255, 0.9)';
+
+      ctx.beginPath();
+      for (let d = 0; d <= length; d += helixStep) {
+        const ang = d * waveFreq - timeSec * waveSpeed + phaseOffset;
+        const rx = originDist + d;
+        const ry = Math.sin(ang) * amp;
+        if (d === 0) ctx.moveTo(rx, ry);
+        else ctx.lineTo(rx, ry);
+      }
+      ctx.strokeStyle = helixColor;
+      ctx.lineWidth = h === 0 ? 3.5 : 2.0;
+      ctx.shadowColor = '#00e5ff';
+      ctx.shadowBlur = 14;
+      ctx.stroke();
+    }
+
+    // Procedural lightning arcs leaping between the twin helices
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 1.6;
+    ctx.shadowColor = '#00e5ff';
+    ctx.shadowBlur = 12;
+    for (let d = 40; d < length; d += 65) {
+      const ang = d * waveFreq - timeSec * waveSpeed;
+      const ryA = Math.sin(ang) * amp;
+      const ryB = Math.sin(ang + Math.PI) * amp;
+      const jitterT = Math.floor(timeSec * 16 + d * 0.1);
+      if ((jitterT + Math.floor(d / 65)) % 3 === 0) {
+        const midX = originDist + d + (Math.sin(d + timeSec * 20) * 10);
+        const midY = (ryA + ryB) * 0.5 + (Math.cos(d + timeSec * 25) * 8);
+        ctx.beginPath();
+        ctx.moveTo(originDist + d, ryA);
+        ctx.lineTo(midX, midY);
+        ctx.lineTo(originDist + d + (Math.sin(d * 2) * 6), ryB);
+        ctx.stroke();
+      }
+    }
+
+    ctx.restore();
   }
 }

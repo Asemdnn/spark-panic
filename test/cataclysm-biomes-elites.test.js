@@ -301,7 +301,7 @@ describe('v2.7 Cosmic Cataclysm, Elite Squadron Leaders & Living Biomes Suite', 
       const html = fs.readFileSync(htmlPath, 'utf-8');
 
       expect(html).toContain('id="btnCataclysm"');
-      expect(html).toMatch(/(⚡ v2\.[789] (COSMIC CATACLYSM|TACTICAL MASTERY|SYNERGY OVERDRIVE)|🌟 v3\.0 GALACTIC COMMAND|🎨 v3\.1 PRISMATIC ART) EDITION/);
+      expect(html).toMatch(/(⚡ v2\.[789] (COSMIC CATACLYSM|TACTICAL MASTERY|SYNERGY OVERDRIVE)|🌟 v3\.0 GALACTIC COMMAND|🎨 v3\.1 PRISMATIC ART|✨ v3\.2 HYPER-VFX & NEBULA SHADER) EDITION/);
       expect(html).toContain('Tactical intelligence on');
     });
   });

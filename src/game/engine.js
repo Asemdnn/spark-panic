@@ -17,9 +17,10 @@ import { StructureManager } from './structures.js';
 import { ICON_SVG } from '../ui/icons.js';
 
 export class GameEngine {
-  constructor(canvas) {
+  constructor(canvas, saveInstance = null) {
     this.canvas = canvas;
-    this.ctx = canvas.getContext('2d');
+    this.saveSystem = saveInstance || (typeof saveSystem !== 'undefined' ? saveSystem : null);
+    this.ctx = canvas?.getContext ? canvas.getContext('2d') : null;
 
     // Display scaling
     this.dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -41,6 +42,8 @@ export class GameEngine {
     this.skills = new TacticalSkills();
     this.projectiles = new ProjectileManager();
     this.particles = new ParticleEngine();
+    this.particles.engine = this;
+    this.particles.getSettings = () => this.getSettings();
     this.hazards = new HazardManager();
     this.supplyPods = new SupplyPodManager();
 
@@ -85,6 +88,11 @@ export class GameEngine {
     };
     this.initSpacetimeGrid();
     this.planet.drawPlanetEntity = (ctx) => this.drawPlanetEntity(ctx);
+
+    // v3.2 Volumetric Cosmic Nebulae & Detonation Ripples
+    this.nebulaClouds = [];
+    this.nebulaRipples = [];
+    this.initVolumetricNebulae();
 
     // Tactical Telemetry & Damage Tracking
     this.telemetryHistory = [];
@@ -242,6 +250,7 @@ export class GameEngine {
     this.planet.resize(this.width, this.height);
     this.initStars();
     this.initSpacetimeGrid();
+    this.initVolumetricNebulae();
   }
 
   setArtStyle(style) {
@@ -493,6 +502,609 @@ export class GameEngine {
     ctx.restore();
   }
 
+  hexToRgba(hex, alpha = 1) {
+    if (!hex || typeof hex !== 'string') return `rgba(255, 255, 255, ${alpha})`;
+    let c = hex.replace('#', '');
+    if (c.length === 3) c = c.split('').map(x => x + x).join('');
+    const num = parseInt(c, 16);
+    if (isNaN(num)) return `rgba(255, 255, 255, ${alpha})`;
+    const r = (num >> 16) & 255;
+    const g = (num >> 8) & 255;
+    const b = num & 255;
+    const a = Math.max(0, Math.min(1, alpha));
+    return `rgba(${r}, ${g}, ${b}, ${a.toFixed(3)})`;
+  }
+
+  getCurrentSector() {
+    if (this.planet && typeof this.planet.sector === 'number') return this.planet.sector;
+    if (this.planet?.data?.sector) return this.planet.data.sector;
+    if (this.currentPlanetId) {
+      const cfg = PLANETS.find(p => p.id === this.currentPlanetId);
+      if (cfg && cfg.sector) return cfg.sector;
+    }
+    return 1;
+  }
+
+  getSectorNebulaColors(sector = 1) {
+    let s = sector;
+    if (typeof s === 'string') {
+      if (s.includes('IV') || s.includes('4')) s = 4;
+      else if (s.includes('III') || s.includes('3')) s = 3;
+      else if (s.includes('II') || s.includes('2')) s = 2;
+      else s = 1;
+    }
+    s = Number(s) || 1;
+    switch (s) {
+      case 1:
+        return {
+          primary: '#00e5ff',
+          secondary: '#0284c7',
+          name: 'Cyan & Aquamarine Celestial Aurora',
+          sectorName: 'Sector I (Inner Sanctuaries)',
+          sector: 1
+        };
+      case 2:
+        return {
+          primary: '#ff3d00',
+          secondary: '#f59e0b',
+          name: 'Amber & Solar Crimson Magma Clouds',
+          sectorName: 'Sector II (Solar Citadel)',
+          sector: 2
+        };
+      case 3:
+        return {
+          primary: '#a855f7',
+          secondary: '#6366f1',
+          name: 'Deep Amethyst & Indigo Quantum Nebulae',
+          sectorName: 'Sector III (Twilight Abyss)',
+          sector: 3
+        };
+      case 4:
+      default:
+        return {
+          primary: '#10b981',
+          secondary: '#7c3aed',
+          name: 'Emerald & Electric Violet Accretion Swirls',
+          sectorName: 'Sector IV (Singularity Horizon)',
+          sector: 4
+        };
+    }
+  }
+
+  initVolumetricNebulae() {
+    this.nebulaClouds = [];
+    const count = 20;
+    // 3 octaves:
+    // Octave 1: Macro ambient aurora (4 nodes)
+    // Octave 2: Meso swirling cloud filaments (8 nodes)
+    // Octave 3: Micro luminous accretion wisps (8 nodes)
+    for (let i = 0; i < count; i++) {
+      let octave = 1;
+      let radius = 280 + Math.random() * 120;
+      let alpha = 0.08 + Math.random() * 0.06;
+      let parallax = 0.18 + Math.random() * 0.1;
+      let driftFreq = 0.08 + Math.random() * 0.1;
+      let driftAmp = 20 + Math.random() * 20;
+
+      if (i >= 4 && i < 12) {
+        octave = 2;
+        radius = 140 + Math.random() * 80;
+        alpha = 0.12 + Math.random() * 0.08;
+        parallax = 0.45 + Math.random() * 0.2;
+        driftFreq = 0.15 + Math.random() * 0.15;
+        driftAmp = 30 + Math.random() * 30;
+      } else if (i >= 12) {
+        octave = 3;
+        radius = 70 + Math.random() * 50;
+        alpha = 0.16 + Math.random() * 0.1;
+        parallax = 0.8 + Math.random() * 0.3;
+        driftFreq = 0.25 + Math.random() * 0.2;
+        driftAmp = 40 + Math.random() * 40;
+      }
+
+      this.nebulaClouds.push({
+        octave,
+        u: Math.random(),
+        v: Math.random(),
+        baseRadius: radius,
+        radius,
+        alpha,
+        baseAlpha: alpha,
+        parallaxFactor: parallax,
+        phase: Math.random() * Math.PI * 2,
+        driftFreq,
+        driftAmp,
+        colorKey: (i % 2 === 0) ? 'primary' : 'secondary'
+      });
+    }
+  }
+
+  addNebulaRipple(x, y, maxRadius = 380, intensity = 45) {
+    if (!this.nebulaRipples) this.nebulaRipples = [];
+    this.nebulaRipples.push({
+      x,
+      y,
+      radius: 10,
+      maxRadius,
+      speed: 300,
+      amplitude: intensity,
+      alpha: 1.0
+    });
+  }
+
+  drawVolumetricNebulae(ctx) {
+    const settings = this.getSettings ? this.getSettings() : null;
+    if (settings && settings.volumetricNebula === false) return;
+
+    if (!this.nebulaClouds || this.nebulaClouds.length === 0) {
+      this.initVolumetricNebulae();
+    }
+
+    const sector = this.getCurrentSector();
+    const colors = this.getSectorNebulaColors(sector);
+    const timeSec = this.gameTime || 0;
+    const activeNovas = (this.particles && this.particles.novas) ? this.particles.novas : [];
+    const cataclysm = this.cataclysmShockwave;
+    const ripples = this.nebulaRipples || [];
+
+    ctx.save();
+    if (this.artStyle === 'vector') {
+      ctx.globalCompositeOperation = 'lighter';
+    } else {
+      ctx.globalCompositeOperation = 'screen';
+    }
+
+    for (let i = 0; i < this.nebulaClouds.length; i++) {
+      const cloud = this.nebulaClouds[i];
+      const baseW = this.width || 800;
+      const baseH = this.height || 600;
+
+      // Base drifting coordinates with multi-octave harmonic oscillation
+      let cx = cloud.u * baseW + Math.cos(timeSec * cloud.driftFreq + cloud.phase) * cloud.driftAmp;
+      let cy = cloud.v * baseH + Math.sin(timeSec * (cloud.driftFreq * 0.85) + cloud.phase) * cloud.driftAmp;
+
+      // Parallax camera displacement
+      cx += (this.parallaxX || 0) * cloud.parallaxFactor;
+      cy += (this.parallaxY || 0) * cloud.parallaxFactor;
+
+      // Real-time radial ripple displacement from Spark Novas
+      let dispX = 0;
+      let dispY = 0;
+
+      for (const nova of activeNovas) {
+        const dx = cx - nova.x;
+        const dy = cy - nova.y;
+        const dist = Math.hypot(dx, dy) || 1;
+        const ringDelta = Math.abs(dist - (nova.radius || 0));
+        if (ringDelta < 140) {
+          const wave = Math.sin((1 - ringDelta / 140) * Math.PI);
+          const push = wave * (nova.alpha ?? 1.0) * 35;
+          dispX += (dx / dist) * push;
+          dispY += (dy / dist) * push;
+        }
+      }
+
+      // Real-time radial ripple displacement from Cataclysms
+      if (cataclysm) {
+        const cdx = cx - (cataclysm.x ?? (this.planet ? this.planet.x : baseW * 0.5));
+        const cdy = cy - (cataclysm.y ?? (this.planet ? this.planet.y : baseH * 0.5));
+        const cdist = Math.hypot(cdx, cdy) || 1;
+        const cRingDelta = Math.abs(cdist - (cataclysm.radius || 0));
+        if (cRingDelta < 180) {
+          const cwave = Math.sin((1 - cRingDelta / 180) * Math.PI);
+          const cpush = cwave * 55;
+          dispX += (cdx / cdist) * cpush;
+          dispY += (cdy / cdist) * cpush;
+        }
+      }
+
+      // Detonation shockwave ripples
+      for (const rip of ripples) {
+        const rdx = cx - rip.x;
+        const rdy = cy - rip.y;
+        const rdist = Math.hypot(rdx, rdy) || 1;
+        const rDelta = Math.abs(rdist - rip.radius);
+        if (rDelta < 120) {
+          const rwave = Math.sin((1 - rDelta / 120) * Math.PI);
+          const rpush = rwave * (rip.alpha || 1.0) * (rip.amplitude || 40);
+          dispX += (rdx / rdist) * rpush;
+          dispY += (rdy / rdist) * rpush;
+        }
+      }
+
+      cx += dispX;
+      cy += dispY;
+
+      // Dynamic radius and pulsating gaseous density
+      const curR = cloud.baseRadius * (1 + Math.sin(timeSec * 0.45 + cloud.phase) * 0.12);
+      const hexColor = (cloud.colorKey === 'primary') ? colors.primary : colors.secondary;
+      const alpha = (cloud.alpha || 0.15) * (this.artStyle === 'vector' ? 0.45 : 1.0);
+
+      if (ctx.createRadialGradient) {
+        const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(1, curR));
+        if (grad && grad.addColorStop) {
+          const c0 = this.hexToRgba(hexColor, alpha * 1.3);
+          const c1 = this.hexToRgba(hexColor, alpha * 0.7);
+          const c2 = this.hexToRgba(hexColor, alpha * 0.2);
+          grad.addColorStop(0, c0);
+          grad.addColorStop(0.4, c1);
+          grad.addColorStop(0.8, c2);
+          grad.addColorStop(1, 'transparent');
+          ctx.fillStyle = grad;
+        } else {
+          ctx.fillStyle = hexColor;
+        }
+      } else {
+        ctx.fillStyle = hexColor;
+      }
+
+      ctx.beginPath();
+      ctx.arc(cx, cy, Math.max(1, curR), 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    ctx.restore();
+  }
+
+  drawRayleighScattering(ctx, p, r, timeSec, atmo) {
+    if (this.artStyle === 'vector') return;
+    const sunAngle = (timeSec * 0.35) % (Math.PI * 2);
+
+    ctx.save();
+    // Dynamic sunward atmospheric limb arc
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, r + 2.5, sunAngle - Math.PI * 0.45, sunAngle + Math.PI * 0.45);
+    ctx.strokeStyle = atmo;
+    ctx.lineWidth = 4.2;
+    ctx.shadowColor = atmo;
+    ctx.shadowBlur = 18;
+    ctx.stroke();
+
+    // Intense specular sunlight highlight core along incident limb
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, r + 1.2, sunAngle - Math.PI * 0.25, sunAngle + Math.PI * 0.25);
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 1.8;
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  drawPlanetaryWeather(ctx, sector, p, r, timeSec, artStyle) {
+    const s = Number(sector) || 1;
+
+    if (s === 1) {
+      // Sector I: Drifting translucent cloud whorls with soft continent shadow projection
+      const cloudDrift = (timeSec * 0.16 + (p.rotation || 0) * 0.5) % (Math.PI * 2);
+
+      if (artStyle !== 'vector') {
+        // Pass 1: Soft continent shadow projection
+        ctx.save();
+        ctx.translate(p.x + 3.5, p.y + 3.5);
+        ctx.rotate(cloudDrift);
+        for (let w = 0; w < 3; w++) {
+          const bandAngle = w * Math.PI * 0.65;
+          ctx.save();
+          ctx.rotate(bandAngle);
+          ctx.beginPath();
+          if (typeof ctx.ellipse === 'function') {
+            ctx.ellipse(r * 0.15, -r * 0.25 + w * (r * 0.25), r * 0.55, r * 0.18, 0.35, 0, Math.PI * 2);
+          } else {
+            ctx.arc(r * 0.15, -r * 0.25 + w * (r * 0.25), r * 0.28, 0, Math.PI * 2);
+          }
+          ctx.fillStyle = 'rgba(0, 8, 20, 0.32)';
+          ctx.fill();
+          ctx.restore();
+        }
+        ctx.restore();
+      }
+
+      // Pass 2: Translucent cloud whorls
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(cloudDrift);
+      for (let w = 0; w < 3; w++) {
+        const bandAngle = w * Math.PI * 0.65;
+        ctx.save();
+        ctx.rotate(bandAngle);
+        ctx.beginPath();
+        if (typeof ctx.ellipse === 'function') {
+          ctx.ellipse(r * 0.15, -r * 0.25 + w * (r * 0.25), r * 0.55, r * 0.18, 0.35, 0, Math.PI * 2);
+        } else {
+          ctx.arc(r * 0.15, -r * 0.25 + w * (r * 0.25), r * 0.28, 0, Math.PI * 2);
+        }
+        ctx.fillStyle = (artStyle === 'vector')
+          ? 'rgba(0, 229, 255, 0.25)'
+          : ((w % 2 === 0) ? 'rgba(255, 255, 255, 0.44)' : 'rgba(200, 245, 255, 0.36)');
+        ctx.fill();
+
+        // Soft wispy whorl spiral arc
+        ctx.beginPath();
+        ctx.arc(0, 0, r * (0.35 + w * 0.2), 0, Math.PI * 0.75);
+        ctx.strokeStyle = (artStyle === 'vector') ? 'rgba(0, 229, 255, 0.45)' : 'rgba(255, 255, 255, 0.4)';
+        ctx.lineWidth = (artStyle === 'comic') ? 2.5 : 2.0;
+        ctx.stroke();
+        ctx.restore();
+      }
+      ctx.restore();
+
+    } else if (s === 2) {
+      // Sector II: Molten tectonic magma rivers glowing between continental fissures with heat shimmer
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate((p.rotation || 0) * 0.85);
+
+      for (let m = 0; m < 5; m++) {
+        const angle = (m / 5) * Math.PI * 2;
+        const shimmer = Math.sin(timeSec * 8 + m * 2.1) * 0.8;
+        const riverWidth = 2.4 + shimmer;
+        const glowBlur = 12 + Math.sin(timeSec * 10 + m) * 4;
+
+        ctx.beginPath();
+        ctx.moveTo(Math.cos(angle) * (r * 0.15), Math.sin(angle) * (r * 0.15));
+        const midR = r * 0.55;
+        const midA = angle + 0.3 * Math.sin(timeSec * 3 + m);
+        ctx.quadraticCurveTo(
+          Math.cos(midA) * midR, Math.sin(midA) * midR,
+          Math.cos(angle + 0.15) * (r * 0.92), Math.sin(angle + 0.15) * (r * 0.92)
+        );
+        ctx.strokeStyle = (m % 2 === 0) ? '#ff3d00' : '#f59e0b';
+        ctx.lineWidth = riverWidth;
+        ctx.shadowColor = '#ff3d00';
+        ctx.shadowBlur = glowBlur;
+        ctx.stroke();
+
+        ctx.strokeStyle = '#ffe082';
+        ctx.lineWidth = 1.0;
+        ctx.shadowBlur = 0;
+        ctx.stroke();
+      }
+      ctx.restore();
+
+    } else if (s === 3) {
+      // Sector III: Shimmering bio-luminescent polar aurora curtains waving across the planet poles
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate((p.rotation || 0) * 0.2);
+
+      for (const pole of [-1, 1]) {
+        const poleY = pole * r * 0.65;
+        for (let layer = 0; layer < 3; layer++) {
+          const color = (layer === 0) ? '#a855f7' : (layer === 1 ? '#00e5ff' : '#6366f1');
+          const waveAlpha = 0.38 + Math.sin(timeSec * 4 + layer + pole) * 0.18;
+          ctx.beginPath();
+          const span = r * 0.68;
+          for (let x = -span; x <= span; x += 6) {
+            const waveH = Math.sin(x * 0.08 + timeSec * 3.2 + layer) * (5 + layer * 2.5);
+            const y = poleY + (pole < 0 ? waveH : -waveH) + (layer * 3 * pole);
+            if (x === -span) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+          }
+          ctx.strokeStyle = color;
+          ctx.lineWidth = (artStyle === 'vector') ? 2.0 : 3.5;
+          ctx.shadowColor = color;
+          ctx.shadowBlur = 10;
+          ctx.globalAlpha = waveAlpha;
+          ctx.stroke();
+        }
+      }
+      ctx.restore();
+
+    } else {
+      // Sector IV: Gravitational accretion disc ring matter spiraling inward toward the planet
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      const spiralRotation = (timeSec * 1.2) % (Math.PI * 2);
+
+      for (let arm = 0; arm < 4; arm++) {
+        const armBaseAngle = (arm / 4) * Math.PI * 2 + spiralRotation;
+        ctx.beginPath();
+        const steps = 18;
+        for (let st = 0; st <= steps; st++) {
+          const progress = st / steps;
+          const spiralR = r * (0.95 - progress * 0.75);
+          const theta = armBaseAngle + progress * Math.PI * 2.2;
+          const sx = Math.cos(theta) * spiralR;
+          const sy = Math.sin(theta) * spiralR;
+          if (st === 0) ctx.moveTo(sx, sy); else ctx.lineTo(sx, sy);
+        }
+        const armColor = (arm % 2 === 0) ? '#10b981' : '#7c3aed';
+        ctx.strokeStyle = armColor;
+        ctx.lineWidth = 2.4;
+        ctx.shadowColor = armColor;
+        ctx.shadowBlur = 8;
+        ctx.stroke();
+
+        // Inward drifting matter particles
+        const partProgress = ((timeSec * 0.6 + arm * 0.25) % 1.0);
+        const partR = r * (0.95 - partProgress * 0.75);
+        const partTheta = armBaseAngle + partProgress * Math.PI * 2.2;
+        ctx.beginPath();
+        ctx.arc(Math.cos(partTheta) * partR, Math.sin(partTheta) * partR, 2.5, 0, Math.PI * 2);
+        ctx.fillStyle = '#ffffff';
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+  }
+
+  applyPostProcessing(ctx) {
+    const settings = this.getSettings ? this.getSettings() : null;
+    if (settings && settings.crtPostProcessing === false) return;
+
+    const timeSec = this.gameTime || 0;
+    const w = this.width || 800;
+    const h = this.height || 600;
+    const cx = w * 0.5;
+    const cy = h * 0.5;
+
+    if (this.artStyle === 'vector') {
+      // 1. Vector Oscilloscope mode: Enhance CRT curvature, raster scanline flicker, and phosphor persistence trail
+      ctx.save();
+
+      // Phosphor persistence trail overlay (subtle oscilloscope afterglow)
+      ctx.fillStyle = 'rgba(0, 229, 255, 0.022)';
+      ctx.fillRect(0, 0, w, h);
+
+      // Raster scanline flicker
+      const flicker = 0.038 + Math.sin(timeSec * 45) * 0.016 + (Math.random() * 0.008);
+      ctx.fillStyle = `rgba(0, 229, 255, ${flicker.toFixed(4)})`;
+      for (let sy = 0; sy < h; sy += 3.5) {
+        ctx.fillRect(0, sy, w, 1.3);
+      }
+
+      // Rolling CRT electron raster refresh beam
+      const beamY = ((timeSec * 220) % (h + 80)) - 40;
+      if (ctx.createLinearGradient) {
+        const beamGrad = ctx.createLinearGradient(0, beamY - 24, 0, beamY + 24);
+        if (beamGrad && beamGrad.addColorStop) {
+          beamGrad.addColorStop(0, 'transparent');
+          beamGrad.addColorStop(0.5, 'rgba(0, 255, 180, 0.055)');
+          beamGrad.addColorStop(1, 'transparent');
+          ctx.fillStyle = beamGrad;
+          ctx.fillRect(0, beamY - 24, w, 48);
+        }
+      }
+
+      // CRT curvature barrel vignette & rounded corners
+      if (ctx.createRadialGradient) {
+        const crtVignette = ctx.createRadialGradient(cx, cy, Math.min(w, h) * 0.55, cx, cy, Math.hypot(cx, cy) * 0.95);
+        if (crtVignette && crtVignette.addColorStop) {
+          crtVignette.addColorStop(0, 'rgba(0, 0, 0, 0)');
+          crtVignette.addColorStop(0.7, 'rgba(0, 10, 5, 0.18)');
+          crtVignette.addColorStop(0.9, 'rgba(0, 5, 2, 0.5)');
+          crtVignette.addColorStop(1, 'rgba(0, 0, 0, 0.88)');
+          ctx.fillStyle = crtVignette;
+          ctx.fillRect(0, 0, w, h);
+        }
+      }
+
+      // CRT curved border bezel strokes
+      ctx.strokeStyle = 'rgba(0, 229, 255, 0.25)';
+      ctx.lineWidth = 2.0;
+      ctx.beginPath();
+      ctx.moveTo(12, 12);
+      ctx.quadraticCurveTo(cx, 4, w - 12, 12);
+      ctx.quadraticCurveTo(w - 4, cy, w - 12, h - 12);
+      ctx.quadraticCurveTo(cx, h - 4, 12, h - 12);
+      ctx.quadraticCurveTo(4, cy, 12, 12);
+      ctx.stroke();
+
+      ctx.restore();
+
+    } else if (this.artStyle === 'comic') {
+      // 2. Comic mode: Add stylized comic screen vignette and enhanced Ben-Day halftone shading on shockwaves
+      ctx.save();
+
+      // Stylized comic screen vignette (edge vignette + panel border)
+      if (ctx.createRadialGradient) {
+        const comicVig = ctx.createRadialGradient(cx, cy, Math.min(cx, cy) * 0.7, cx, cy, Math.hypot(cx, cy));
+        if (comicVig && comicVig.addColorStop) {
+          comicVig.addColorStop(0, 'transparent');
+          comicVig.addColorStop(0.85, 'rgba(0, 0, 0, 0.12)');
+          comicVig.addColorStop(1, 'rgba(0, 0, 0, 0.42)');
+          ctx.fillStyle = comicVig;
+          ctx.fillRect(0, 0, w, h);
+        }
+      }
+
+      // Crisp comic panel border
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = 3.5;
+      if (typeof ctx.strokeRect === 'function') {
+        ctx.strokeRect(4, 4, w - 8, h - 8);
+      } else {
+        ctx.beginPath();
+        if (typeof ctx.rect === 'function') ctx.rect(4, 4, w - 8, h - 8);
+        ctx.stroke();
+      }
+
+      // Comic corner crosshatch ink accents
+      ctx.lineWidth = 1.8;
+      ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)';
+      const corners = [[8, 8, 1, 1], [w - 8, 8, -1, 1], [8, h - 8, 1, -1], [w - 8, h - 8, -1, -1]];
+      for (const [kx, ky, sx, sy] of corners) {
+        for (let l = 1; l <= 4; l++) {
+          ctx.beginPath();
+          ctx.moveTo(kx + sx * l * 5, ky);
+          ctx.lineTo(kx, ky + sy * l * 5);
+          ctx.stroke();
+        }
+      }
+
+      // Enhanced Ben-Day halftone shading on shockwaves
+      const activeNovas = (this.particles && this.particles.novas) ? this.particles.novas : [];
+      const cataclysm = this.cataclysmShockwave;
+      const shockwaves = [...activeNovas];
+      if (cataclysm) shockwaves.push(cataclysm);
+      if (this.skills && this.skills.empActive) {
+        shockwaves.push({ x: this.skills.empOriginX, y: this.skills.empOriginY, radius: this.skills.empRadius, alpha: 1.0 });
+      }
+
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
+      for (const sw of shockwaves) {
+        const swR = sw.radius || 40;
+        if (swR > 10) {
+          const dotCount = Math.min(32, Math.max(8, Math.floor(swR / 6)));
+          for (let d = 0; d < dotCount; d++) {
+            const dotAngle = (d / dotCount) * Math.PI * 2;
+            const dotDist = swR + Math.sin(d * 3 + timeSec * 6) * 4;
+            const dotX = (sw.x ?? cx) + Math.cos(dotAngle) * dotDist;
+            const dotY = (sw.y ?? cy) + Math.sin(dotAngle) * dotDist;
+            ctx.beginPath();
+            ctx.arc(dotX, dotY, 2.2, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+      }
+
+      ctx.restore();
+
+    } else {
+      // 3. Astral mode (default): Edge chromatic aberration lens flare on mega-combos and heavy screen shakes
+      const isMegaCombo = (this.combo || 0) >= 10;
+      const isHeavyShake = (this.shakeTimer > 0) && ((this.shakeIntensity || 0) >= 5);
+
+      if (isMegaCombo || isHeavyShake) {
+        ctx.save();
+        const intensity = isMegaCombo ? Math.min(1.0, (this.combo - 9) * 0.1 + 0.3) : 0.45;
+
+        // Edge chromatic aberration (cyan/magenta split borders)
+        ctx.fillStyle = `rgba(0, 229, 255, ${(0.14 * intensity).toFixed(3)})`;
+        ctx.fillRect(0, 0, 10, h); // Left cyan fringe
+        ctx.fillRect(0, 0, w, 8);  // Top cyan fringe
+
+        ctx.fillStyle = `rgba(224, 64, 251, ${(0.14 * intensity).toFixed(3)})`;
+        ctx.fillRect(w - 10, 0, 10, h); // Right magenta fringe
+        ctx.fillRect(0, h - 8, w, 8);  // Bottom magenta fringe
+
+        // Horizontal anamorphic lens flare streak centered on planet or epicenter
+        const flareY = this.planet ? this.planet.y : cy;
+        if (ctx.createLinearGradient) {
+          const flareGrad = ctx.createLinearGradient(0, flareY, w, flareY);
+          if (flareGrad && flareGrad.addColorStop) {
+            flareGrad.addColorStop(0, 'transparent');
+            flareGrad.addColorStop(0.25, `rgba(0, 229, 255, ${(0.18 * intensity).toFixed(3)})`);
+            flareGrad.addColorStop(0.5, `rgba(255, 255, 255, ${(0.65 * intensity).toFixed(3)})`);
+            flareGrad.addColorStop(0.75, `rgba(224, 64, 251, ${(0.18 * intensity).toFixed(3)})`);
+            flareGrad.addColorStop(1, 'transparent');
+            ctx.fillStyle = flareGrad;
+            ctx.fillRect(0, flareY - 3, w, 6);
+          }
+        }
+
+        // Central lens bloom
+        const flareX = this.planet ? this.planet.x : cx;
+        ctx.beginPath();
+        ctx.arc(flareX, flareY, 18 * intensity, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255, 255, 255, ${(0.4 * intensity).toFixed(3)})`;
+        ctx.shadowColor = '#00e5ff';
+        ctx.shadowBlur = 16;
+        ctx.fill();
+
+        ctx.restore();
+      }
+    }
+  }
+
   drawPlanetEntity(ctx) {
     if (!this.planet) return;
     const p = this.planet;
@@ -533,6 +1145,8 @@ export class GameEngine {
     if (artStyle === 'vector') {
       ctx.fillStyle = '#020408';
       ctx.fillRect(p.x - r, p.y - r, r * 2, r * 2);
+      const sector = this.getCurrentSector();
+      this.drawPlanetaryWeather(ctx, sector, p, r, timeSec, artStyle);
     } else {
       // Base dark mantle
       ctx.fillStyle = '#060c1d';
@@ -604,6 +1218,27 @@ export class GameEngine {
       ctx.restore();
       ctx.globalAlpha = 1.0;
 
+      // Sector-specific living weather overlays
+      const sector = this.getCurrentSector();
+      this.drawPlanetaryWeather(ctx, sector, p, r, timeSec, artStyle);
+
+      // Inner Rayleigh scattering limb glow
+      if (artStyle !== 'vector') {
+        const sunAngle = (timeSec * 0.35) % (Math.PI * 2);
+        const sunX = p.x + Math.cos(sunAngle) * r * 0.7;
+        const sunY = p.y + Math.sin(sunAngle) * r * 0.7;
+        if (ctx.createRadialGradient) {
+          const rayGrad = ctx.createRadialGradient(sunX, sunY, r * 0.15, p.x, p.y, r);
+          if (rayGrad && rayGrad.addColorStop) {
+            rayGrad.addColorStop(0, 'rgba(255, 255, 255, 0.3)');
+            rayGrad.addColorStop(0.4, this.hexToRgba(atmo, 0.2));
+            rayGrad.addColorStop(0.85, 'transparent');
+            ctx.fillStyle = rayGrad;
+            ctx.fillRect(p.x - r, p.y - r, r * 2, r * 2);
+          }
+        }
+      }
+
       // Dual-tone cel-shaded terminator shadow with neon atmospheric rim crescent on dark side
       const shadowMid = ctx.createRadialGradient(
         p.x - r * 0.45, p.y - r * 0.45, r * 0.25,
@@ -634,6 +1269,9 @@ export class GameEngine {
     ctx.lineWidth = 1.2;
     ctx.stroke();
     ctx.restore();
+
+    // Dynamic Rayleigh scattering rim glow that rotates with time/sun angle
+    this.drawRayleighScattering(ctx, p, r, timeSec, atmo);
 
     // Edge boundary stroke
     ctx.beginPath();
@@ -925,8 +1563,9 @@ export class GameEngine {
   }
 
   getSettings() {
-    if (!saveSystem || !saveSystem.getSettings) return DEFAULT_SETTINGS;
-    return saveSystem.getSettings();
+    const sys = this.saveSystem || (typeof saveSystem !== 'undefined' ? saveSystem : null);
+    if (!sys || !sys.getSettings) return DEFAULT_SETTINGS;
+    return sys.getSettings();
   }
 
   deployStructure() {
@@ -946,6 +1585,7 @@ export class GameEngine {
     audio.playCataclysm();
     this.addScreenShake(20, 0.7);
     this.triggerImpactFlash(this.planet.x, this.planet.y);
+    this.addNebulaRipple(this.planet.x, this.planet.y, 480, 65);
 
     // Zoom trigger: [F] Cataclysm (1.15x for 0.9s)
     if (this.getSettings().screenShake !== false && this.getSettings().screenShake !== 0) {
@@ -1621,6 +2261,7 @@ export class GameEngine {
     }
 
     this.particles.spawnNova(targetX, targetY, blastRadius, color, damage, true, this.combo);
+    this.addNebulaRipple(targetX, targetY, blastRadius * 2.2, 45);
 
     // v2.8 Split-Nova Catalyst Draft Perk: Splits into 4 homing mini-plasmas
     if (this.hasPerk('splitNova')) {
@@ -1826,6 +2467,7 @@ export class GameEngine {
         maxLife: 0.65
       });
     }
+    this.particles?.spawnHullFragments?.(alien.x, alien.y, alien.color || '#00e5ff', (alien.isBoss || alien.classKey === 'BOSS') ? 16 : 8, (alien.isBoss || alien.classKey === 'BOSS') ? 210 : 160);
 
     // Multi-Ring Shockwaves & Hit-Stop Micro-Slow-Mo on Milestone Mega Chains (x8, x12, x16, x20+)
     if (this.combo === 8 || this.combo === 12 || this.combo === 16 || (this.combo >= 20 && this.combo % 4 === 0)) {
@@ -1994,6 +2636,7 @@ export class GameEngine {
 
     this.particles.spawnNova(alien.x, alien.y, nRadius, alien.color, nDmg, false, this.combo);
     this.particles.spawnDebris(alien.x, alien.y, alien.color, 14);
+    this.particles.spawnHullFragments?.(alien.x, alien.y, alien.color, alien.isBoss ? 16 : 8, alien.isBoss ? 210 : 160);
 
     // Class specific death payload mechanics
     if (alien.classKey === 'INTERCEPTOR') {
@@ -2139,6 +2782,18 @@ export class GameEngine {
       this.cataclysmShockwave.radius += this.cataclysmShockwave.speed * dt;
       if (this.cataclysmShockwave.radius >= this.cataclysmShockwave.maxRadius) {
         this.cataclysmShockwave = null;
+      }
+    }
+
+    // Update Nebula Detonation Ripples
+    if (this.nebulaRipples && this.nebulaRipples.length > 0) {
+      for (let i = this.nebulaRipples.length - 1; i >= 0; i--) {
+        const rip = this.nebulaRipples[i];
+        rip.radius += rip.speed * dt;
+        rip.alpha = Math.max(0, 1 - rip.radius / rip.maxRadius);
+        if (rip.radius >= rip.maxRadius || rip.alpha <= 0) {
+          this.nebulaRipples.splice(i, 1);
+        }
       }
     }
     for (let mIdx = this.cataclysmMeteors.length - 1; mIdx >= 0; mIdx--) {
@@ -3156,6 +3811,9 @@ export class GameEngine {
       ctx.restore();
     }
 
+    // Multi-Octave Volumetric Cosmic Nebulae (procedural cloud layer behind starfield and gravity grid)
+    this.drawVolumetricNebulae(ctx);
+
     // Reactive Spacetime Gravity Grid (22x14 vertex mesh)
     this.drawWarpedSpacetimeGrid(ctx);
 
@@ -3666,15 +4324,8 @@ export class GameEngine {
       this.drawImpactFrames(ctx);
     }
 
-    // v3.1 Vector Art Style: CRT Scanlines overlay
-    if (this.artStyle === 'vector') {
-      ctx.save();
-      ctx.fillStyle = 'rgba(0, 229, 255, 0.035)';
-      for (let sy = 0; sy < this.height; sy += 3.5) {
-        ctx.fillRect(0, sy, this.width, 1.2);
-      }
-      ctx.restore();
-    }
+    // Enhanced Cinematic Post-Processing Pipeline
+    this.applyPostProcessing(ctx);
   }
 
   updateHUD() {
@@ -4086,6 +4737,7 @@ export class GameEngine {
     this.particles.addFloater(torpX, torpY - 20, '⚡ PERFECT PARRY! +20% NOVA', '#ffd700', 16);
     this.hitStopTimer = 0.08;
     this.triggerImpactFlash(torpX, torpY);
+    this.projectiles?.spawnParryShieldFlash?.(torpX, torpY, refAngle);
     this.timeScale = 0.4;
     audio.playParry();
 

@@ -215,33 +215,56 @@ export class TacticalSkills {
       ctx.fill();
       ctx.shadowBlur = 0;
 
-      // 4. Sine-wave helical energy ribbon spiraling down the length of the beam
+      // 4. True double-helix intertwining energy coils with procedural lightning arcs
       ctx.save();
       ctx.globalCompositeOperation = 'lighter';
-      ctx.beginPath();
-      for (let d = 0; d <= length; d += 14) {
-        const rx = originDist + d;
-        const ry = Math.sin(d * 0.06 - timeSec * 28) * 14;
-        if (d === 0) ctx.moveTo(rx, ry);
-        else ctx.lineTo(rx, ry);
-      }
-      ctx.strokeStyle = '#00e5ff';
-      ctx.lineWidth = 3.5;
-      ctx.shadowColor = '#00e5ff';
-      ctx.shadowBlur = 14;
-      ctx.stroke();
 
-      // Intertwined white counter-helix
-      ctx.beginPath();
-      for (let d = 0; d <= length; d += 14) {
-        const rx = originDist + d;
-        const ry = -Math.sin(d * 0.06 - timeSec * 28) * 14;
-        if (d === 0) ctx.moveTo(rx, ry);
-        else ctx.lineTo(rx, ry);
+      const helixStep = 12;
+      const waveFreq = 0.055;
+      const waveSpeed = 28;
+      const amp = width * 0.85;
+
+      // Twin Helices with 3D Depth Modulation
+      for (let h = 0; h < 2; h++) {
+        const phaseOffset = h * Math.PI;
+        const helixColor = h === 0 ? '#00e5ff' : 'rgba(255, 255, 255, 0.9)';
+
+        ctx.beginPath();
+        for (let d = 0; d <= length; d += helixStep) {
+          const ang = d * waveFreq - timeSec * waveSpeed + phaseOffset;
+          const rx = originDist + d;
+          const ry = Math.sin(ang) * amp;
+          if (d === 0) ctx.moveTo(rx, ry);
+          else ctx.lineTo(rx, ry);
+        }
+        ctx.strokeStyle = helixColor;
+        ctx.lineWidth = h === 0 ? 3.5 : 2.0;
+        ctx.shadowColor = '#00e5ff';
+        ctx.shadowBlur = 14;
+        ctx.stroke();
       }
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
-      ctx.lineWidth = 1.8;
-      ctx.stroke();
+
+      // Procedural lightning arcs leaping between the twin helices
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 1.6;
+      ctx.shadowColor = '#00e5ff';
+      ctx.shadowBlur = 12;
+      for (let d = 40; d < length; d += 65) {
+        const ang = d * waveFreq - timeSec * waveSpeed;
+        const ryA = Math.sin(ang) * amp;
+        const ryB = Math.sin(ang + Math.PI) * amp;
+        const jitterT = Math.floor(timeSec * 16 + d * 0.1);
+        if ((jitterT + Math.floor(d / 65)) % 3 === 0) {
+          const midX = originDist + d + (Math.sin(d + timeSec * 20) * 10);
+          const midY = (ryA + ryB) * 0.5 + (Math.cos(d + timeSec * 25) * 8);
+          ctx.beginPath();
+          ctx.moveTo(originDist + d, ryA);
+          ctx.lineTo(midX, midY);
+          ctx.lineTo(originDist + d + (Math.sin(d * 2) * 6), ryB);
+          ctx.stroke();
+        }
+      }
+
       ctx.restore();
 
       ctx.restore();

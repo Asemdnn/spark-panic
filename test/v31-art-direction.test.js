@@ -32,6 +32,8 @@ describe('Spark Panic v3.1: Prismatic Art Direction Suite', () => {
       fillText: vi.fn(),
       moveTo: vi.fn(),
       lineTo: vi.fn(),
+      quadraticCurveTo: vi.fn(),
+      bezierCurveTo: vi.fn(),
       closePath: vi.fn(),
       clip: vi.fn(),
       setLineDash: vi.fn(),
@@ -451,24 +453,24 @@ describe('Spark Panic v3.1: Prismatic Art Direction Suite', () => {
       const html = fs.readFileSync(htmlPath, 'utf-8');
 
       // Page Title
-      expect(html).toContain('Spark Panic: Planetary Invasion Defense — 🎨 v3.1 Prismatic Art Edition');
+      expect(html).toMatch(/(🎨 v3\.1 Prismatic Art|✨ v3\.2 Hyper-VFX & Nebula Shader) Edition/i);
 
       // Title Screen Badge
-      expect(html).toContain('🎨 v3.1 PRISMATIC ART EDITION');
+      expect(html).toMatch(/(🎨 v3\.1 PRISMATIC ART|✨ v3\.2 HYPER-VFX & NEBULA SHADER) EDITION/);
     });
 
-    it('battle-card.js should declare v3.1 Prismatic Art Edition headers and share text', () => {
+    it('battle-card.js should declare v3.1 or v3.2 Edition headers and share text', () => {
       const cardPath = path.resolve(__dirname, '../src/ui/battle-card.js');
       const cardSrc = fs.readFileSync(cardPath, 'utf-8');
 
-      expect(cardSrc).toContain('🎨 v3.1 PRISMATIC ART EDITION');
+      expect(cardSrc).toMatch(/(🎨 v3\.1 PRISMATIC ART|✨ v3\.2 HYPER-VFX & NEBULA SHADER) EDITION/);
     });
 
     it('README.md should document v3.1 Prismatic Art Edition systems and style switcher', () => {
       const readmePath = path.resolve(__dirname, '../README.md');
       const readme = fs.readFileSync(readmePath, 'utf-8');
 
-      expect(readme).toContain('🎨 v3.1 Prismatic Art Edition');
+      expect(readme).toMatch(/(🎨 v3\.1 Prismatic Art|✨ v3\.2 Hyper-VFX & Nebula Shader) Edition/i);
       expect(readme).toContain('Dynamic Spacetime Gravity Grid');
       expect(readme).toContain('22x14 Orbital Vertex Lattice');
       expect(readme).toContain('Faceted Stained-Glass Aesthetic & 2.5D Directional Rim-Lighting');

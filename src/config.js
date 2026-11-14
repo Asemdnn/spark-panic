@@ -1109,7 +1109,10 @@ export const DEFAULT_SETTINGS = {
   particleDensity: 'high', // 'high' | 'low'
   threatRings: true, // boolean
   floatingText: 'all', // 'all' | 'combos' | 'off'
-  artStyle: 'astral' // 'astral' | 'vector' | 'comic'
+  artStyle: 'astral', // 'astral' | 'vector' | 'comic'
+  volumetricNebula: true, // boolean (v3.2)
+  crtPostProcessing: true, // boolean (v3.2)
+  hullDebrisShards: true // boolean (v3.2)
 };
 
 export const TACTICAL_DRAFT_PERKS = [
