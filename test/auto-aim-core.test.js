@@ -441,4 +441,186 @@ describe('Auto-Aim Targeting System (v3.2 Core Suite)', () => {
       expect(engine.turret.targetAngle).toBeCloseTo(expectedAngle, 0.1);
     });
   });
+
+  describe('4. Ballistic Lead Prediction & Anti-Jitter Target Hysteresis', () => {
+    let engine;
+    let mockCanvas;
+
+    beforeEach(() => {
+      storage.resetAll();
+      mockCanvas = {
+        width: 800,
+        height: 600,
+        getContext: vi.fn(() => ({
+          save: vi.fn(),
+          restore: vi.fn(),
+          translate: vi.fn(),
+          rotate: vi.fn(),
+          scale: vi.fn(),
+          beginPath: vi.fn(),
+          arc: vi.fn(),
+          fill: vi.fn(),
+          stroke: vi.fn(),
+          clearRect: vi.fn(),
+          fillRect: vi.fn(),
+          fillText: vi.fn(),
+          moveTo: vi.fn(),
+          lineTo: vi.fn(),
+          setLineDash: vi.fn(),
+          setTransform: vi.fn(),
+          createRadialGradient: vi.fn(() => ({ addColorStop: vi.fn() })),
+          createLinearGradient: vi.fn(() => ({ addColorStop: vi.fn() }))
+        }))
+      };
+      engine = new GameEngine(mockCanvas);
+      engine.startMission(1, false);
+      engine.aliens = [];
+      engine.projectiles.torpedoes = [];
+    });
+
+    it('should lead a moving alien target based on velocity vector so bullets hit moving targets', () => {
+      const px = engine.planet.x;
+      const py = engine.planet.y;
+
+      // Alien to the right at (px + 240, py), moving downward at vy = 140px/s
+      const scout = new Alien(px + 240, py, 'SCOUT');
+      scout.vx = 0;
+      scout.vy = 140; // moving downwards
+      engine.aliens = [scout];
+
+      const target = engine.findBestAutoAimTarget();
+      expect(target).not.toBeNull();
+      // Current position is unchanged
+      expect(target.x).toBe(px + 240);
+      expect(target.y).toBe(py);
+      // Lead position predicts future downward movement (leadY > current y)
+      expect(target.leadY).toBeGreaterThan(py);
+      // Firing angle leads downward ahead of target (angle > 0)
+      expect(target.angle).toBeGreaterThan(0);
+      expect(target.angle).toBeLessThan(Math.PI / 2);
+    });
+
+    it('should lead an orbiting Interceptor along its circular orbit path', () => {
+      const px = engine.planet.x;
+      const py = engine.planet.y;
+
+      const inter = new Alien(px + 220, py, 'INTERCEPTOR');
+      inter.orbitDistance = 220;
+      inter.orbitAngle = 0;
+      inter.speed = 120;
+      engine.aliens = [inter];
+
+      const target = engine.findBestAutoAimTarget();
+      expect(target).not.toBeNull();
+      expect(target.x).toBe(px + 220);
+      expect(target.y).toBe(py);
+      // Orbit lead angle is ahead in direction of orbital velocity (angle > 0)
+      expect(target.angle).toBeGreaterThan(0);
+      expect(target.leadY).toBeGreaterThan(py);
+    });
+
+    it('should maintain target stickiness hysteresis and avoid rapid jitter between equidistant enemies', () => {
+      const px = engine.planet.x;
+      const py = engine.planet.y;
+
+      const scoutA = new Alien(px + 200, py, 'SCOUT'); // dist 200
+      const scoutB = new Alien(px, py - 202, 'SCOUT'); // dist 202
+
+      engine.aliens = [scoutA, scoutB];
+
+      // First evaluation: scoutA is slightly closer (200 vs 202) -> locks onto scoutA
+      const firstTarget = engine.findBestAutoAimTarget();
+      expect(firstTarget.entity).toBe(scoutA);
+
+      // On next frame: scoutB moves slightly closer to 198px, while scoutA is at 200px
+      scoutB.y = py - 198;
+      // Because of stickiness hysteresis (+90px virtual proximity to locked target), scoutA REMAINS locked!
+      const stickyTarget = engine.findBestAutoAimTarget();
+      expect(stickyTarget.entity).toBe(scoutA);
+
+      // When scoutA is vaporized, auto-aim immediately acquires scoutB
+      scoutA.alive = false;
+      const nextTarget = engine.findBestAutoAimTarget();
+      expect(nextTarget.entity).toBe(scoutB);
+    });
+
+    it('should prioritize finishing off a heavily damaged low-HP alien over a full-health alien', () => {
+      const px = engine.planet.x;
+      const py = engine.planet.y;
+
+      // Scout A: slightly further (215px), but heavily damaged (10/100 HP, 90% missing)
+      const damagedScout = new Alien(px + 215, py, 'SCOUT');
+      damagedScout.maxHp = 100;
+      damagedScout.hp = 10;
+
+      // Scout B: slightly closer (200px), but full health (100/100 HP)
+      const healthyScout = new Alien(px, py - 200, 'SCOUT');
+      healthyScout.maxHp = 100;
+      healthyScout.hp = 100;
+
+      engine.aliens = [damagedScout, healthyScout];
+
+      const target = engine.findBestAutoAimTarget();
+      expect(target).not.toBeNull();
+      // Low-HP finishing bonus prioritizes eliminating the damaged threat
+      expect(target.entity).toBe(damagedScout);
+    });
+
+    it('should lead rotating boss reactor weak-spot when exposed', () => {
+      const px = engine.planet.x;
+      const py = engine.planet.y;
+
+      const boss = new Alien(px + 260, py, 'BOSS');
+      boss.alive = true;
+      boss.weakSpotExposedTimer = 3.0; // Exposed!
+      boss.weakSpotAngle = 0;
+      boss.heading = 0;
+      engine.aliens = [boss];
+
+      const target = engine.findBestAutoAimTarget();
+      expect(target).not.toBeNull();
+      // Weak spot rotates forward in time, so lead angle is non-zero
+      expect(target.leadY).not.toBe(target.y);
+    });
+
+    it('should immediately break stickiness lock to eliminate a latched Leech pod on a city', () => {
+      const px = engine.planet.x;
+      const py = engine.planet.y;
+
+      const scout = new Alien(px + 180, py, 'SCOUT');
+      engine.aliens = [scout];
+
+      // Initially locked onto scout
+      const firstTarget = engine.findBestAutoAimTarget();
+      expect(firstTarget.entity).toBe(scout);
+
+      // Leech pod latches onto city (emergency threat!)
+      const leech = new Alien(px, py + 85, 'LEECH');
+      leech.latched = true;
+      engine.aliens.push(leech);
+
+      // Emergency latch overrides stickiness immediately
+      const emergencyTarget = engine.findBestAutoAimTarget();
+      expect(emergencyTarget.entity).toBe(leech);
+    });
+
+    it('should immediately break stickiness lock for incoming torpedoes in danger range (d <= 220px)', () => {
+      const px = engine.planet.x;
+      const py = engine.planet.y;
+
+      const scout = new Alien(px + 220, py, 'SCOUT');
+      engine.aliens = [scout];
+
+      // Locked onto scout
+      const firstTarget = engine.findBestAutoAimTarget();
+      expect(firstTarget.entity).toBe(scout);
+
+      // Torpedo fired at distance 160px
+      engine.projectiles.spawnTorpedo(px, py - 160, Math.PI / 2, 180, 10, '#ff1744');
+
+      // Torpedo danger range overrides scout lock
+      const torpTarget = engine.findBestAutoAimTarget();
+      expect(torpTarget.entity).toBe(engine.projectiles.torpedoes[0]);
+    });
+  });
 });

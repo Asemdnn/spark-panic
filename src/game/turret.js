@@ -78,11 +78,16 @@ export class GuardianTurret {
       this.targetAngle = Math.atan2(pointerY - planetY, pointerX - planetX);
     }
     
-    // Smooth angle interpolation
+    // Smooth angle interpolation (snappy military tracking with auto-lock)
     let diff = this.targetAngle - this.angle;
     while (diff < -Math.PI) diff += Math.PI * 2;
     while (diff > Math.PI) diff -= Math.PI * 2;
-    this.angle += diff * Math.min(1, dt * 18);
+    if (this.autoAim && Math.abs(diff) < 0.05) {
+      this.angle = this.targetAngle;
+    } else {
+      const turnRate = this.autoAim ? 26 : 18;
+      this.angle += diff * Math.min(1, dt * turnRate);
+    }
 
     // Muzzle flash decay (~0.06s duration)
     if (this.muzzleFlash > 0) {
@@ -326,6 +331,24 @@ export class GuardianTurret {
     ctx.lineWidth = 1.5;
     ctx.stroke();
     ctx.setLineDash([]);
+
+    // Sleek holographic lock-on reticle at lead target
+    if (this.autoAim) {
+      ctx.beginPath();
+      ctx.arc(pointerX, pointerY, 13, 0, Math.PI * 2);
+      ctx.strokeStyle = sightColor;
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+
+      const tick = 4;
+      ctx.beginPath();
+      ctx.moveTo(pointerX - 17, pointerY); ctx.lineTo(pointerX - 17 + tick, pointerY);
+      ctx.moveTo(pointerX + 17, pointerY); ctx.lineTo(pointerX + 17 - tick, pointerY);
+      ctx.moveTo(pointerX, pointerY - 17); ctx.lineTo(pointerX, pointerY - 17 + tick);
+      ctx.moveTo(pointerX, pointerY + 17); ctx.lineTo(pointerX, pointerY + 17 - tick);
+      ctx.stroke();
+    }
+
     ctx.restore();
   }
 

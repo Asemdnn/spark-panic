@@ -129,9 +129,10 @@ export class GameEngine {
     this.totalMissionEnemies = 0;
     this.activeBoss = null;
 
-    // Pointer Input
+    // Pointer Input & Auto-Aim Lock State
     this.pointerX = this.width * 0.5;
     this.pointerY = this.height * 0.2;
+    this.lockedAutoAimTargetEntity = null;
 
     // Screen Shake
     this.shakeIntensity = 0;
@@ -2419,6 +2420,9 @@ export class GameEngine {
   }
 
   onAlienDestroyed(alien, killerNova = null) {
+    if (this.lockedAutoAimTargetEntity === alien) {
+      this.lockedAutoAimTargetEntity = null;
+    }
     this.enemiesVaporized++;
     let pts = (alien.score || 25) * Math.max(1, this.combo);
     if (this.hasDailyMutator('swarmBlitz')) {
@@ -2944,7 +2948,9 @@ export class GameEngine {
         const loadout = this.getShipyardLoadout();
         const chargeRate = loadout.barrel === 'siege' ? 1.35 : 1.0;
         this.chargeProgress = Math.min(1.0, ((heldSec - 0.25) / 0.40) * chargeRate);
-        this.turret.angle = Math.atan2(this.pointerY - this.planet.y, this.pointerX - this.planet.x);
+        if (!this.turret || !this.turret.autoAim) {
+          this.turret.angle = Math.atan2(this.pointerY - this.planet.y, this.pointerX - this.planet.x);
+        }
         if (this.zoomTimer <= 0 && screenShakeSetting !== false && screenShakeSetting !== 0) {
           this.targetZoom = 1.04;
         }
@@ -3012,6 +3018,10 @@ export class GameEngine {
         this.pointerY = autoAimTarget.y;
         if (this.isChargingOvercharge) {
           this.turret.angle = autoAimTarget.angle;
+        }
+      } else {
+        if (this.lockedAutoAimTargetEntity && !this.lockedAutoAimTargetEntity.alive) {
+          this.lockedAutoAimTargetEntity = null;
         }
       }
       if (this.isTutorialActive && this.tutorialStep === 1) {
@@ -3098,7 +3108,7 @@ export class GameEngine {
       },
       isOverclock,
       isWeaverSlowed,
-      autoAimTarget ? autoAimTarget.angle : null
+      autoAimTarget ? autoAimTarget.angle : (this.turret && this.turret.autoAim ? this.turret.angle : null)
     );
 
     // 3. Update Autonomous Defense Satellites
@@ -4898,29 +4908,151 @@ export class GameEngine {
     this.addFrenzy(15.0);
   }
 
+  getTurretBulletSpeed() {
+    let speed = 520;
+    if (this.turret) {
+      if (this.turret.chassis === 'railgun') speed = 880;
+      else if (this.turret.chassis === 'tesla') speed = 480;
+      else speed = 520;
+    }
+    const loadout = this.getShipyardLoadout ? this.getShipyardLoadout() : { barrel: 'standard' };
+    if (loadout && loadout.barrel === 'standard') {
+      speed *= 1.10;
+    }
+    return speed;
+  }
+
+  calculateBallisticLead(planetX, planetY, targetX, targetY, vx = 0, vy = 0, bulletSpeed = 520, entity = null) {
+    const dx = targetX - planetX;
+    const dy = targetY - planetY;
+    const currentDist = Math.hypot(dx, dy);
+
+    if (bulletSpeed <= 0) {
+      return { leadX: targetX, leadY: targetY, angle: Math.atan2(dy, dx), timeToImpact: currentDist / 520 };
+    }
+
+    // 1. Boss rotating reactor weak-spot lead (rotates at +1.5 rad/s)
+    if (entity && entity.isWeakSpot && entity.boss) {
+      const boss = entity.boss;
+      const t = currentDist / (bulletSpeed || 520);
+      const bvx = boss.vx || 0;
+      const bvy = boss.vy || 0;
+      const futureBossX = boss.x + bvx * t;
+      const futureBossY = boss.y + bvy * t;
+      const futureWsAngle = (boss.weakSpotAngle || 0) + 1.5 * t;
+      const wsDist = (boss.radius || 30) * 0.85;
+      const leadX = futureBossX + Math.cos((boss.heading || 0) + futureWsAngle) * wsDist;
+      const leadY = futureBossY + Math.sin((boss.heading || 0) + futureWsAngle) * wsDist;
+      return { leadX, leadY, angle: Math.atan2(leadY - planetY, leadX - planetX), timeToImpact: t };
+    }
+
+    // 2. Circular orbit predictive lead ONLY for actively orbiting alien classes (Interceptor / Weaver / Beacon)
+    const isOrbitingClass = entity && (entity.classKey === 'INTERCEPTOR' || entity.classKey === 'WEAVER' || entity.classKey === 'BEACON');
+    if (isOrbitingClass && entity.orbitDistance && typeof entity.orbitAngle === 'number' && (entity.speed || 0) > 0 && Math.abs(currentDist - entity.orbitDistance) < 30) {
+      const spd = entity.speed || 100;
+      let spdMult = entity.speedMultiplier || 1.0;
+      if (entity.frozenTimer > 0) spdMult = 0.25;
+      else if (entity.slowTimer > 0) spdMult = Math.min(spdMult, 0.5);
+
+      const omega = (spd / entity.orbitDistance) * spdMult;
+      const t = currentDist / (bulletSpeed || 520);
+      const futureAngle = entity.orbitAngle + omega * t;
+      const leadX = planetX + Math.cos(futureAngle) * entity.orbitDistance;
+      const leadY = planetY + Math.sin(futureAngle) * entity.orbitDistance;
+      return { leadX, leadY, angle: futureAngle, timeToImpact: t };
+    }
+
+    // 3. If target entity has speed === 0 or zero velocity, direct line of fire
+    const hasExplicitZeroSpeed = entity && entity.speed === 0;
+    const hasZeroVelocity = Math.abs(vx) < 0.1 && Math.abs(vy) < 0.1;
+    if (hasExplicitZeroSpeed || (hasZeroVelocity && (!entity || !entity.speed))) {
+      return {
+        leadX: targetX,
+        leadY: targetY,
+        angle: Math.atan2(dy, dx),
+        timeToImpact: currentDist / (bulletSpeed || 520)
+      };
+    }
+
+    // If vx/vy are 0 but entity has speed and heading, use heading & speed
+    let effVx = vx;
+    let effVy = vy;
+    if (hasZeroVelocity && entity && entity.speed > 0) {
+      effVx = Math.cos(entity.heading || 0) * entity.speed;
+      effVy = Math.sin(entity.heading || 0) * entity.speed;
+    }
+
+    // 4. First-order quadratic ballistic intercept
+    const a = (effVx * effVx + effVy * effVy) - (bulletSpeed * bulletSpeed);
+    const b = 2 * (dx * effVx + dy * effVy);
+    const c = dx * dx + dy * dy;
+
+    let t = 0;
+    if (Math.abs(a) < 1e-5) {
+      t = -c / (b || 1e-5);
+    } else {
+      const disc = b * b - 4 * a * c;
+      if (disc >= 0) {
+        const sqrtDisc = Math.sqrt(disc);
+        const t1 = (-b - sqrtDisc) / (2 * a);
+        const t2 = (-b + sqrtDisc) / (2 * a);
+        if (t1 > 0 && t2 > 0) t = Math.min(t1, t2);
+        else if (t1 > 0) t = t1;
+        else if (t2 > 0) t = t2;
+      }
+    }
+
+    if (t <= 0 || t > 1.2 || !Number.isFinite(t)) {
+      t = currentDist / bulletSpeed;
+    }
+
+    const leadX = targetX + effVx * t;
+    const leadY = targetY + effVy * t;
+    const angle = Math.atan2(leadY - planetY, leadX - planetX);
+
+    return {
+      leadX,
+      leadY,
+      angle,
+      timeToImpact: t
+    };
+  }
+
   findBestAutoAimTarget() {
     if (!this.planet) return null;
     const planetX = this.planet.x !== undefined ? this.planet.x : (this.width || 800) * 0.5;
     const planetY = this.planet.y !== undefined ? this.planet.y : (this.height || 600) * 0.5;
+    const bulletSpeed = this.getTurretBulletSpeed();
 
     // Priority 1: Incoming torpedoes within danger distance of the planet shield (d <= 220px)
     if (this.projectiles && Array.isArray(this.projectiles.torpedoes)) {
-      let nearestTorp = null;
-      let minTorpDist = Infinity;
+      const dangerTorps = [];
       for (const torp of this.projectiles.torpedoes) {
         if (!torp || !torp.alive) continue;
         const d = Math.hypot(torp.x - planetX, torp.y - planetY);
-        if (d <= 220 && d < minTorpDist) {
-          minTorpDist = d;
-          nearestTorp = torp;
+        if (d <= 220) {
+          dangerTorps.push({ torp, dist: d });
         }
       }
-      if (nearestTorp) {
+      if (dangerTorps.length > 0) {
+        dangerTorps.sort((a, b) => {
+          // If one is already the locked target, apply small hysteresis
+          const aLock = (this.lockedAutoAimTargetEntity === a.torp) ? -30 : 0;
+          const bLock = (this.lockedAutoAimTargetEntity === b.torp) ? -30 : 0;
+          return (a.dist + aLock) - (b.dist + bLock);
+        });
+        const best = dangerTorps[0].torp;
+        const dist = dangerTorps[0].dist;
+        this.lockedAutoAimTargetEntity = best;
+        const lead = this.calculateBallisticLead(planetX, planetY, best.x, best.y, best.vx || 0, best.vy || 0, bulletSpeed, best);
         return {
-          x: nearestTorp.x,
-          y: nearestTorp.y,
-          angle: Math.atan2(nearestTorp.y - planetY, nearestTorp.x - planetX),
-          dist: minTorpDist
+          x: best.x,
+          y: best.y,
+          leadX: lead.leadX,
+          leadY: lead.leadY,
+          angle: lead.angle,
+          dist: dist,
+          entity: best
         };
       }
     }
@@ -4957,11 +5089,16 @@ export class GameEngine {
             wsY = boss.y + Math.sin(heading + wsAngle) * wsDist;
           }
           const d = Math.hypot(wsX - planetX, wsY - planetY);
+          this.lockedAutoAimTargetEntity = boss;
+          const lead = this.calculateBallisticLead(planetX, planetY, wsX, wsY, boss.vx || 0, boss.vy || 0, bulletSpeed, { isWeakSpot: true, boss });
           return {
             x: wsX,
             y: wsY,
-            angle: Math.atan2(wsY - planetY, wsX - planetX),
-            dist: d
+            leadX: lead.leadX,
+            leadY: lead.leadY,
+            angle: lead.angle,
+            dist: d,
+            entity: boss
           };
         }
       }
@@ -4986,17 +5123,33 @@ export class GameEngine {
               sub.y = sy;
             }
             const sd = Math.hypot(sx - planetX, sy - planetY);
-            if (sd < minSubDist) {
-              minSubDist = sd;
+            // Low-HP finishing bonus & lock hysteresis
+            const lockBonus = (this.lockedAutoAimTargetEntity === sub) ? -25 : 0;
+            const hpBonus = sub.maxHp ? (1.0 - (sub.hp / sub.maxHp)) * 20 : 0;
+            const effectiveDist = sd + lockBonus - hpBonus;
+            if (effectiveDist < minSubDist) {
+              minSubDist = effectiveDist;
               bestSub = {
+                sub,
                 x: sx,
                 y: sy,
-                angle: Math.atan2(sy - planetY, sx - planetX),
                 dist: sd
               };
             }
           }
-          if (bestSub) return bestSub;
+          if (bestSub) {
+            this.lockedAutoAimTargetEntity = bestSub.sub;
+            const lead = this.calculateBallisticLead(planetX, planetY, bestSub.x, bestSub.y, boss.vx || 0, boss.vy || 0, bulletSpeed, bestSub.sub);
+            return {
+              x: bestSub.x,
+              y: bestSub.y,
+              leadX: lead.leadX,
+              leadY: lead.leadY,
+              angle: lead.angle,
+              dist: bestSub.dist,
+              entity: bestSub.sub
+            };
+          }
         }
       }
 
@@ -5011,11 +5164,16 @@ export class GameEngine {
           closestBoss = b;
         }
       }
+      this.lockedAutoAimTargetEntity = closestBoss;
+      const lead = this.calculateBallisticLead(planetX, planetY, closestBoss.x, closestBoss.y, closestBoss.vx || 0, closestBoss.vy || 0, bulletSpeed, closestBoss);
       return {
         x: closestBoss.x,
         y: closestBoss.y,
-        angle: Math.atan2(closestBoss.y - planetY, closestBoss.x - planetX),
-        dist: minBossDist
+        leadX: lead.leadX,
+        leadY: lead.leadY,
+        angle: lead.angle,
+        dist: minBossDist,
+        entity: closestBoss
       };
     }
 
@@ -5043,63 +5201,98 @@ export class GameEngine {
           if (!a.isLatched && b.isLatched) return 1;
           if (a.isHeavy && !b.isHeavy) return -1;
           if (!a.isHeavy && b.isHeavy) return 1;
-          return a.dist - b.dist;
+
+          // Target hysteresis stickiness bonus (+60px virtual proximity to locked target)
+          const aLock = (this.lockedAutoAimTargetEntity === a.alien) ? -60 : 0;
+          const bLock = (this.lockedAutoAimTargetEntity === b.alien) ? -60 : 0;
+
+          // Low-HP finishing bonus (prefer eliminating damaged heavy targets)
+          const aHpBonus = (a.alien.maxHp && a.alien.hp) ? (1.0 - (a.alien.hp / a.alien.maxHp)) * 40 : 0;
+          const bHpBonus = (b.alien.maxHp && b.alien.hp) ? (1.0 - (b.alien.hp / b.alien.maxHp)) * 40 : 0;
+
+          return (a.dist + aLock - aHpBonus) - (b.dist + bLock - bHpBonus);
         });
         const best = heavyThreats[0].alien;
         const d = heavyThreats[0].dist;
+        this.lockedAutoAimTargetEntity = best;
+        const lead = this.calculateBallisticLead(planetX, planetY, best.x, best.y, best.vx || 0, best.vy || 0, bulletSpeed, best);
         return {
           x: best.x,
           y: best.y,
-          angle: Math.atan2(best.y - planetY, best.x - planetX),
-          dist: d
+          leadX: lead.leadX,
+          leadY: lead.leadY,
+          angle: lead.angle,
+          dist: d,
+          entity: best
         };
       }
     }
 
-    // Priority 4: Nearest alien ship to planet
+    // Priority 4: Nearest alien ship to planet with Target Stickiness Hysteresis & Low-HP Finishing
     if (Array.isArray(this.aliens)) {
-      let nearestAlien = null;
-      let minAlienDist = Infinity;
+      const candidates = [];
       for (const a of this.aliens) {
         if (!a || !a.alive) continue;
         const d = Math.hypot(a.x - planetX, a.y - planetY);
-        if (d < minAlienDist) {
-          minAlienDist = d;
-          nearestAlien = a;
-        }
+        candidates.push({ alien: a, dist: d });
       }
-      if (nearestAlien) {
+
+      if (candidates.length > 0) {
+        candidates.sort((a, b) => {
+          // Strong hysteresis stickiness (+90px virtual proximity to stay locked onto target until destroyed)
+          const aLock = (this.lockedAutoAimTargetEntity === a.alien) ? -90 : 0;
+          const bLock = (this.lockedAutoAimTargetEntity === b.alien) ? -90 : 0;
+
+          // Low-HP finishing bonus (focus fire on enemies near death)
+          const aHpBonus = (a.alien.maxHp && a.alien.hp) ? (1.0 - (a.alien.hp / a.alien.maxHp)) * 35 : 0;
+          const bHpBonus = (b.alien.maxHp && b.alien.hp) ? (1.0 - (b.alien.hp / b.alien.maxHp)) * 35 : 0;
+
+          return (a.dist + aLock - aHpBonus) - (b.dist + bLock - bHpBonus);
+        });
+
+        const best = candidates[0].alien;
+        const d = candidates[0].dist;
+        this.lockedAutoAimTargetEntity = best;
+        const lead = this.calculateBallisticLead(planetX, planetY, best.x, best.y, best.vx || 0, best.vy || 0, bulletSpeed, best);
         return {
-          x: nearestAlien.x,
-          y: nearestAlien.y,
-          angle: Math.atan2(nearestAlien.y - planetY, nearestAlien.x - planetX),
-          dist: minAlienDist
+          x: best.x,
+          y: best.y,
+          leadX: lead.leadX,
+          leadY: lead.leadY,
+          angle: lead.angle,
+          dist: d,
+          entity: best
         };
       }
     }
 
     // Fallback: If any alive torpedoes exist (even > 220px), target the closest one
     if (this.projectiles && Array.isArray(this.projectiles.torpedoes)) {
-      let nearestTorp = null;
-      let minTorpDist = Infinity;
+      const farTorps = [];
       for (const torp of this.projectiles.torpedoes) {
         if (!torp || !torp.alive) continue;
         const d = Math.hypot(torp.x - planetX, torp.y - planetY);
-        if (d < minTorpDist) {
-          minTorpDist = d;
-          nearestTorp = torp;
-        }
+        farTorps.push({ torp, dist: d });
       }
-      if (nearestTorp) {
+      if (farTorps.length > 0) {
+        farTorps.sort((a, b) => a.dist - b.dist);
+        const best = farTorps[0].torp;
+        const d = farTorps[0].dist;
+        this.lockedAutoAimTargetEntity = best;
+        const lead = this.calculateBallisticLead(planetX, planetY, best.x, best.y, best.vx || 0, best.vy || 0, bulletSpeed, best);
         return {
-          x: nearestTorp.x,
-          y: nearestTorp.y,
-          angle: Math.atan2(nearestTorp.y - planetY, nearestTorp.x - planetX),
-          dist: minTorpDist
+          x: best.x,
+          y: best.y,
+          leadX: lead.leadX,
+          leadY: lead.leadY,
+          angle: lead.angle,
+          dist: d,
+          entity: best
         };
       }
     }
 
+    this.lockedAutoAimTargetEntity = null;
     return null;
   }
 

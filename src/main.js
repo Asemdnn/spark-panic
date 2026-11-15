@@ -45,10 +45,14 @@ window.addEventListener('DOMContentLoaded', () => {
   let selectedSector = 1;
   let selectedPlanetId = 1;
 
-  // Track pointer
+  // Track pointer (manual aiming only; when autoAim is enabled, target lock manages coordinates)
   window.addEventListener('pointermove', (e) => {
-    engine.pointerX = e.clientX;
-    engine.pointerY = e.clientY;
+    engine.rawPointerX = e.clientX;
+    engine.rawPointerY = e.clientY;
+    if (!engine.turret || !engine.turret.autoAim) {
+      engine.pointerX = e.clientX;
+      engine.pointerY = e.clientY;
+    }
   });
 
   // Prevent browser context menu on game canvas for zero-latency Right-Click Phase-Parry

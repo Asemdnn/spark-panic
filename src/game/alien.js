@@ -25,6 +25,8 @@ export class Alien {
     this.speedMultiplier = 1.0;
     this.pulsePhase = Math.random() * Math.PI * 2;
     this.heading = 0;
+    this.vx = 0;
+    this.vy = 0;
 
     // Boss Multi-Phase Overdrive Mechanics
     this.isBoss = (classKey === 'BOSS');
@@ -234,6 +236,8 @@ export class Alien {
 
   update(dt, planetX, planetY, shieldRadius, spawnDropshipScoutCallback, fireTorpedoCallback, planet = null) {
     if (!this.alive) return;
+    const prevX = this.x;
+    const prevY = this.y;
 
     this.pulsePhase += dt * 4;
 
@@ -447,6 +451,11 @@ export class Alien {
       this.x = planetX + Math.cos(this.orbitAngle) * (this.orbitDistance || 260);
       this.y = planetY + Math.sin(this.orbitAngle) * (this.orbitDistance || 260);
       this.heading = this.orbitAngle + Math.PI * 0.5;
+    }
+
+    if (dt > 0) {
+      this.vx = (this.x - prevX) / dt;
+      this.vy = (this.y - prevY) / dt;
     }
   }
 
