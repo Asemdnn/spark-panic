@@ -16,6 +16,14 @@ import { WingmanFighter } from './wingman.js';
 import { StructureManager } from './structures.js';
 import { ICON_SVG } from '../ui/icons.js';
 
+// Pre-allocated static plate seeds for zero-allocation planet rendering in hot paths
+const PLANET_PLATE_SEED = [
+  [-0.15, -0.2], [0.2, -0.35], [0.45, -0.1], [0.1, 0.15],
+  [-0.35, 0.1], [-0.5, -0.25], [-0.25, -0.55], [0.15, -0.65],
+  [0.6, -0.45], [0.7, 0.2], [0.35, 0.55], [-0.1, 0.65],
+  [-0.55, 0.45], [-0.75, 0.05]
+];
+
 export class GameEngine {
   constructor(canvas, saveInstance = null) {
     this.canvas = canvas;
@@ -88,6 +96,7 @@ export class GameEngine {
     };
     this.initSpacetimeGrid();
     this.planet.drawPlanetEntity = (ctx) => this.drawPlanetEntity(ctx);
+    this.preloadPlanetTextures();
 
     // v3.2 Volumetric Cosmic Nebulae & Detonation Ripples
     this.nebulaClouds = [];
@@ -261,6 +270,23 @@ export class GameEngine {
         saveSystem.setArtStyle(style);
       }
     }
+  }
+
+  preloadPlanetTextures() {
+    if (typeof PLANETS !== 'undefined' && Array.isArray(PLANETS)) {
+      Planet.preloadAll(PLANETS);
+    }
+    if (this.planet && this.planet.data) {
+      this.planet.loadTexture(this.planet.data);
+    }
+  }
+
+  getPlanetTexture(planetId = this.currentPlanetId) {
+    if (this.planet && this.planet.textureLoaded && this.planet.texture) {
+      return this.planet.texture;
+    }
+    const entry = Planet.textureCache.get(String(planetId));
+    return (entry && entry.loaded) ? entry.img : null;
   }
 
   triggerImpactFlash(originX = null, originY = null) {
@@ -1137,50 +1163,112 @@ export class GameEngine {
       ctx.fill();
     }
 
-    // 2. Faceted Planet Body
+    // 2. Faceted / Textured Planet Body
     ctx.save();
     ctx.beginPath();
     ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
     if (typeof ctx.clip === 'function') ctx.clip(); // clip to spherical disk
 
+    const hasTexture = !!(p.texture && p.textureLoaded && typeof ctx.drawImage === 'function');
+    const sunAngle = (timeSec * 0.35) % (Math.PI * 2);
+    const sunX = p.x + Math.cos(sunAngle) * r * 0.55;
+    const sunY = p.y + Math.sin(sunAngle) * r * 0.55;
+    const darkX = p.x - Math.cos(sunAngle) * r * 0.5;
+    const darkY = p.y - Math.sin(sunAngle) * r * 0.5;
+
     if (artStyle === 'vector') {
       ctx.fillStyle = '#020408';
       ctx.fillRect(p.x - r, p.y - r, r * 2, r * 2);
+
+      // High-contrast neon latitude/longitude vector mesh
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.strokeStyle = atmo;
+      ctx.lineWidth = 1.4;
+      ctx.shadowColor = atmo;
+      ctx.shadowBlur = 6;
+
+      // 5 Latitude rings
+      for (let lat = 0; lat < 5; lat++) {
+        const normY = -0.7 + lat * 0.35;
+        const py = normY * r;
+        const radX = Math.sqrt(Math.max(0, r * r - py * py));
+        const radY = radX * 0.28;
+        ctx.beginPath();
+        if (typeof ctx.ellipse === 'function') {
+          ctx.ellipse(0, py, radX, radY, 0, 0, Math.PI * 2);
+        } else {
+          ctx.arc(0, py, radX, 0, Math.PI * 2);
+        }
+        ctx.stroke();
+      }
+
+      // 6 Longitude meridian rings rotating with planet
+      const longCount = 6;
+      const longRot = (p.rotation || 0) * 1.2;
+      for (let lng = 0; lng < longCount; lng++) {
+        const phi = longRot + (lng / longCount) * Math.PI;
+        const radX = Math.abs(Math.sin(phi)) * r;
+        ctx.beginPath();
+        if (typeof ctx.ellipse === 'function') {
+          ctx.ellipse(0, 0, radX, r, 0, 0, Math.PI * 2);
+        } else {
+          ctx.arc(0, 0, radX, 0, Math.PI * 2);
+        }
+        ctx.stroke();
+      }
+      ctx.shadowBlur = 0;
+      ctx.restore();
+
       const sector = this.getCurrentSector();
       this.drawPlanetaryWeather(ctx, sector, p, r, timeSec, artStyle);
+
     } else {
-      // Base dark mantle
-      ctx.fillStyle = '#060c1d';
-      ctx.fillRect(p.x - r, p.y - r, r * 2, r * 2);
+      // Non-vector (astral or comic)
 
-      // Inner bioluminescent core visible through crystal fissures
-      const corePulse = 1.0 + Math.sin(timeSec * 3) * 0.12;
-      const coreGrad = ctx.createRadialGradient(p.x, p.y, 4, p.x, p.y, r * 0.75 * corePulse);
-      coreGrad.addColorStop(0, '#ffffff');
-      coreGrad.addColorStop(0.3, atmo);
-      coreGrad.addColorStop(0.7, `${c2}bb`);
-      coreGrad.addColorStop(1, 'transparent');
-      ctx.fillStyle = coreGrad;
-      ctx.fillRect(p.x - r, p.y - r, r * 2, r * 2);
+      if (hasTexture) {
+        // Spherical texture with gentle orbital rotation
+        const texW = r * 6.283;
+        const texH = r * 2.1;
+        const rotOffset = ((p.rotation || 0) * r * 1.5) % texW;
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(0.18); // gentle axial tilt
+        ctx.drawImage(p.texture, -r - rotOffset, -r, texW, texH);
+        ctx.drawImage(p.texture, -r - rotOffset + texW, -r, texW, texH);
+        ctx.restore();
+      } else {
+        // Base dark mantle
+        ctx.fillStyle = '#060c1d';
+        ctx.fillRect(p.x - r, p.y - r, r * 2, r * 2);
 
-      // Crisp faceted low-poly / stained-glass geometric tectonic plates with glowing seams
+        // Inner bioluminescent core visible through crystal fissures
+        const corePulse = 1.0 + Math.sin(timeSec * 3) * 0.12;
+        if (typeof ctx.createRadialGradient === 'function') {
+          const coreGrad = ctx.createRadialGradient(p.x, p.y, 4, p.x, p.y, r * 0.75 * corePulse);
+          if (coreGrad && coreGrad.addColorStop) {
+            coreGrad.addColorStop(0, '#ffffff');
+            coreGrad.addColorStop(0.3, atmo);
+            coreGrad.addColorStop(0.7, `${c2}bb`);
+            coreGrad.addColorStop(1, 'transparent');
+            ctx.fillStyle = coreGrad;
+            ctx.fillRect(p.x - r, p.y - r, r * 2, r * 2);
+          }
+        }
+      }
+
+      // Faceted geometric stained-glass caustics and prismatic iridescence
+      // In astral mode: blended over planet (or primary procedural plates)
       ctx.save();
       ctx.translate(p.x, p.y);
       ctx.rotate(p.rotation || 0);
 
       const plateCount = 14;
-      const plateSeed = [
-        [-0.15, -0.2], [0.2, -0.35], [0.45, -0.1], [0.1, 0.15],
-        [-0.35, 0.1], [-0.5, -0.25], [-0.25, -0.55], [0.15, -0.65],
-        [0.6, -0.45], [0.7, 0.2], [0.35, 0.55], [-0.1, 0.65],
-        [-0.55, 0.45], [-0.75, 0.05]
-      ];
-
       for (let i = 0; i < plateCount; i++) {
         const a1 = (i / plateCount) * Math.PI * 2;
         const a2 = ((i + 1) / plateCount) * Math.PI * 2;
-        const pInner = plateSeed[i % plateSeed.length];
-        const pNextInner = plateSeed[(i + 1) % plateSeed.length];
+        const pInner = PLANET_PLATE_SEED[i % PLANET_PLATE_SEED.length];
+        const pNextInner = PLANET_PLATE_SEED[(i + 1) % PLANET_PLATE_SEED.length];
 
         const x1 = Math.cos(a1) * (r * 1.05);
         const y1 = Math.sin(a1) * (r * 1.05);
@@ -1198,78 +1286,188 @@ export class GameEngine {
         ctx.lineTo(x1 * 0.94, y1 * 0.94);
         ctx.closePath();
 
-        const plateAlpha = 0.58 + ((i % 4) * 0.08);
+        const baseAlpha = hasTexture ? 0.30 : 0.58;
+        const plateAlpha = (artStyle === 'comic') ? (hasTexture ? 0.18 : 0.45) : (baseAlpha + ((i % 4) * 0.08));
         ctx.fillStyle = (i % 2 === 0) ? c1 : c2;
         ctx.globalAlpha = plateAlpha;
         ctx.fill();
 
         ctx.strokeStyle = '#ffffff';
         ctx.lineWidth = 1.4;
-        ctx.globalAlpha = 0.85;
+        ctx.globalAlpha = hasTexture ? 0.55 : 0.85;
         ctx.stroke();
 
         ctx.strokeStyle = atmo;
         ctx.lineWidth = 2.4;
         ctx.shadowColor = atmo;
         ctx.shadowBlur = 8;
-        ctx.globalAlpha = 0.65;
+        ctx.globalAlpha = hasTexture ? 0.45 : 0.65;
         ctx.stroke();
         ctx.shadowBlur = 0;
       }
       ctx.restore();
       ctx.globalAlpha = 1.0;
 
+      // Dual-layer atmospheric cloud rotation
+      // Cloud Layer 1 (Drifting forward at rotation * 1.35 + timeSec * 0.04)
+      const cloudRot1 = ((p.rotation || 0) * 1.35 + timeSec * 0.04) % (Math.PI * 2);
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(cloudRot1);
+      ctx.fillStyle = (artStyle === 'comic') ? 'rgba(255, 255, 255, 0.38)' : 'rgba(255, 255, 255, 0.22)';
+      for (let c = 0; c < 5; c++) {
+        const cAng = (c / 5) * Math.PI * 2;
+        const cDist = r * (0.22 + (c % 3) * 0.18);
+        ctx.beginPath();
+        if (typeof ctx.ellipse === 'function') {
+          ctx.ellipse(Math.cos(cAng) * cDist, Math.sin(cAng) * cDist, r * 0.42, r * 0.16, cAng + 0.35, 0, Math.PI * 2);
+        } else {
+          ctx.arc(Math.cos(cAng) * cDist, Math.sin(cAng) * cDist, r * 0.25, 0, Math.PI * 2);
+        }
+        ctx.fill();
+      }
+      ctx.restore();
+
+      // Cloud Layer 2 (Counter-rotating at -rotation * 0.95 + timeSec * 0.02 + 0.8)
+      const cloudRot2 = (-(p.rotation || 0) * 0.95 + timeSec * 0.02 + 0.8) % (Math.PI * 2);
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(cloudRot2);
+      ctx.fillStyle = (artStyle === 'comic') ? 'rgba(235, 248, 255, 0.28)' : 'rgba(200, 245, 255, 0.16)';
+      for (let c = 0; c < 4; c++) {
+        const cAng = (c / 4) * Math.PI * 2 + 0.5;
+        const cDist = r * (0.32 + (c % 2) * 0.22);
+        ctx.beginPath();
+        if (typeof ctx.ellipse === 'function') {
+          ctx.ellipse(Math.cos(cAng) * cDist, Math.sin(cAng) * cDist, r * 0.36, r * 0.14, cAng - 0.3, 0, Math.PI * 2);
+        } else {
+          ctx.arc(Math.cos(cAng) * cDist, Math.sin(cAng) * cDist, r * 0.2, 0, Math.PI * 2);
+        }
+        ctx.fill();
+      }
+      ctx.restore();
+
       // Sector-specific living weather overlays
       const sector = this.getCurrentSector();
       this.drawPlanetaryWeather(ctx, sector, p, r, timeSec, artStyle);
 
       // Inner Rayleigh scattering limb glow
-      if (artStyle !== 'vector') {
-        const sunAngle = (timeSec * 0.35) % (Math.PI * 2);
-        const sunX = p.x + Math.cos(sunAngle) * r * 0.7;
-        const sunY = p.y + Math.sin(sunAngle) * r * 0.7;
-        if (ctx.createRadialGradient) {
-          const rayGrad = ctx.createRadialGradient(sunX, sunY, r * 0.15, p.x, p.y, r);
-          if (rayGrad && rayGrad.addColorStop) {
-            rayGrad.addColorStop(0, 'rgba(255, 255, 255, 0.3)');
-            rayGrad.addColorStop(0.4, this.hexToRgba(atmo, 0.2));
-            rayGrad.addColorStop(0.85, 'transparent');
-            ctx.fillStyle = rayGrad;
+      if (typeof ctx.createRadialGradient === 'function') {
+        const rayGrad = ctx.createRadialGradient(sunX, sunY, r * 0.15, p.x, p.y, r);
+        if (rayGrad && rayGrad.addColorStop) {
+          rayGrad.addColorStop(0, 'rgba(255, 255, 255, 0.3)');
+          rayGrad.addColorStop(0.4, this.hexToRgba(atmo, 0.2));
+          rayGrad.addColorStop(0.85, 'transparent');
+          ctx.fillStyle = rayGrad;
+          ctx.fillRect(p.x - r, p.y - r, r * 2, r * 2);
+        }
+      }
+
+      // 3D Spherical Lambertian Diffuse Lighting with Dynamic Terminator Shadow & Limb Darkening
+      if (artStyle === 'comic') {
+        // Comic halftone stippling along terminator & bold crosshatching shadow
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(sunAngle + Math.PI); // Orient shadow so +X is into the dark hemisphere
+
+        // Halftone stippling dots along twilight terminator line
+        ctx.fillStyle = '#000000';
+        for (let dotY = -r * 0.85; dotY <= r * 0.85; dotY += 8) {
+          const dotR = 1.6 + Math.sin(dotY * 0.2) * 0.6;
+          ctx.beginPath();
+          ctx.arc(-r * 0.1 + Math.sin(dotY * 0.3) * 6, dotY, dotR, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        // Bold inked crosshatching on night side
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 1.6;
+        for (let hx = -r * 0.15; hx <= r; hx += 7) {
+          ctx.beginPath();
+          ctx.moveTo(hx, -r);
+          ctx.lineTo(hx + r, 0);
+          ctx.stroke();
+        }
+        for (let hx = r * 0.25; hx <= r; hx += 7) {
+          ctx.beginPath();
+          ctx.moveTo(hx, 0);
+          ctx.lineTo(hx - r, -r);
+          ctx.stroke();
+        }
+        ctx.restore();
+
+      } else {
+        // Dual-tone astronomical terminator shadow
+        if (typeof ctx.createRadialGradient === 'function') {
+          const shadowMid = ctx.createRadialGradient(
+            darkX, darkY, r * 0.15,
+            p.x, p.y, r * 1.15
+          );
+          if (shadowMid && shadowMid.addColorStop) {
+            shadowMid.addColorStop(0, 'rgba(1, 2, 8, 0.95)');
+            shadowMid.addColorStop(0.48, 'rgba(2, 4, 14, 0.82)');
+            shadowMid.addColorStop(0.72, 'rgba(6, 12, 28, 0.45)');
+            shadowMid.addColorStop(0.92, 'rgba(10, 18, 36, 0.12)');
+            shadowMid.addColorStop(1, 'transparent');
+            ctx.fillStyle = shadowMid;
             ctx.fillRect(p.x - r, p.y - r, r * 2, r * 2);
           }
         }
       }
 
-      // Dual-tone cel-shaded terminator shadow with neon atmospheric rim crescent on dark side
-      const shadowMid = ctx.createRadialGradient(
-        p.x - r * 0.45, p.y - r * 0.45, r * 0.25,
-        p.x, p.y, r * 1.05
-      );
-      shadowMid.addColorStop(0, 'rgba(0, 0, 0, 0)');
-      shadowMid.addColorStop(0.48, 'rgba(0, 0, 0, 0)');
-      shadowMid.addColorStop(0.52, 'rgba(6, 12, 28, 0.45)');
-      shadowMid.addColorStop(0.78, 'rgba(6, 12, 28, 0.45)');
-      shadowMid.addColorStop(0.82, 'rgba(2, 4, 12, 0.88)');
-      shadowMid.addColorStop(1, 'rgba(1, 2, 8, 0.95)');
-      ctx.fillStyle = shadowMid;
-      ctx.fillRect(p.x - r, p.y - r, r * 2, r * 2);
+      // 3D Spherical Limb Darkening
+      if (typeof ctx.createRadialGradient === 'function') {
+        const limbGrad = ctx.createRadialGradient(p.x, p.y, r * 0.65, p.x, p.y, r * 1.02);
+        if (limbGrad && limbGrad.addColorStop) {
+          limbGrad.addColorStop(0, 'transparent');
+          limbGrad.addColorStop(0.75, 'rgba(0, 3, 10, 0.25)');
+          limbGrad.addColorStop(1, 'rgba(0, 2, 8, 0.80)');
+          ctx.fillStyle = limbGrad;
+          ctx.fillRect(p.x - r, p.y - r, r * 2, r * 2);
+        }
+      }
     }
 
     ctx.restore(); // restore clip
 
-    // Neon atmospheric rim crescent on the dark side
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, r, Math.PI * 0.35, Math.PI * 1.15);
-    ctx.strokeStyle = atmo;
-    ctx.lineWidth = 3.2;
-    ctx.shadowColor = atmo;
-    ctx.shadowBlur = 14;
-    ctx.stroke();
-    ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 1.2;
-    ctx.stroke();
-    ctx.restore();
+    // In vector mode: high-contrast neon glowing perimeter rings
+    if (artStyle === 'vector') {
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.strokeStyle = atmo;
+      ctx.lineWidth = 1.5;
+      ctx.shadowColor = atmo;
+      ctx.shadowBlur = 10;
+
+      ctx.beginPath();
+      ctx.arc(0, 0, r + 4, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.setLineDash([6, 8]);
+      ctx.arc(0, 0, r + 10, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      ctx.shadowBlur = 0;
+      ctx.restore();
+    }
+
+    // Neon atmospheric rim crescent on the dark side (in non-vector mode)
+    if (artStyle !== 'vector') {
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, r, Math.PI * 0.35, Math.PI * 1.15);
+      ctx.strokeStyle = atmo;
+      ctx.lineWidth = 3.2;
+      ctx.shadowColor = atmo;
+      ctx.shadowBlur = 14;
+      ctx.stroke();
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+      ctx.restore();
+    }
 
     // Dynamic Rayleigh scattering rim glow that rotates with time/sun angle
     this.drawRayleighScattering(ctx, p, r, timeSec, atmo);
@@ -1278,7 +1476,7 @@ export class GameEngine {
     ctx.beginPath();
     ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
     ctx.strokeStyle = (artStyle === 'comic') ? '#000000' : atmo;
-    ctx.lineWidth = (artStyle === 'comic') ? 3.5 : 2.5;
+    ctx.lineWidth = (artStyle === 'comic') ? 3.8 : 2.5;
     ctx.stroke();
 
     // 3. Crisp architectural silhouettes for 4 surface cyber-cities

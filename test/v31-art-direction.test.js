@@ -38,6 +38,7 @@ describe('Spark Panic v3.1: Prismatic Art Direction Suite', () => {
       clip: vi.fn(),
       setLineDash: vi.fn(),
       setTransform: vi.fn(),
+      drawImage: vi.fn(),
       createRadialGradient: vi.fn(() => ({ addColorStop: vi.fn() })),
       createLinearGradient: vi.fn(() => ({ addColorStop: vi.fn() })),
       measureText: vi.fn(() => ({ width: 60 }))
@@ -219,6 +220,89 @@ describe('Spark Panic v3.1: Prismatic Art Direction Suite', () => {
       expect(mockCtx.clip).toHaveBeenCalled();
       expect(mockCtx.fill).toHaveBeenCalled();
       expect(mockCtx.stroke).toHaveBeenCalled();
+      expect(mockCtx.createRadialGradient).toHaveBeenCalled();
+    });
+
+    it('should preload and retrieve planet textures via engine methods', () => {
+      expect(typeof engine.preloadPlanetTextures).toBe('function');
+      expect(typeof engine.getPlanetTexture).toBe('function');
+
+      expect(() => engine.preloadPlanetTextures()).not.toThrow();
+      const tex = engine.getPlanetTexture('genesis');
+      // Returns cached image or null in test environment without throwing
+      expect(tex === null || typeof tex === 'object').toBe(true);
+    });
+
+    it('should render spherical texture with wrap-around drawImage when texture is loaded', () => {
+      const dummyTex = {};
+      engine.planet.texture = dummyTex;
+      engine.planet.textureLoaded = true;
+      mockCtx.drawImage.mockClear();
+
+      engine.drawPlanetEntity(mockCtx);
+
+      expect(mockCtx.drawImage).toHaveBeenCalledTimes(2);
+      expect(mockCtx.drawImage).toHaveBeenCalledWith(
+        dummyTex,
+        expect.any(Number),
+        expect.any(Number),
+        expect.any(Number),
+        expect.any(Number)
+      );
+    });
+
+    it('should render procedural crystal mantle and Rayleigh scattering when texture is unloaded', () => {
+      engine.planet.texture = null;
+      engine.planet.textureLoaded = false;
+      mockCtx.drawImage.mockClear();
+      mockCtx.createRadialGradient.mockClear();
+
+      engine.drawPlanetEntity(mockCtx);
+
+      expect(mockCtx.drawImage).not.toHaveBeenCalled();
+      expect(mockCtx.createRadialGradient).toHaveBeenCalled();
+      expect(mockCtx.fill).toHaveBeenCalled();
+      expect(mockCtx.stroke).toHaveBeenCalled();
+    });
+
+    it('should render vector style with high-contrast neon latitude/longitude mesh and perimeter rings', () => {
+      engine.artStyle = 'vector';
+      mockCtx.stroke.mockClear();
+      mockCtx.setLineDash.mockClear();
+
+      engine.drawPlanetEntity(mockCtx);
+
+      expect(mockCtx.stroke).toHaveBeenCalled();
+      expect(mockCtx.setLineDash).toHaveBeenCalledWith([6, 8]);
+    });
+
+    it('should render comic style with bold 3.8px perimeter line, halftone stippling, and crosshatching', () => {
+      engine.artStyle = 'comic';
+      const lineWidths = [];
+      Object.defineProperty(mockCtx, 'lineWidth', {
+        set: (v) => lineWidths.push(v),
+        get: () => lineWidths[lineWidths.length - 1] || 1,
+        configurable: true
+      });
+      mockCtx.stroke.mockClear();
+      mockCtx.fill.mockClear();
+
+      engine.drawPlanetEntity(mockCtx);
+
+      expect(lineWidths).toContain(3.8);
+      expect(mockCtx.fill).toHaveBeenCalled();
+      expect(mockCtx.stroke).toHaveBeenCalled();
+    });
+
+    it('should render astral style with stained-glass caustics and dual-layer atmospheric clouds', () => {
+      engine.artStyle = 'astral';
+      engine.planet.textureLoaded = false;
+      mockCtx.fill.mockClear();
+      mockCtx.createRadialGradient.mockClear();
+
+      engine.drawPlanetEntity(mockCtx);
+
+      expect(mockCtx.fill).toHaveBeenCalled();
       expect(mockCtx.createRadialGradient).toHaveBeenCalled();
     });
 

@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { Planet } from '../src/game/planet.js';
 import { PLANETS } from '../src/config.js';
 
@@ -89,5 +89,131 @@ describe('Central Living Planet & Aegis Shield Engine (v2.0)', () => {
     expect(planet.y).toBe(424);
     expect(planet.planetRadius).toBeGreaterThan(68);
     expect(planet.shieldRadius).toBe(planet.planetRadius + 22);
+  });
+
+  describe('Planetary Spherical Shader & Texture Caching Engine', () => {
+    let mockCtx;
+
+    beforeEach(() => {
+      mockCtx = {
+        save: vi.fn(),
+        restore: vi.fn(),
+        translate: vi.fn(),
+        rotate: vi.fn(),
+        scale: vi.fn(),
+        beginPath: vi.fn(),
+        arc: vi.fn(),
+        ellipse: vi.fn(),
+        rect: vi.fn(),
+        fill: vi.fn(),
+        stroke: vi.fn(),
+        fillRect: vi.fn(),
+        strokeRect: vi.fn(),
+        fillText: vi.fn(),
+        moveTo: vi.fn(),
+        lineTo: vi.fn(),
+        closePath: vi.fn(),
+        clip: vi.fn(),
+        setLineDash: vi.fn(),
+        drawImage: vi.fn(),
+        createRadialGradient: vi.fn(() => ({ addColorStop: vi.fn() })),
+        createLinearGradient: vi.fn(() => ({ addColorStop: vi.fn() }))
+      };
+    });
+
+    it('should expose static textureCache and preloadAll without throwing', () => {
+      expect(Planet.textureCache).toBeInstanceOf(Map);
+      Planet.clearTextureCache();
+      expect(Planet.textureCache.size).toBe(0);
+
+      expect(() => Planet.preloadAll(PLANETS)).not.toThrow();
+      expect(Planet.textureCache.size).toBeGreaterThan(0);
+    });
+
+    it('should handle loadTexture with string id, slug, or config object', () => {
+      const p = new Planet(mockCanvas);
+      const img1 = p.loadTexture('genesis');
+      expect(img1).toBeDefined();
+
+      const img2 = p.loadTexture({ id: 'boreas', name: 'Boreas Prime' });
+      expect(img2).toBeDefined();
+
+      // Returns null gracefully for null/undefined
+      expect(p.loadTexture(null)).toBeNull();
+      expect(p.loadTexture(undefined)).toBeNull();
+    });
+
+    it('should reuse cached texture entry on duplicate load calls', () => {
+      Planet.clearTextureCache();
+      const p1 = new Planet(mockCanvas);
+      const img1 = p1.loadTexture('chronos');
+      const p2 = new Planet(mockCanvas);
+      const img2 = p2.loadTexture('chronos');
+
+      expect(img1).toBe(img2);
+      expect(Planet.textureCache.get('chronos').img).toBe(img1);
+    });
+
+    it('should render procedural continent swirls when texture is not loaded', () => {
+      planet.texture = null;
+      planet.textureLoaded = false;
+      mockCtx.drawImage.mockClear();
+      mockCtx.ellipse.mockClear();
+
+      planet.render(mockCtx, false, 1.0);
+
+      expect(mockCtx.drawImage).not.toHaveBeenCalled();
+      expect(mockCtx.ellipse).toHaveBeenCalled();
+      expect(mockCtx.createRadialGradient).toHaveBeenCalled();
+      expect(mockCtx.fillRect).toHaveBeenCalled();
+    });
+
+    it('should render texture with wrap-around drawImage when textureLoaded is true', () => {
+      const dummyImg = {};
+      planet.texture = dummyImg;
+      planet.textureLoaded = true;
+      mockCtx.drawImage.mockClear();
+
+      planet.render(mockCtx, false, 1.5);
+
+      expect(mockCtx.drawImage).toHaveBeenCalledTimes(2);
+      expect(mockCtx.drawImage).toHaveBeenCalledWith(
+        dummyImg,
+        expect.any(Number),
+        expect.any(Number),
+        expect.any(Number),
+        expect.any(Number)
+      );
+    });
+
+    it('should render 3D spherical night-side terminator and limb darkening without error', () => {
+      mockCtx.createRadialGradient.mockClear();
+      planet.render(mockCtx, false, 2.5);
+
+      // Terminator shadow + limb darkening + atmosphere glow create radial gradients
+      expect(mockCtx.createRadialGradient).toHaveBeenCalled();
+      expect(mockCtx.fillRect).toHaveBeenCalled();
+    });
+
+    it('should handle uninitialized Image or missing environment gracefully', () => {
+      Planet.clearTextureCache();
+      const origImage = globalThis.Image;
+      const origWinImage = typeof window !== 'undefined' ? window.Image : undefined;
+      try {
+        // @ts-ignore
+        globalThis.Image = undefined;
+        if (typeof window !== 'undefined') window.Image = undefined;
+
+        const p = new Planet(mockCanvas);
+        expect(() => p.loadTexture('aerilon_fresh')).not.toThrow();
+        expect(p.texture).toBeNull();
+        expect(p.textureLoaded).toBe(false);
+
+        expect(() => Planet.preloadAll(PLANETS)).not.toThrow();
+      } finally {
+        globalThis.Image = origImage;
+        if (typeof window !== 'undefined') window.Image = origWinImage;
+      }
+    });
   });
 });

@@ -11,7 +11,27 @@ const CRACK_NORMALIZED_PATHS = [
 const DYSON_NODE_PCTS = [0.15, 0.5, 0.85];
 const POLE_FACTORS = [-1, 1];
 
+// Shared texture cache mapping planet id or slug to cached image record
+const textureCache = new Map();
+
 export class Planet {
+  static get textureCache() {
+    return textureCache;
+  }
+
+  static clearTextureCache() {
+    textureCache.clear();
+  }
+
+  static preloadAll(planetsList) {
+    if (!Array.isArray(planetsList) || typeof Image === 'undefined') return;
+    for (const cfg of planetsList) {
+      if (!cfg) continue;
+      const dummy = new Planet();
+      dummy.loadTexture(cfg);
+    }
+  }
+
   constructor(canvasOrWidth, maybeHeight, maybeConfig) {
     if (typeof canvasOrWidth === 'number') {
       this.canvas = { width: canvasOrWidth, height: maybeHeight || 600 };
@@ -42,6 +62,9 @@ export class Planet {
     this.pulsePhase = 0;
 
     this.data = null;
+    this.texture = null;
+    this.textureLoaded = false;
+    this.textureError = false;
     this.shieldRipples = [];
     this.craters = [];
     this.continents = [];
@@ -93,8 +116,85 @@ export class Planet {
     this.shieldRadius = this.planetRadius + 22;
   }
 
+  loadTexture(planetConfig) {
+    if (!planetConfig) return null;
+    const id = typeof planetConfig === 'object' ? planetConfig.id : planetConfig;
+    const name = typeof planetConfig === 'object' ? planetConfig.name : null;
+    const slug = name ? name.toLowerCase() : (typeof id === 'string' ? id.toLowerCase() : null);
+    const key = String(id || slug);
+
+    if (textureCache.has(key)) {
+      const cached = textureCache.get(key);
+      this.texture = cached.img;
+      this.textureLoaded = cached.loaded;
+      this.textureError = cached.error;
+      return cached.img;
+    }
+
+    if (slug && textureCache.has(slug)) {
+      const cached = textureCache.get(slug);
+      this.texture = cached.img;
+      this.textureLoaded = cached.loaded;
+      this.textureError = cached.error;
+      return cached.img;
+    }
+
+    if (typeof Image === 'undefined') {
+      this.texture = null;
+      this.textureLoaded = false;
+      return null;
+    }
+
+    const img = new Image();
+    const entry = {
+      img,
+      loaded: false,
+      error: false
+    };
+    textureCache.set(key, entry);
+    if (slug && slug !== key) {
+      textureCache.set(slug, entry);
+    }
+
+    img.onload = () => {
+      entry.loaded = true;
+      entry.error = false;
+      if (!this.data || this.data.id === id || (this.data.name && this.data.name.toLowerCase() === slug)) {
+        this.texture = img;
+        this.textureLoaded = true;
+      }
+    };
+
+    img.onerror = () => {
+      const src = img.src || '';
+      if (slug && src.indexOf(slug) === -1) {
+        img.src = `./assets/planets/${slug}.jpg`;
+      } else if (!src.startsWith('/') && !src.startsWith('http')) {
+        img.src = `/assets/planets/${slug || id}.jpg`;
+      } else {
+        entry.error = true;
+        entry.loaded = false;
+      }
+    };
+
+    // Load from ./assets/planets/<id>.jpg or slug if available
+    img.src = slug ? `./assets/planets/${slug}.jpg` : `./assets/planets/${id}.jpg`;
+
+    if (img.complete && img.naturalWidth > 0) {
+      entry.loaded = true;
+      this.texture = img;
+      this.textureLoaded = true;
+    } else {
+      this.texture = img;
+      this.textureLoaded = false;
+    }
+
+    return img;
+  }
+
   setPlanet(planetConfig, shieldGridLvl = 0) {
     this.data = planetConfig;
+    this.loadTexture(planetConfig);
     const bonusPct = shieldGridLvl * 0.22;
     this.maxShield = Math.round(100 * (1 + bonusPct));
     this.shield = this.maxShield;
@@ -431,23 +531,36 @@ export class Planet {
     ctx.arc(this.x, this.y, r, 0, Math.PI * 2);
     ctx.clip();
 
-    // Base color
-    ctx.fillStyle = c1;
-    ctx.fillRect(this.x - r, this.y - r, r * 2, r * 2);
+    if (this.texture && this.textureLoaded && typeof ctx.drawImage === 'function') {
+      const texW = r * 6.283;
+      const texH = r * 2.1;
+      const rotOffset = ((this.rotation || 0) * r * 1.5) % texW;
+      ctx.save();
+      ctx.translate(this.x, this.y);
+      ctx.rotate(0.18);
+      ctx.drawImage(this.texture, -r - rotOffset, -r, texW, texH);
+      ctx.drawImage(this.texture, -r - rotOffset + texW, -r, texW, texH);
+      ctx.restore();
+    } else {
+      // Base color
+      ctx.fillStyle = c1;
+      ctx.fillRect(this.x - r, this.y - r, r * 2, r * 2);
 
-    // Rotating Continents & Biome Swirls
-    ctx.save();
-    ctx.translate(this.x, this.y);
-    ctx.rotate(this.rotation);
-    ctx.fillStyle = c2;
-    for (const cont of this.continents) {
-      const cx = Math.cos(cont.angle) * (r * cont.dist);
-      const cy = Math.sin(cont.angle) * (r * cont.dist);
-      const cr = r * cont.radius;
+      // Rotating Continents & Biome Swirls
+      ctx.save();
+      ctx.translate(this.x, this.y);
+      ctx.rotate(this.rotation);
+      ctx.fillStyle = c2;
+      for (const cont of this.continents) {
+        const cx = Math.cos(cont.angle) * (r * cont.dist);
+        const cy = Math.sin(cont.angle) * (r * cont.dist);
+        const cr = r * cont.radius;
 
-      ctx.beginPath();
-      ctx.ellipse(cx, cy, cr * 1.3, cr * 0.9, cont.tilt, 0, Math.PI * 2);
-      ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, cr * 1.3, cr * 0.9, cont.tilt, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
     }
 
     // Impact Craters on surface
@@ -514,16 +627,34 @@ export class Planet {
       ctx.restore();
     }
 
-    // 3D Spherical Night-Side Terminator Shadow
-    const shadow = ctx.createRadialGradient(
-      this.x - r * 0.45, this.y - r * 0.45, r * 0.2,
-      this.x, this.y, r * 1.05
-    );
-    shadow.addColorStop(0, 'rgba(0,0,0,0)');
-    shadow.addColorStop(0.55, 'rgba(3,7,18,0.4)');
-    shadow.addColorStop(1, 'rgba(1,3,10,0.92)');
-    ctx.fillStyle = shadow;
-    ctx.fillRect(this.x - r, this.y - r, r * 2, r * 2);
+    // 3D Spherical Night-Side Terminator Shadow & Limb Darkening
+    const sunAngle = (timeSec * 0.35) % (Math.PI * 2);
+    const darkX = this.x - Math.cos(sunAngle) * r * 0.5;
+    const darkY = this.y - Math.sin(sunAngle) * r * 0.5;
+    if (typeof ctx.createRadialGradient === 'function') {
+      const shadow = ctx.createRadialGradient(
+        darkX, darkY, r * 0.2,
+        this.x, this.y, r * 1.15
+      );
+      if (shadow && shadow.addColorStop) {
+        shadow.addColorStop(0, 'rgba(1, 3, 10, 0.94)');
+        shadow.addColorStop(0.55, 'rgba(3, 7, 18, 0.55)');
+        shadow.addColorStop(0.85, 'rgba(5, 12, 28, 0.15)');
+        shadow.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        ctx.fillStyle = shadow;
+        ctx.fillRect(this.x - r, this.y - r, r * 2, r * 2);
+      }
+
+      // Limb darkening
+      const limb = ctx.createRadialGradient(this.x, this.y, r * 0.65, this.x, this.y, r);
+      if (limb && limb.addColorStop) {
+        limb.addColorStop(0, 'rgba(0, 0, 0, 0)');
+        limb.addColorStop(0.8, 'rgba(0, 3, 8, 0.25)');
+        limb.addColorStop(1, 'rgba(0, 2, 6, 0.75)');
+        ctx.fillStyle = limb;
+        ctx.fillRect(this.x - r, this.y - r, r * 2, r * 2);
+      }
+    }
 
     ctx.restore();
 
