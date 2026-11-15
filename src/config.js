@@ -1112,7 +1112,8 @@ export const DEFAULT_SETTINGS = {
   artStyle: 'astral', // 'astral' | 'vector' | 'comic'
   volumetricNebula: true, // boolean (v3.2)
   crtPostProcessing: true, // boolean (v3.2)
-  hullDebrisShards: true // boolean (v3.2)
+  hullDebrisShards: true, // boolean (v3.2)
+  autoAim: true // boolean (Auto-Targeting Lock)
 };
 
 export const TACTICAL_DRAFT_PERKS = [

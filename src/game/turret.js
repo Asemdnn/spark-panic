@@ -8,6 +8,7 @@ export class GuardianTurret {
     this.angle = -Math.PI / 2;
     this.targetAngle = -Math.PI / 2;
     this.autoFire = true;
+    this.autoAim = true;
     this.isFiring = false;
     this.fireTimer = 0;
     this.baseFireInterval = 0.22; // sec between shots
@@ -45,9 +46,37 @@ export class GuardianTurret {
     return isOverdrive ? baseDmg * 1.5 : baseDmg;
   }
 
-  update(dt, pointerX, pointerY, planetX, planetY, isOverdrive = false, onFireCallback, isOverclock = false, isWeaverSlowed = false) {
-    // Smooth aim tracking towards pointer
-    this.targetAngle = Math.atan2(pointerY - planetY, pointerX - planetX);
+  update(
+    dt,
+    pointerX,
+    pointerY,
+    planetX,
+    planetY,
+    isOverdrive = false,
+    onFireCallback = null,
+    isOverclock = false,
+    isWeaverSlowed = false,
+    targetAngleOverride = null,
+    autoAimTarget = null
+  ) {
+    // Smooth aim tracking towards pointer or auto-aim override target
+    const override = (targetAngleOverride !== null && targetAngleOverride !== undefined)
+      ? targetAngleOverride
+      : autoAimTarget;
+
+    if (this.autoAim && override !== null && override !== undefined) {
+      if (typeof override === 'number') {
+        this.targetAngle = override;
+      } else if (typeof override === 'object') {
+        if (typeof override.angle === 'number') {
+          this.targetAngle = override.angle;
+        } else if (typeof override.x === 'number' && typeof override.y === 'number') {
+          this.targetAngle = Math.atan2(override.y - planetY, override.x - planetX);
+        }
+      }
+    } else {
+      this.targetAngle = Math.atan2(pointerY - planetY, pointerX - planetX);
+    }
     
     // Smooth angle interpolation
     let diff = this.targetAngle - this.angle;

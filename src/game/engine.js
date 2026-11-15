@@ -2969,7 +2969,8 @@ export class GameEngine {
         this.tutorialAimAccum += diff;
         this.lastTurretAngle = this.turret.angle;
         this.tutorialTimer += dt;
-        if (this.tutorialAimAccum >= 0.78 || this.tutorialTimer >= 4.0) {
+        const autoAimAdv = this.turret && this.turret.autoAim && (this.findBestAutoAimTarget() || this.tutorialTimer >= 2.0);
+        if (this.tutorialAimAccum >= 0.78 || this.tutorialTimer >= 4.0 || autoAimAdv) {
           this.advanceTutorial(2);
         }
       } else if (this.tutorialStep === 3) {
@@ -3000,6 +3001,25 @@ export class GameEngine {
     if (loadout.barrel === 'gatling') fireRateMult *= 1.35;
     else if (loadout.barrel === 'siege') fireRateMult *= 0.80;
     const turretDt = dt * fireRateMult;
+
+    // Auto-Aim Targeting Logic
+    let autoAimTarget = null;
+    if (this.turret && this.turret.autoAim) {
+      autoAimTarget = this.findBestAutoAimTarget();
+      if (autoAimTarget) {
+        this.turret.targetAngle = autoAimTarget.angle;
+        this.pointerX = autoAimTarget.x;
+        this.pointerY = autoAimTarget.y;
+        if (this.isChargingOvercharge) {
+          this.turret.angle = autoAimTarget.angle;
+        }
+      }
+      if (this.isTutorialActive && this.tutorialStep === 1) {
+        if (autoAimTarget || this.tutorialTimer >= 2.0) {
+          this.advanceTutorial(2);
+        }
+      }
+    }
 
     this.turret.update(
       turretDt,
@@ -3077,7 +3097,8 @@ export class GameEngine {
         this.projectiles.spawnTurretBolts(this.planet.x, this.planet.y, this.planet.planetRadius, finalBolts);
       },
       isOverclock,
-      isWeaverSlowed
+      isWeaverSlowed,
+      autoAimTarget ? autoAimTarget.angle : null
     );
 
     // 3. Update Autonomous Defense Satellites
@@ -4875,6 +4896,211 @@ export class GameEngine {
     audio.playCritBreach();
     // v2.9 Frenzy Overdrive: +15% on Critical Weak-Spot Breach
     this.addFrenzy(15.0);
+  }
+
+  findBestAutoAimTarget() {
+    if (!this.planet) return null;
+    const planetX = this.planet.x !== undefined ? this.planet.x : (this.width || 800) * 0.5;
+    const planetY = this.planet.y !== undefined ? this.planet.y : (this.height || 600) * 0.5;
+
+    // Priority 1: Incoming torpedoes within danger distance of the planet shield (d <= 220px)
+    if (this.projectiles && Array.isArray(this.projectiles.torpedoes)) {
+      let nearestTorp = null;
+      let minTorpDist = Infinity;
+      for (const torp of this.projectiles.torpedoes) {
+        if (!torp || !torp.alive) continue;
+        const d = Math.hypot(torp.x - planetX, torp.y - planetY);
+        if (d <= 220 && d < minTorpDist) {
+          minTorpDist = d;
+          nearestTorp = torp;
+        }
+      }
+      if (nearestTorp) {
+        return {
+          x: nearestTorp.x,
+          y: nearestTorp.y,
+          angle: Math.atan2(nearestTorp.y - planetY, nearestTorp.x - planetX),
+          dist: minTorpDist
+        };
+      }
+    }
+
+    // Priority 2: Active boss weak-spots (weakSpotExposedTimer > 0 or alive subsystems) and boss itself
+    const aliveBosses = [];
+    if (Array.isArray(this.aliens)) {
+      for (const a of this.aliens) {
+        if (a && a.alive && (a.isBoss || a.classKey === 'BOSS')) {
+          aliveBosses.push(a);
+        }
+      }
+    }
+    if (this.activeBoss && this.activeBoss.alive && !aliveBosses.includes(this.activeBoss)) {
+      aliveBosses.push(this.activeBoss);
+    }
+
+    if (aliveBosses.length > 0) {
+      // 2a. Check if any boss has an exposed reactor weak-spot
+      for (const boss of aliveBosses) {
+        if (boss.weakSpotExposedTimer > 0) {
+          let wsX, wsY;
+          if (boss.weakSpot && typeof boss.weakSpot.x === 'number') {
+            wsX = boss.weakSpot.x;
+            wsY = boss.weakSpot.y;
+          } else if (typeof boss.weakSpotX === 'number' && typeof boss.weakSpotY === 'number') {
+            wsX = boss.weakSpotX;
+            wsY = boss.weakSpotY;
+          } else {
+            const wsDist = (boss.radius || 30) * 0.85;
+            const heading = boss.heading || 0;
+            const wsAngle = boss.weakSpotAngle || 0;
+            wsX = boss.x + Math.cos(heading + wsAngle) * wsDist;
+            wsY = boss.y + Math.sin(heading + wsAngle) * wsDist;
+          }
+          const d = Math.hypot(wsX - planetX, wsY - planetY);
+          return {
+            x: wsX,
+            y: wsY,
+            angle: Math.atan2(wsY - planetY, wsX - planetX),
+            dist: d
+          };
+        }
+      }
+
+      // 2b. Check if any boss has alive subsystems
+      for (const boss of aliveBosses) {
+        if (boss.subsystems && Array.isArray(boss.subsystems)) {
+          let bestSub = null;
+          let minSubDist = Infinity;
+          for (const sub of boss.subsystems) {
+            if (!sub || !sub.alive || sub.destroyed) continue;
+            let sx, sy;
+            if (typeof sub.x === 'number' && typeof sub.y === 'number' && (sub.x !== boss.x || sub.y !== boss.y)) {
+              sx = sub.x;
+              sy = sub.y;
+            } else {
+              const sDist = sub.dist || ((boss.radius || 30) + 18);
+              const sOffset = sub.angleOffset || 0;
+              sx = boss.x + Math.cos((boss.heading || 0) + sOffset) * sDist;
+              sy = boss.y + Math.sin((boss.heading || 0) + sOffset) * sDist;
+              sub.x = sx;
+              sub.y = sy;
+            }
+            const sd = Math.hypot(sx - planetX, sy - planetY);
+            if (sd < minSubDist) {
+              minSubDist = sd;
+              bestSub = {
+                x: sx,
+                y: sy,
+                angle: Math.atan2(sy - planetY, sx - planetX),
+                dist: sd
+              };
+            }
+          }
+          if (bestSub) return bestSub;
+        }
+      }
+
+      // 2c. Target the boss itself (pick closest if multiple)
+      let closestBoss = aliveBosses[0];
+      let minBossDist = Math.hypot(closestBoss.x - planetX, closestBoss.y - planetY);
+      for (let i = 1; i < aliveBosses.length; i++) {
+        const b = aliveBosses[i];
+        const d = Math.hypot(b.x - planetX, b.y - planetY);
+        if (d < minBossDist) {
+          minBossDist = d;
+          closestBoss = b;
+        }
+      }
+      return {
+        x: closestBoss.x,
+        y: closestBoss.y,
+        angle: Math.atan2(closestBoss.y - planetY, closestBoss.x - planetX),
+        dist: minBossDist
+      };
+    }
+
+    // Priority 3: Dangerous heavy ships (Leech pods latching on cities, Jammers, Dreadnoughts)
+    if (Array.isArray(this.aliens)) {
+      const heavyThreats = [];
+      for (const a of this.aliens) {
+        if (!a || !a.alive) continue;
+        const isLatchedLeech = (a.isLeech || a.classKey === 'LEECH') && a.latched;
+        const isJammerOrDread = a.classKey === 'JAMMER' || a.classKey === 'DREADNOUGHT';
+        const isLeech = (a.isLeech || a.classKey === 'LEECH');
+        if (isLatchedLeech || isJammerOrDread || isLeech) {
+          const d = Math.hypot(a.x - planetX, a.y - planetY);
+          heavyThreats.push({
+            alien: a,
+            dist: d,
+            isLatched: isLatchedLeech,
+            isHeavy: isJammerOrDread
+          });
+        }
+      }
+      if (heavyThreats.length > 0) {
+        heavyThreats.sort((a, b) => {
+          if (a.isLatched && !b.isLatched) return -1;
+          if (!a.isLatched && b.isLatched) return 1;
+          if (a.isHeavy && !b.isHeavy) return -1;
+          if (!a.isHeavy && b.isHeavy) return 1;
+          return a.dist - b.dist;
+        });
+        const best = heavyThreats[0].alien;
+        const d = heavyThreats[0].dist;
+        return {
+          x: best.x,
+          y: best.y,
+          angle: Math.atan2(best.y - planetY, best.x - planetX),
+          dist: d
+        };
+      }
+    }
+
+    // Priority 4: Nearest alien ship to planet
+    if (Array.isArray(this.aliens)) {
+      let nearestAlien = null;
+      let minAlienDist = Infinity;
+      for (const a of this.aliens) {
+        if (!a || !a.alive) continue;
+        const d = Math.hypot(a.x - planetX, a.y - planetY);
+        if (d < minAlienDist) {
+          minAlienDist = d;
+          nearestAlien = a;
+        }
+      }
+      if (nearestAlien) {
+        return {
+          x: nearestAlien.x,
+          y: nearestAlien.y,
+          angle: Math.atan2(nearestAlien.y - planetY, nearestAlien.x - planetX),
+          dist: minAlienDist
+        };
+      }
+    }
+
+    // Fallback: If any alive torpedoes exist (even > 220px), target the closest one
+    if (this.projectiles && Array.isArray(this.projectiles.torpedoes)) {
+      let nearestTorp = null;
+      let minTorpDist = Infinity;
+      for (const torp of this.projectiles.torpedoes) {
+        if (!torp || !torp.alive) continue;
+        const d = Math.hypot(torp.x - planetX, torp.y - planetY);
+        if (d < minTorpDist) {
+          minTorpDist = d;
+          nearestTorp = torp;
+        }
+      }
+      if (nearestTorp) {
+        return {
+          x: nearestTorp.x,
+          y: nearestTorp.y,
+          angle: Math.atan2(nearestTorp.y - planetY, nearestTorp.x - planetX),
+          dist: minTorpDist
+        };
+      }
+    }
+
+    return null;
   }
 
   getEligibleSynergyEvolutions() {

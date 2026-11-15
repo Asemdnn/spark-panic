@@ -600,6 +600,9 @@
 
     <!-- Right: Auto-Fire Toggle & Tactical Shortcuts -->
     <div class="glass-panel p-2.5 rounded-2xl flex items-center gap-2 pointer-events-auto border-cosmic-mint/30">
+      <button id="btnAutoAim" class="cyber-chamfer px-3.5 py-2 rounded-xl font-orbitron text-xs font-bold transition flex items-center gap-1.5 cursor-pointer bg-cosmic-cyan/20 text-cosmic-cyan border border-cosmic-cyan/40 hover:bg-cosmic-cyan/30 shadow-[0_0_12px_rgba(0,229,255,0.25)]" title="Toggle Auto-Aim Targeting Lock">
+        🎯 AUTO-AIM: ON
+      </button>
       <button id="btnAutoFire" class="cyber-chamfer px-3.5 py-2 rounded-xl font-orbitron text-xs font-bold transition flex items-center gap-1.5 cursor-pointer bg-cosmic-mint/20 text-cosmic-mint border border-cosmic-mint/40 hover:bg-cosmic-mint/30" title="Toggle Auto-Fire (T)">
         <span class="w-2 h-2 rounded-full bg-cosmic-mint animate-ping"></span>
         <span id="autoFireLabel">AUTO: ON</span>
@@ -1404,6 +1407,18 @@
           <div class="flex items-center gap-1.5" id="settingDebrisBtns">
             <button data-val="true" class="btn-setting-debris px-3 py-1 rounded-lg text-[10px] font-orbitron font-bold border transition cursor-pointer">ON</button>
             <button data-val="false" class="btn-setting-debris px-3 py-1 rounded-lg text-[10px] font-orbitron font-bold border transition cursor-pointer">OFF</button>
+          </div>
+        </div>
+
+        <!-- Auto-Targeting Lock (Auto-Aim) -->
+        <div class="glass-card p-3 rounded-2xl border border-slate-700/60 flex items-center justify-between">
+          <div>
+            <div class="font-orbitron font-bold text-xs text-white">AUTO-TARGETING LOCK</div>
+            <div class="text-[10px] text-slate-400">Autonomous orbital turret threat tracking & torpedo interception</div>
+          </div>
+          <div class="flex items-center gap-1.5" id="settingAutoAimBtns">
+            <button data-val="true" class="btn-setting-autoaim px-3 py-1 rounded-lg text-[10px] font-orbitron font-bold border transition cursor-pointer">ON</button>
+            <button data-val="false" class="btn-setting-autoaim px-3 py-1 rounded-lg text-[10px] font-orbitron font-bold border transition cursor-pointer">OFF</button>
           </div>
         </div>
 

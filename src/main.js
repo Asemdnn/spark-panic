@@ -21,6 +21,26 @@ window.addEventListener('DOMContentLoaded', () => {
   const engine = new GameEngine(canvas);
   engine.artStyle = saveSystem.getArtStyle ? saveSystem.getArtStyle() : 'astral';
 
+  // Sync engine.turret.autoAim = saveSystem.getAutoAim() on startup
+  const initialAutoAim = saveSystem.getAutoAim ? saveSystem.getAutoAim() : true;
+  if (engine.turret) {
+    engine.turret.autoAim = initialAutoAim;
+  }
+  updateAutoAimButton(initialAutoAim);
+
+  // Sync engine.turret.autoAim on reset
+  const origResetCombat = engine.resetCombatState?.bind(engine);
+  if (origResetCombat) {
+    engine.resetCombatState = () => {
+      origResetCombat();
+      const aim = saveSystem.getAutoAim ? saveSystem.getAutoAim() : true;
+      if (engine.turret) {
+        engine.turret.autoAim = aim;
+      }
+      updateAutoAimButton(aim);
+    };
+  }
+
   // Selected Sector & Planet in Star Map
   let selectedSector = 1;
   let selectedPlanetId = 1;
@@ -202,6 +222,48 @@ window.addEventListener('DOMContentLoaded', () => {
   });
   document.getElementById('btnAutoFire')?.addEventListener('click', () => {
     engine.turret.autoFire = !engine.turret.autoFire;
+  });
+
+  // Auto-Aim Targeting Lock Helper & Controls
+  function updateAutoAimButton(enabled) {
+    const btn = document.getElementById('btnAutoAim');
+    if (!btn) return;
+    const isAim = enabled !== false;
+    btn.textContent = isAim ? '🎯 AUTO-AIM: ON' : '🎯 AUTO-AIM: OFF';
+    btn.className = `cyber-chamfer px-3.5 py-2 rounded-xl font-orbitron text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+      isAim
+        ? 'bg-cosmic-cyan/20 text-cosmic-cyan border border-cosmic-cyan/40 hover:bg-cosmic-cyan/30 shadow-[0_0_12px_rgba(0,229,255,0.25)]'
+        : 'bg-slate-900/60 text-slate-400 border border-slate-700/60 hover:border-slate-500 hover:text-slate-200'
+    }`;
+    btn.title = `Toggle Auto-Aim Targeting Lock (${isAim ? 'ON' : 'OFF'})`;
+  }
+
+  function setAutoAimState(enabled) {
+    if (saveSystem.setAutoAim) {
+      saveSystem.setAutoAim(enabled);
+    } else {
+      saveSystem.updateSettings({ autoAim: enabled });
+    }
+    if (engine.turret) {
+      engine.turret.autoAim = enabled;
+    }
+    updateAutoAimButton(enabled);
+    syncSettingsUI();
+  }
+
+  function toggleAutoAim() {
+    audio.init();
+    if (audio.playShardPickup) audio.playShardPickup();
+    const current = (engine.turret && typeof engine.turret.autoAim === 'boolean')
+      ? engine.turret.autoAim
+      : (saveSystem.getAutoAim ? saveSystem.getAutoAim() : true);
+    const next = !current;
+    setAutoAimState(next);
+    engine.showToast(`🎯 AUTO-AIM: ${next ? 'LOCKED ON' : 'MANUAL CONTROL'}`, next ? '#00e5ff' : '#94a3b8');
+  }
+
+  document.getElementById('btnAutoAim')?.addEventListener('click', () => {
+    toggleAutoAim();
   });
 
   // v2.8 Tactical Command Draft Modal Wiring
@@ -562,6 +624,11 @@ window.addEventListener('DOMContentLoaded', () => {
 
   function restartCurrent() {
     hideAllModals();
+    const aim = saveSystem.getAutoAim ? saveSystem.getAutoAim() : true;
+    if (engine.turret) {
+      engine.turret.autoAim = aim;
+    }
+    updateAutoAimButton(aim);
     if (engine.isTitanProtocolMode) engine.startTitanProtocol();
     else if (engine.isDailyAnomalyMode) engine.startDailyAnomaly();
     else if (engine.isEndlessMode) engine.startEndless();
@@ -1968,6 +2035,16 @@ window.addEventListener('DOMContentLoaded', () => {
       }`;
     });
 
+    // Auto-Targeting Lock (Auto-Aim)
+    const autoAimActive = saveSystem.getAutoAim ? saveSystem.getAutoAim() : (s.autoAim !== false);
+    document.querySelectorAll('.btn-setting-autoaim').forEach(btn => {
+      const val = (btn.getAttribute('data-val') === 'true');
+      const active = (autoAimActive === val);
+      btn.className = `btn-setting-autoaim px-3 py-1 rounded-lg text-[10px] font-orbitron font-bold border transition cursor-pointer ${
+        active ? 'bg-cosmic-cyan text-slate-950 border-cosmic-cyan shadow-[0_0_10px_rgba(0,229,255,0.4)]' : 'bg-slate-900 text-slate-400 border-slate-700 hover:border-slate-500'
+      }`;
+    });
+
     updateGamepadBadge();
   }
 
@@ -2076,6 +2153,16 @@ window.addEventListener('DOMContentLoaded', () => {
       saveSystem.updateSettings({ hullDebrisShards: val });
       syncSettingsUI();
       engine.showToast(`💥 HULL DEBRIS SHARDS: ${val ? 'ENABLED' : 'DISABLED'}`, '#00e5ff');
+    });
+  });
+
+  document.querySelectorAll('.btn-setting-autoaim').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      audio.init();
+      if (audio.playShardPickup) audio.playShardPickup();
+      const val = (e.currentTarget.getAttribute('data-val') === 'true');
+      setAutoAimState(val);
+      engine.showToast(`🎯 AUTO-AIM: ${val ? 'LOCKED ON' : 'DISABLED'}`, val ? '#00e5ff' : '#94a3b8');
     });
   });
 

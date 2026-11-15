@@ -675,6 +675,16 @@ export class SaveSystem {
     return this.updateSettings({ hullDebrisShards: !!enabled });
   }
 
+  // Auto-Aim Targeting Lock
+  getAutoAim() {
+    const s = this.getSettings();
+    return s.autoAim !== false;
+  }
+
+  setAutoAim(enabled) {
+    return this.updateSettings({ autoAim: !!enabled });
+  }
+
   // Wingman System
   isWingmanUnlocked() {
     return !!this.data.wingmanUnlocked || (this.data.upgrades && (this.data.upgrades.satellites || 0) >= WINGMAN_CONFIG.unlockSatelliteReq);
