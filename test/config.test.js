@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { SECTORS, PLANETS, ALIEN_CLASSES, ARMORY_CONFIG, TROPHIES, GUARDIAN_RANKS, PENTATONIC_FREQS } from '../src/config.js';
+import { SECTORS, PLANETS, ALIEN_CLASSES, ARMORY_CONFIG, TROPHIES, GUARDIAN_RANKS, PENTATONIC_FREQS, DEFAULT_SETTINGS, getPlanetDisplayName } from '../src/config.js';
 
 describe('Configuration & Universe Data (v2.0)', () => {
   it('should define exactly 4 Cosmic Sectors spanning all 20 planets', () => {
@@ -15,9 +15,15 @@ describe('Configuration & Universe Data (v2.0)', () => {
     expect(SECTORS[3].range).toEqual([16, 20]);
   });
 
-  it('should define all 20 unique planets with required visual attributes and boss stages', () => {
+  it('should define all 20 unique planets with required visual attributes, astronomical data, and boss stages', () => {
     expect(PLANETS.length).toBe(20);
-    const expectedNames = [
+    const expectedRealNames = [
+      'Earth', 'Mars', 'Venus', 'Mercury', 'Luna',
+      'Jupiter', 'Saturn', 'Uranus', 'Neptune', 'Pluto',
+      'Europa', 'Titan', 'Io', 'Enceladus', 'Ceres',
+      'Proxima Centauri b', 'TRAPPIST-1e', 'Kepler-452b', '55 Cancri e', 'Kepler-22b'
+    ];
+    const expectedClassicNames = [
       'Aerilon', 'Aquatis', 'Solaria', 'Verdantia', 'Cryon',
       'Pyros', 'Zephyria', 'Obsidian', 'Lumina', 'Vortexia',
       'Aethelgard', 'Chronos', 'Mycelia', 'Ferrum', 'Eclipse',
@@ -26,7 +32,19 @@ describe('Configuration & Universe Data (v2.0)', () => {
 
     PLANETS.forEach((planet, index) => {
       expect(planet.id).toBe(index + 1);
-      expect(planet.name).toBe(expectedNames[index]);
+      expect(planet.name).toBe(expectedRealNames[index]);
+      expect(planet.realName).toBe(expectedRealNames[index]);
+      expect(planet.classicName).toBe(expectedClassicNames[index]);
+      expect(planet.title).toBeDefined();
+      expect(typeof planet.title).toBe('string');
+      expect(planet.astronomicalType).toBeDefined();
+      expect(typeof planet.astronomicalType).toBe('string');
+      expect(planet.realDistance).toBeDefined();
+      expect(typeof planet.realDistance).toBe('string');
+      expect(planet.surfaceGravity).toBeDefined();
+      expect(typeof planet.surfaceGravity).toBe('string');
+      expect(planet.realFact).toBeDefined();
+      expect(typeof planet.realFact).toBe('string');
       expect(planet.color1).toBeDefined();
       expect(planet.color2).toBeDefined();
       expect(planet.atmo).toBeDefined();
@@ -40,6 +58,21 @@ describe('Configuration & Universe Data (v2.0)', () => {
     expect(PLANETS[9].bossName).toBe('Mothership Kaelen');
     expect(PLANETS[14].bossName).toBe('Void Harbinger');
     expect(PLANETS[19].bossName).toBe('The Apex Leviathan');
+  });
+
+  it('should support Celestial System naming styles (real, classic, both) via getPlanetDisplayName', () => {
+    expect(DEFAULT_SETTINGS.planetNaming).toBe('real');
+
+    const earth = PLANETS[0];
+    expect(getPlanetDisplayName(earth, 'real')).toBe('Earth');
+    expect(getPlanetDisplayName(earth, 'classic')).toBe('Aerilon');
+    expect(getPlanetDisplayName(earth, 'both')).toBe('Earth [Aerilon]');
+    expect(getPlanetDisplayName(earth)).toBe('Earth');
+
+    // Edge cases
+    expect(getPlanetDisplayName(null)).toBe('');
+    expect(getPlanetDisplayName(undefined)).toBe('');
+    expect(getPlanetDisplayName({ name: 'Alpha' }, 'both')).toBe('Alpha');
   });
 
   it('should define 12 unique Alien Classes with exact combat stats and death payloads', () => {

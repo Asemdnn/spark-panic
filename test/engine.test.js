@@ -53,7 +53,9 @@ describe('GameEngine Coordinator & 360° Defense Loop (v2.0)', () => {
     expect(engine.isEndlessMode).toBe(false);
     expect(engine.currentWave).toBe(1);
     expect(engine.totalWaves).toBe(PLANETS[0].waves);
-    expect(engine.planet.data.name).toBe('Aerilon');
+    expect(engine.planet.data.name).toBe('Earth');
+    expect(engine.planet.data.classicName).toBe('Aerilon');
+    expect(engine.planet.data.realName).toBe('Earth');
     expect(engine.planet.coreHp).toBe(100);
     expect(engine.planet.shield).toBe(100);
   });

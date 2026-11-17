@@ -14,6 +14,39 @@ const POLE_FACTORS = [-1, 1];
 // Shared texture cache mapping planet id or slug to cached image record
 const textureCache = new Map();
 
+// Canonical real solar system & exoplanet aliases mapping to classic sci-fi names
+const CELESTIAL_ALIASES = {
+  1: { real: 'earth', classic: 'aerilon', aliases: ['earth', 'aerilon'] },
+  2: { real: 'mars', classic: 'aquatis', aliases: ['mars', 'aquatis'] },
+  3: { real: 'venus', classic: 'solaria', aliases: ['venus', 'solaria'] },
+  4: { real: 'mercury', classic: 'verdantia', aliases: ['mercury', 'verdantia'] },
+  5: { real: 'luna', classic: 'cryon', aliases: ['luna', 'cryon', 'moon'] },
+  6: { real: 'jupiter', classic: 'pyros', aliases: ['jupiter', 'pyros'] },
+  7: { real: 'saturn', classic: 'zephyria', aliases: ['saturn', 'zephyria'] },
+  8: { real: 'uranus', classic: 'obsidian', aliases: ['uranus', 'obsidian'] },
+  9: { real: 'neptune', classic: 'lumina', aliases: ['neptune', 'lumina'] },
+  10: { real: 'pluto', classic: 'vortexia', aliases: ['pluto', 'vortexia'] },
+  11: { real: 'europa', classic: 'aethelgard', aliases: ['europa', 'aethelgard'] },
+  12: { real: 'titan', classic: 'chronos', aliases: ['titan', 'chronos'] },
+  13: { real: 'io', classic: 'mycelia', aliases: ['io', 'mycelia'] },
+  14: { real: 'enceladus', classic: 'ferrum', aliases: ['enceladus', 'ferrum'] },
+  15: { real: 'ceres', classic: 'eclipse', aliases: ['ceres', 'eclipse'] },
+  16: { real: 'proxima-b', classic: 'hyperion', aliases: ['proxima-b', 'proxima-centauri-b', 'proximab', 'hyperion'] },
+  17: { real: 'trappist-1e', classic: 'astralis', aliases: ['trappist-1e', 'trappist1e', 'astralis'] },
+  18: { real: 'kepler-452b', classic: 'voidreach', aliases: ['kepler-452b', 'kepler452b', 'voidreach'] },
+  19: { real: '55-cancri-e', classic: 'omega-prime', aliases: ['55-cancri-e', '55cancrie', 'omega-prime', 'omegaprime', 'omega'] },
+  20: { real: 'kepler-22b', classic: 'genesis', aliases: ['kepler-22b', 'kepler22b', 'genesis', 'genesis-core', 'genesiscore'] }
+};
+
+function toSlug(str) {
+  if (!str) return '';
+  return String(str)
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
 export class Planet {
   static get textureCache() {
     return textureCache;
@@ -118,25 +151,95 @@ export class Planet {
 
   loadTexture(planetConfig) {
     if (!planetConfig) return null;
-    const id = typeof planetConfig === 'object' ? planetConfig.id : planetConfig;
-    const name = typeof planetConfig === 'object' ? planetConfig.name : null;
-    const slug = name ? name.toLowerCase() : (typeof id === 'string' ? id.toLowerCase() : null);
-    const key = String(id || slug);
 
-    if (textureCache.has(key)) {
-      const cached = textureCache.get(key);
-      this.texture = cached.img;
-      this.textureLoaded = cached.loaded;
-      this.textureError = cached.error;
-      return cached.img;
+    let id = null;
+    let name = null;
+    let realName = null;
+    let classicName = null;
+
+    if (typeof planetConfig === 'object') {
+      id = planetConfig.id !== undefined ? planetConfig.id : null;
+      name = planetConfig.name || null;
+      realName = planetConfig.realName || null;
+      classicName = planetConfig.classicName || null;
+    } else if (typeof planetConfig === 'number') {
+      id = planetConfig;
+    } else if (typeof planetConfig === 'string') {
+      if (/^\d+$/.test(planetConfig.trim())) {
+        id = parseInt(planetConfig.trim(), 10);
+      } else {
+        name = planetConfig;
+      }
     }
 
-    if (slug && textureCache.has(slug)) {
-      const cached = textureCache.get(slug);
-      this.texture = cached.img;
-      this.textureLoaded = cached.loaded;
-      this.textureError = cached.error;
-      return cached.img;
+    // Match against CELESTIAL_ALIASES by id or name/realName/classicName
+    let matchedAliases = null;
+    if (id && CELESTIAL_ALIASES[id]) {
+      matchedAliases = CELESTIAL_ALIASES[id];
+    } else {
+      const candidates = [name, realName, classicName, typeof id === 'string' ? id : null]
+        .filter(Boolean)
+        .map(s => String(s).toLowerCase().replace(/[^a-z0-9]/g, ''));
+
+      for (const [pId, entry] of Object.entries(CELESTIAL_ALIASES)) {
+        const entryKeys = [
+          entry.real.replace(/[^a-z0-9]/g, ''),
+          entry.classic.replace(/[^a-z0-9]/g, ''),
+          ...entry.aliases.map(a => a.replace(/[^a-z0-9]/g, ''))
+        ];
+        if (candidates.some(c => entryKeys.includes(c))) {
+          matchedAliases = entry;
+          if (!id) id = parseInt(pId, 10);
+          break;
+        }
+      }
+    }
+
+    const candidateKeys = new Set();
+    if (id !== null && id !== undefined) {
+      candidateKeys.add(String(id));
+      candidateKeys.add(`planet-${id}`);
+    }
+    if (name) {
+      candidateKeys.add(String(name));
+      candidateKeys.add(String(name).toLowerCase());
+      const slug = toSlug(name);
+      if (slug) candidateKeys.add(slug);
+    }
+    if (realName) {
+      candidateKeys.add(String(realName));
+      candidateKeys.add(String(realName).toLowerCase());
+      const slug = toSlug(realName);
+      if (slug) candidateKeys.add(slug);
+    }
+    if (classicName) {
+      candidateKeys.add(String(classicName));
+      candidateKeys.add(String(classicName).toLowerCase());
+      const slug = toSlug(classicName);
+      if (slug) candidateKeys.add(slug);
+    }
+    if (matchedAliases) {
+      candidateKeys.add(matchedAliases.real);
+      candidateKeys.add(matchedAliases.classic);
+      for (const a of matchedAliases.aliases) {
+        candidateKeys.add(a);
+      }
+    }
+
+    // Check if any candidateKey already exists in textureCache
+    for (const key of candidateKeys) {
+      if (textureCache.has(key)) {
+        const cached = textureCache.get(key);
+        this.texture = cached.img;
+        this.textureLoaded = cached.loaded;
+        this.textureError = cached.error;
+        for (const otherKey of candidateKeys) {
+          if (!textureCache.has(otherKey)) {
+            textureCache.set(otherKey, cached);
+          }
+        }
+        return cached.img;
+      }
     }
 
     if (typeof Image === 'undefined') {
@@ -151,34 +254,65 @@ export class Planet {
       loaded: false,
       error: false
     };
-    textureCache.set(key, entry);
-    if (slug && slug !== key) {
-      textureCache.set(slug, entry);
+
+    for (const key of candidateKeys) {
+      textureCache.set(key, entry);
     }
 
+    // Build prioritized list of candidate asset paths: real slug, classic slug, name, realName, classicName, id
+    const candidateSlugs = [];
+    if (matchedAliases) {
+      if (!candidateSlugs.includes(matchedAliases.real)) candidateSlugs.push(matchedAliases.real);
+      if (!candidateSlugs.includes(matchedAliases.classic)) candidateSlugs.push(matchedAliases.classic);
+      for (const a of matchedAliases.aliases) {
+        if (!candidateSlugs.includes(a)) candidateSlugs.push(a);
+      }
+    }
+    if (realName) {
+      const s = toSlug(realName);
+      if (s && !candidateSlugs.includes(s)) candidateSlugs.push(s);
+    }
+    if (name) {
+      const s = toSlug(name);
+      if (s && !candidateSlugs.includes(s)) candidateSlugs.push(s);
+    }
+    if (classicName) {
+      const s = toSlug(classicName);
+      if (s && !candidateSlugs.includes(s)) candidateSlugs.push(s);
+    }
+    if (id !== null && id !== undefined && !candidateSlugs.includes(String(id))) {
+      candidateSlugs.push(String(id));
+    }
+
+    const candidateUrls = [];
+    for (const s of candidateSlugs) {
+      candidateUrls.push(`./assets/planets/${s}.jpg`);
+      candidateUrls.push(`/assets/planets/${s}.jpg`);
+    }
+
+    let urlIndex = 0;
     img.onload = () => {
       entry.loaded = true;
       entry.error = false;
-      if (!this.data || this.data.id === id || (this.data.name && this.data.name.toLowerCase() === slug)) {
+      if (!this.data || this.data.id === id || candidateKeys.has(this.data.name) || candidateKeys.has(this.data.realName) || candidateKeys.has(this.data.classicName)) {
         this.texture = img;
         this.textureLoaded = true;
       }
     };
 
     img.onerror = () => {
-      const src = img.src || '';
-      if (slug && src.indexOf(slug) === -1) {
-        img.src = `./assets/planets/${slug}.jpg`;
-      } else if (!src.startsWith('/') && !src.startsWith('http')) {
-        img.src = `/assets/planets/${slug || id}.jpg`;
+      urlIndex++;
+      if (urlIndex < candidateUrls.length) {
+        img.src = candidateUrls[urlIndex];
       } else {
         entry.error = true;
         entry.loaded = false;
       }
     };
 
-    // Load from ./assets/planets/<id>.jpg or slug if available
-    img.src = slug ? `./assets/planets/${slug}.jpg` : `./assets/planets/${id}.jpg`;
+    if (candidateUrls.length > 0) {
+      img.src = candidateUrls[0];
+    }
 
     if (img.complete && img.naturalWidth > 0) {
       entry.loaded = true;

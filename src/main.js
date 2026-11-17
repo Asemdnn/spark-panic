@@ -1,6 +1,6 @@
 // Spark Panic 2.5 - Application Bootstrap & Event Controller
 
-import { PLANETS, SECTORS, ALIEN_CLASSES, ARMORY_CONFIG, TROPHIES, GUARDIAN_RANKS, CHASSIS_CONFIG, getDailyAnomalyConfig, TITAN_PROTOCOL_CONFIG, WINGMAN_CONFIG, TURRET_SKINS, ASCENSION_CONFIG, COSMIC_RELICS, STRUCTURE_CONFIG, DEFAULT_SETTINGS, SHIPYARD_PARTS } from './config.js';
+import { PLANETS, SECTORS, ALIEN_CLASSES, ARMORY_CONFIG, TROPHIES, GUARDIAN_RANKS, CHASSIS_CONFIG, getDailyAnomalyConfig, TITAN_PROTOCOL_CONFIG, WINGMAN_CONFIG, TURRET_SKINS, ASCENSION_CONFIG, COSMIC_RELICS, STRUCTURE_CONFIG, DEFAULT_SETTINGS, SHIPYARD_PARTS, getPlanetDisplayName } from './config.js';
 import { audio } from './engine/audio.js';
 import { saveSystem } from './engine/storage.js';
 import { GameEngine } from './game/engine.js';
@@ -40,6 +40,27 @@ window.addEventListener('DOMContentLoaded', () => {
       updateAutoAimButton(aim);
     };
   }
+
+  // Live HUD Planet Nomenclature Helper
+  function updateHudPlanetLabel() {
+    const label = document.getElementById('hudPlanetLabel');
+    if (!label) return;
+    const currentPlanetId = engine.currentPlanetId || selectedPlanetId || 1;
+    const cfg = PLANETS.find(p => p.id === currentPlanetId) || PLANETS[0];
+    const namingStyle = saveSystem?.data?.settings?.planetNaming || saveSystem?.getSettings?.()?.planetNaming || 'real';
+    const name = getPlanetDisplayName(cfg, namingStyle);
+    label.textContent = name.toUpperCase();
+  }
+
+  // Hook engine.updateHUD to ensure real planet nomenclature updates live during combat
+  const origUpdateHUD = engine.updateHUD?.bind(engine);
+  if (origUpdateHUD) {
+    engine.updateHUD = () => {
+      origUpdateHUD();
+      updateHudPlanetLabel();
+    };
+  }
+  updateHudPlanetLabel();
 
   // Selected Sector & Planet in Star Map
   let selectedSector = 1;
@@ -470,7 +491,9 @@ window.addEventListener('DOMContentLoaded', () => {
       hideAllModals();
       engine.startCampaignPlanet(activeIncursion.planetId);
       const p = PLANETS.find(pl => pl.id === activeIncursion.planetId) || PLANETS[0];
-      engine.showToast(`🚨 DEFENDING INCURSION: ${p.name.toUpperCase()}! 2X SHARDS!`, '#ff3366');
+      const namingStyle = saveSystem?.data?.settings?.planetNaming || saveSystem?.getSettings?.()?.planetNaming || 'real';
+      const pName = getPlanetDisplayName(p, namingStyle);
+      engine.showToast(`🚨 DEFENDING INCURSION: ${pName.toUpperCase()}! 2X SHARDS!`, '#ff3366');
     }
   });
 
@@ -667,10 +690,15 @@ window.addEventListener('DOMContentLoaded', () => {
     const p = cfg.planet;
     const sectorTag = document.getElementById('dailySectorTag');
     if (sectorTag) sectorTag.textContent = `SECTOR ${'I'.repeat(p.sector)}`;
+    const namingStyle = saveSystem?.data?.settings?.planetNaming || saveSystem?.getSettings?.()?.planetNaming || 'real';
+    const pDisplayName = getPlanetDisplayName(p, namingStyle);
     const pName = document.getElementById('dailyPlanetName');
-    if (pName) pName.textContent = p.name.toUpperCase();
+    if (pName) pName.textContent = pDisplayName.toUpperCase();
     const pTitle = document.getElementById('dailyPlanetTitle');
-    if (pTitle) pTitle.textContent = p.title;
+    if (pTitle) {
+      const typeStr = p.astronomicalType ? ` • ${p.astronomicalType}` : '';
+      pTitle.textContent = `${p.title}${typeStr}`;
+    }
 
     // Target planet preview canvas
     const pCanvas = document.getElementById('dailyPlanetCanvas');
@@ -870,7 +898,9 @@ window.addEventListener('DOMContentLoaded', () => {
     if (incursionBtn && incursionLabel) {
       if (activeIncursion && activeIncursion.active) {
         const incursionPlanet = PLANETS.find(p => p.id === activeIncursion.planetId) || PLANETS[0];
-        incursionLabel.textContent = `🚨 DEFEND INCURSION: ${incursionPlanet.name.toUpperCase()} (2x ✦)`;
+        const namingStyle = saveSystem?.data?.settings?.planetNaming || saveSystem?.getSettings?.()?.planetNaming || 'real';
+        const incursionName = getPlanetDisplayName(incursionPlanet, namingStyle);
+        incursionLabel.textContent = `🚨 DEFEND INCURSION: ${incursionName.toUpperCase()} (2x ✦)`;
         incursionBtn.classList.remove('hidden');
       } else {
         incursionBtn.classList.add('hidden');
@@ -970,12 +1000,15 @@ window.addEventListener('DOMContentLoaded', () => {
     const sectorPlanets = PLANETS.filter(p => p.sector === selectedSector);
     const unlocked = saveSystem.data.unlockedPlanet || 1;
     const activeIncursion = saveSystem.getActiveIncursion ? saveSystem.getActiveIncursion() : null;
+    const namingStyle = saveSystem?.data?.settings?.planetNaming || saveSystem?.getSettings?.()?.planetNaming || 'real';
 
     for (const p of sectorPlanets) {
       const isLocked = p.id > unlocked;
       const isSelected = p.id === selectedPlanetId;
       const stars = saveSystem.data.planetStars[p.id] || 0;
       const isIncursion = activeIncursion && activeIncursion.active && p.id === activeIncursion.planetId;
+      const displayName = getPlanetDisplayName(p, namingStyle);
+      const astroType = p.astronomicalType || p.title || '';
 
       const card = document.createElement('div');
       card.className = `glass-card p-3 rounded-2xl flex flex-col items-center text-center cursor-pointer transition border relative ${
@@ -1006,8 +1039,8 @@ window.addEventListener('DOMContentLoaded', () => {
             </svg>
           ` : ''}
         </div>
-        <div class="text-xs font-black font-orbitron text-white truncate w-full">${p.name}</div>
-        <div class="text-[9px] text-slate-400 truncate w-full">${p.title}</div>
+        <div class="text-xs font-black font-orbitron text-white truncate w-full" title="${displayName}">${displayName.toUpperCase()}</div>
+        <div class="text-[9px] text-slate-400 truncate w-full" title="${astroType}">${astroType}</div>
         <div class="flex items-center gap-0.5 text-xs text-cosmic-gold mt-1.5">
           ${starIcons}
         </div>
@@ -1032,17 +1065,47 @@ window.addEventListener('DOMContentLoaded', () => {
     const stars = saveSystem.data.planetStars[planet.id] || 0;
     const activeIncursion = saveSystem.getActiveIncursion ? saveSystem.getActiveIncursion() : null;
     const isIncursion = activeIncursion && activeIncursion.active && planet.id === activeIncursion.planetId;
+    const namingStyle = saveSystem?.data?.settings?.planetNaming || saveSystem?.getSettings?.()?.planetNaming || 'real';
+    const displayName = getPlanetDisplayName(planet, namingStyle);
 
-    document.getElementById('briefingSectorTag').textContent = `SECTOR ${'I'.repeat(planet.sector)}`;
+    const sectorTag = document.getElementById('briefingSectorTag');
+    if (sectorTag) sectorTag.textContent = `SECTOR ${'I'.repeat(planet.sector)}`;
+
     const starBriefing = Array.from({ length: 3 }, (_, i) => 
       ICON_SVG.star('w-4 h-4 ' + (i < stars ? 'text-cosmic-gold drop-shadow-[0_0_6px_#ffd700]' : 'text-slate-700'), i < stars)
     ).join('');
-    document.getElementById('briefingStars').innerHTML = starBriefing;
-    document.getElementById('briefingPlanetName').textContent = planet.name.toUpperCase();
-    document.getElementById('briefingPlanetTitle').textContent = planet.title;
-    document.getElementById('briefingWaves').textContent = `${planet.waves} Invasion Waves`;
-    document.getElementById('briefingEnemies').textContent = `${planet.baseEnemies} Alien Invaders`;
-    document.getElementById('briefingRings').textContent = planet.rings ? 'Yes (Encircled)' : 'None';
+    const starsEl = document.getElementById('briefingStars');
+    if (starsEl) starsEl.innerHTML = starBriefing;
+
+    const nameEl = document.getElementById('briefingPlanetName');
+    if (nameEl) nameEl.textContent = displayName.toUpperCase();
+
+    const titleEl = document.getElementById('briefingPlanetTitle');
+    if (titleEl) {
+      const typeStr = planet.astronomicalType ? ` • ${planet.astronomicalType}` : '';
+      titleEl.textContent = `${planet.title}${typeStr}`;
+    }
+
+    const distEl = document.getElementById('briefingDistance');
+    if (distEl) distEl.textContent = planet.realDistance || '1.00 AU';
+
+    const gravEl = document.getElementById('briefingGravity');
+    if (gravEl) gravEl.textContent = planet.surfaceGravity || '9.81 m/s²';
+
+    const descEl = document.getElementById('briefingDesc');
+    if (descEl) descEl.textContent = planet.desc || '';
+
+    const factTextEl = document.getElementById('briefingFactText');
+    if (factTextEl) factTextEl.textContent = planet.realFact || 'Authentic astronomical planetary data.';
+
+    const wavesEl = document.getElementById('briefingWaves');
+    if (wavesEl) wavesEl.textContent = `${planet.waves} Invasion Waves`;
+
+    const enemiesEl = document.getElementById('briefingEnemies');
+    if (enemiesEl) enemiesEl.textContent = `${planet.baseEnemies} Alien Invaders`;
+
+    const ringsEl = document.getElementById('briefingRings');
+    if (ringsEl) ringsEl.textContent = planet.rings ? 'Yes (Encircled)' : 'None';
     
     const threatEl = document.getElementById('briefingBoss');
     if (threatEl) {
@@ -1971,6 +2034,16 @@ window.addEventListener('DOMContentLoaded', () => {
       }`;
     });
 
+    // Celestial System Planet Naming
+    const planetNaming = s.planetNaming || saveSystem?.data?.settings?.planetNaming || 'real';
+    document.querySelectorAll('.btn-setting-planet-naming').forEach(btn => {
+      const val = btn.getAttribute('data-val');
+      const active = (planetNaming === val);
+      btn.className = `btn-setting-planet-naming px-2.5 py-1 rounded-lg text-[10px] font-orbitron font-bold border transition cursor-pointer ${
+        active ? 'bg-cosmic-cyan text-slate-950 border-cosmic-cyan shadow-[0_0_10px_rgba(0,229,255,0.4)]' : 'bg-slate-900 text-slate-400 border-slate-700 hover:border-slate-500'
+      }`;
+    });
+
     // Particle density
     document.querySelectorAll('.btn-setting-part').forEach(btn => {
       const val = btn.getAttribute('data-val');
@@ -2111,6 +2184,34 @@ window.addEventListener('DOMContentLoaded', () => {
       const val = e.currentTarget.getAttribute('data-val');
       saveSystem.updateSettings({ floatingText: val });
       syncSettingsUI();
+    });
+  });
+
+  document.querySelectorAll('.btn-setting-planet-naming').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      audio.init();
+      const val = e.currentTarget.getAttribute('data-val');
+      if (saveSystem.updateSettings) {
+        saveSystem.updateSettings({ planetNaming: val });
+      } else {
+        if (!saveSystem.data.settings) saveSystem.data.settings = {};
+        saveSystem.data.settings.planetNaming = val;
+        saveSystem.save();
+      }
+      if (saveSystem.data && saveSystem.data.settings) {
+        saveSystem.data.settings.planetNaming = val;
+      }
+      syncSettingsUI();
+      renderStarMapPlanets();
+      updateTacticalBriefing();
+      updateHudPlanetLabel();
+
+      const toastMap = {
+        real: '🪐 REAL PLANETS (Earth, Mars, Jupiter...)',
+        classic: '✨ CLASSIC SCI-FI (Aerilon, Aquatis, Solaria...)',
+        both: '🌐 BOTH (Earth [Aerilon], Mars [Aquatis]...)'
+      };
+      engine.showToast(`🪐 CELESTIAL SYSTEM: ${toastMap[val] || val.toUpperCase()}`, '#00e5ff');
     });
   });
 

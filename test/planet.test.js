@@ -143,6 +143,38 @@ describe('Central Living Planet & Aegis Shield Engine (v2.0)', () => {
       expect(p.loadTexture(undefined)).toBeNull();
     });
 
+    it('should resolve both real celestial body names and classic sci-fi names without errors', () => {
+      const realSlugs = [
+        'earth', 'mars', 'venus', 'mercury', 'luna',
+        'jupiter', 'saturn', 'uranus', 'neptune', 'pluto',
+        'europa', 'titan', 'io', 'enceladus', 'ceres',
+        'proxima-b', 'trappist-1e', 'kepler-452b', '55-cancri-e', 'kepler-22b'
+      ];
+      const classicSlugs = [
+        'aerilon', 'aquatis', 'solaria', 'verdantia', 'cryon',
+        'pyros', 'zephyria', 'obsidian', 'lumina', 'vortexia',
+        'aethelgard', 'chronos', 'mycelia', 'ferrum', 'eclipse',
+        'hyperion', 'astralis', 'voidreach', 'omega-prime', 'genesis'
+      ];
+
+      const p = new Planet(mockCanvas);
+
+      for (let i = 0; i < 20; i++) {
+        const realImg = p.loadTexture(realSlugs[i]);
+        expect(realImg).toBeDefined();
+        expect(realImg).not.toBeNull();
+
+        const classicImg = p.loadTexture(classicSlugs[i]);
+        expect(classicImg).toBeDefined();
+        expect(classicImg).not.toBeNull();
+
+        // Object config loading
+        const objImg = p.loadTexture(PLANETS[i]);
+        expect(objImg).toBeDefined();
+        expect(objImg).not.toBeNull();
+      }
+    });
+
     it('should reuse cached texture entry on duplicate load calls', () => {
       Planet.clearTextureCache();
       const p1 = new Planet(mockCanvas);

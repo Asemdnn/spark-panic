@@ -3,7 +3,7 @@
 export const SECTORS = [
   {
     id: 1,
-    name: 'SECTOR I: INNER SANCTUARIES',
+    name: 'SECTOR I: INNER SANCTUARIES (SOL SYSTEM)',
     shortName: 'SECTOR I',
     themeColor: '#00e5ff',
     range: [1, 5],
@@ -11,7 +11,7 @@ export const SECTORS = [
   },
   {
     id: 2,
-    name: 'SECTOR II: NEBULA FRONTIER',
+    name: 'SECTOR II: NEBULA FRONTIER (GAS GIANTS)',
     shortName: 'SECTOR II',
     themeColor: '#e040fb',
     range: [6, 10],
@@ -19,7 +19,7 @@ export const SECTORS = [
   },
   {
     id: 3,
-    name: 'SECTOR III: DARK RIFT',
+    name: 'SECTOR III: DARK RIFT (DEEP MOONS)',
     shortName: 'SECTOR III',
     themeColor: '#ffd700',
     range: [11, 15],
@@ -27,7 +27,7 @@ export const SECTORS = [
   },
   {
     id: 4,
-    name: 'SECTOR IV: SOL GENESIS',
+    name: 'SECTOR IV: SOL GENESIS (EXOPLANETS)',
     shortName: 'SECTOR IV',
     themeColor: '#ff3366',
     range: [16, 20],
@@ -36,11 +36,13 @@ export const SECTORS = [
 ];
 
 export const PLANETS = [
-  // SECTOR I: INNER SANCTUARIES
+  // SECTOR I: INNER SANCTUARIES (SOL SYSTEM)
   {
     id: 1,
-    name: 'Aerilon',
-    title: 'Terran Haven',
+    name: 'Earth',
+    realName: 'Earth',
+    classicName: 'Aerilon',
+    title: 'Cradle of Humanity',
     sector: 1,
     color1: '#0ea5e9',
     color2: '#10b981',
@@ -49,228 +51,324 @@ export const PLANETS = [
     waves: 2,
     baseEnemies: 12,
     bossName: null,
+    astronomicalType: 'Terrestrial Habitable Planet',
+    realDistance: '1.00 AU (149.6M km)',
+    surfaceGravity: '9.81 m/s² (1.00g)',
+    realFact: 'The only celestial body known to harbor active water-based life, shielded by a geomagnetic dynamo and nitrogen-oxygen atmosphere.',
     desc: 'Lush terrestrial cradle under attack by Vanguard Recon Scout fleets.'
   },
   {
     id: 2,
-    name: 'Aquatis',
-    title: 'Pelagic Sphere',
+    name: 'Mars',
+    realName: 'Mars',
+    classicName: 'Aquatis',
+    title: 'Rust Dunes & Olympus Mons',
     sector: 1,
-    color1: '#0284c7',
-    color2: '#06b6d4',
-    atmo: '#00e5ff',
-    rings: false,
-    waves: 2,
-    baseEnemies: 15,
-    bossName: null,
-    desc: 'Bioluminescent oceanic sanctuary threatened by mid-range Trident Interceptors.'
-  },
-  {
-    id: 3,
-    name: 'Solaria',
-    title: 'Helios Dunes',
-    sector: 1,
-    color1: '#d97706',
-    color2: '#f59e0b',
-    atmo: '#fbbf24',
-    rings: true,
-    waves: 3,
-    baseEnemies: 18,
-    bossName: null,
-    desc: 'Ringed desert super-forge besieged by heavy armored siege dropships.'
-  },
-  {
-    id: 4,
-    name: 'Verdantia',
-    title: 'Bio-Jungle',
-    sector: 1,
-    color1: '#059669',
-    color2: '#84cc16',
-    atmo: '#34d399',
-    rings: false,
-    waves: 3,
-    baseEnemies: 22,
-    bossName: null,
-    desc: 'Dense bioluminescent forest world facing multi-vector swarm incursions.'
-  },
-  {
-    id: 5,
-    name: 'Cryon',
-    title: 'Glacial Bastion',
-    sector: 1,
-    color1: '#38bdf8',
-    color2: '#e0f2fe',
-    atmo: '#7dd3fc',
-    rings: true,
-    waves: 3,
-    baseEnemies: 26,
-    bossName: 'Dreadnought Vexor',
-    desc: 'Frozen outer bastion defended against Flagship Dreadnought Vexor!'
-  },
-
-  // SECTOR II: NEBULA FRONTIER
-  {
-    id: 6,
-    name: 'Pyros',
-    title: 'Magma Core',
-    sector: 2,
     color1: '#dc2626',
     color2: '#f97316',
     atmo: '#fb923c',
     rings: false,
+    waves: 2,
+    baseEnemies: 15,
+    bossName: null,
+    astronomicalType: 'Terrestrial Desert Planet',
+    realDistance: '1.52 AU (227.9M km)',
+    surfaceGravity: '3.72 m/s² (0.38g)',
+    realFact: 'Hosts the solar system’s tallest volcano, Olympus Mons (21.9 km), and the gargantuan Valles Marineris canyon network.',
+    desc: 'Rust dunes and ancient river valleys under siege by mid-range Trident Interceptors.'
+  },
+  {
+    id: 3,
+    name: 'Venus',
+    realName: 'Venus',
+    classicName: 'Solaria',
+    title: 'Super-Greenhouse Veil',
+    sector: 1,
+    color1: '#d97706',
+    color2: '#f59e0b',
+    atmo: '#fbbf24',
+    rings: false,
+    waves: 3,
+    baseEnemies: 18,
+    bossName: null,
+    astronomicalType: 'Infernal Greenhouse Planet',
+    realDistance: '0.72 AU (108.2M km)',
+    surfaceGravity: '8.87 m/s² (0.90g)',
+    realFact: 'A runaway greenhouse effect generates crushing 92 bar atmospheric pressure and blistering surface heat of 465°C.',
+    desc: 'Super-heated sulfuric acid storm veil besieged by heavy armored siege dropships.'
+  },
+  {
+    id: 4,
+    name: 'Mercury',
+    realName: 'Mercury',
+    classicName: 'Verdantia',
+    title: 'Scorched Caloris Basin',
+    sector: 1,
+    color1: '#475569',
+    color2: '#64748b',
+    atmo: '#94a3b8',
+    rings: false,
+    waves: 3,
+    baseEnemies: 22,
+    bossName: null,
+    astronomicalType: 'Airless Rocky Planet',
+    realDistance: '0.39 AU (57.9M km)',
+    surfaceGravity: '3.70 m/s² (0.38g)',
+    realFact: 'Experiences wild surface temperature swings from -180°C at night to 430°C in direct solar glare, with an enormous metallic iron core.',
+    desc: 'Scorched impact basins and lobate scarps facing multi-vector swarm incursions.'
+  },
+  {
+    id: 5,
+    name: 'Luna',
+    realName: 'Luna',
+    classicName: 'Cryon',
+    title: 'Lunar Stronghold',
+    sector: 1,
+    color1: '#334155',
+    color2: '#e2e8f0',
+    atmo: '#94a3b8',
+    rings: false,
+    waves: 3,
+    baseEnemies: 26,
+    bossName: 'Dreadnought Vexor',
+    astronomicalType: 'Major Planetary Natural Satellite',
+    realDistance: '0.00257 AU (384,400 km from Earth)',
+    surfaceGravity: '1.62 m/s² (0.17g)',
+    realFact: 'Tidally locked to Earth with dark basaltic mare plains and deep water-ice traps in shadowed polar craters.',
+    desc: 'Lunar orbital bastion and regolith stronghold defended against Flagship Dreadnought Vexor!'
+  },
+
+  // SECTOR II: NEBULA FRONTIER (GAS GIANTS)
+  {
+    id: 6,
+    name: 'Jupiter',
+    realName: 'Jupiter',
+    classicName: 'Pyros',
+    title: 'Great Red Spot & Storm Belts',
+    sector: 2,
+    color1: '#d97706',
+    color2: '#ea580c',
+    atmo: '#fed7aa',
+    rings: true,
     waves: 3,
     baseEnemies: 24,
     bossName: null,
-    desc: 'Volcanic super-heated world with turbulent plasma invasions.'
+    astronomicalType: 'Gas Giant (Jovian Planet)',
+    realDistance: '5.20 AU (778.5M km)',
+    surfaceGravity: '24.79 m/s² (2.53g)',
+    realFact: 'Contains more mass than all other solar system planets combined, harboring an anticyclonic storm raging for centuries.',
+    desc: 'Massive atmospheric belts and swirling cyclonic storms under relentless alien assault.'
   },
   {
     id: 7,
-    name: 'Zephyria',
-    title: 'Aether Giant',
+    name: 'Saturn',
+    realName: 'Saturn',
+    classicName: 'Zephyria',
+    title: 'Majestic Ring System',
     sector: 2,
-    color1: '#0891b2',
-    color2: '#a855f7',
-    atmo: '#c084fc',
+    color1: '#ca8a04',
+    color2: '#eab308',
+    atmo: '#fef08a',
     rings: true,
     waves: 3,
     baseEnemies: 28,
     bossName: null,
-    desc: 'Massive swirling gas giant encircled by crystalline particle rings.'
+    astronomicalType: 'Gas Giant (Ringed Jovian)',
+    realDistance: '9.58 AU (1.43B km)',
+    surfaceGravity: '10.44 m/s² (1.06g)',
+    realFact: 'Encircled by an intricate 282,000 km wide ring system of 99% pure water ice, with a unique hexagonal storm at its north pole.',
+    desc: 'Majestic ring system and golden cloud belts encircled by crystalline particle rings.'
   },
   {
     id: 8,
-    name: 'Obsidian',
-    title: 'Null Crystal',
+    name: 'Uranus',
+    realName: 'Uranus',
+    classicName: 'Obsidian',
+    title: 'Aquamarine Methane Cryo-Sphere',
     sector: 2,
-    color1: '#312e81',
-    color2: '#6366f1',
-    atmo: '#818cf8',
-    rings: false,
+    color1: '#0891b2',
+    color2: '#06b6d4',
+    atmo: '#67e8f9',
+    rings: true,
     waves: 3,
     baseEnemies: 30,
     bossName: null,
-    desc: 'Dark matter crystalline sphere where quantum Phase-Shifter ships blink through space.'
+    astronomicalType: 'Ice Giant',
+    realDistance: '19.22 AU (2.87B km)',
+    surfaceGravity: '8.69 m/s² (0.89g)',
+    realFact: 'Rotates on its side with an axial tilt of 97.8 degrees, possessing the coldest planetary atmosphere in the Solar System at -224°C.',
+    desc: 'Aquamarine methane ice giant where quantum Phase-Shifter ships blink through orbital space.'
   },
   {
     id: 9,
-    name: 'Lumina',
-    title: 'Prism Star-World',
+    name: 'Neptune',
+    realName: 'Neptune',
+    classicName: 'Lumina',
+    title: 'Supersonic Wind Realm',
     sector: 2,
-    color1: '#db2777',
-    color2: '#f472b6',
-    atmo: '#f9a8d4',
+    color1: '#1d4ed8',
+    color2: '#2563eb',
+    atmo: '#60a5fa',
     rings: true,
     waves: 3,
     baseEnemies: 34,
     bossName: null,
-    desc: 'Luminous world reflecting stellar radiation through radiant atmospheric halos.'
+    astronomicalType: 'Ice Giant',
+    realDistance: '30.05 AU (4.50B km)',
+    surfaceGravity: '11.15 m/s² (1.14g)',
+    realFact: 'Whips the fastest planetary winds in the solar system, exceeding 2,100 km/h across vivid azure cloud bands.',
+    desc: 'Supersonic blue wind realm radiating concentrated planetary storms against alien cruisers.'
   },
   {
     id: 10,
-    name: 'Vortexia',
-    title: 'Gravity Well',
+    name: 'Pluto',
+    realName: 'Pluto',
+    classicName: 'Vortexia',
+    title: 'Nitrogen Glacier Heart',
     sector: 2,
     color1: '#7c3aed',
     color2: '#ec4899',
-    atmo: '#e879f9',
-    rings: true,
+    atmo: '#f472b6',
+    rings: false,
     waves: 4,
     baseEnemies: 38,
     bossName: 'Mothership Kaelen',
-    desc: 'Gravitational anomaly where Sector Mothership Kaelen launches orbital siege attacks.'
+    astronomicalType: 'Kuiper Belt Dwarf Planet',
+    realDistance: '39.48 AU (5.91B km)',
+    surfaceGravity: '0.62 m/s² (0.063g)',
+    realFact: 'Features a vast nitrogen and carbon-monoxide glacier shaped like a heart (Tombaugh Regio) and rugged water-ice mountain peaks.',
+    desc: 'Frozen Kuiper Belt outpost where Sector Mothership Kaelen launches orbital siege attacks.'
   },
 
-  // SECTOR III: DARK RIFT
+  // SECTOR III: DARK RIFT (DEEP MOONS)
   {
     id: 11,
-    name: 'Aethelgard',
-    title: 'Relic Citadel',
+    name: 'Europa',
+    realName: 'Europa',
+    classicName: 'Aethelgard',
+    title: 'Sub-Surface Cryo-Ocean Abyss',
     sector: 3,
-    color1: '#ca8a04',
-    color2: '#14b8a6',
-    atmo: '#fde047',
-    rings: true,
+    color1: '#0284c7',
+    color2: '#38bdf8',
+    atmo: '#7dd3fc',
+    rings: false,
     waves: 3,
     baseEnemies: 36,
     bossName: null,
-    desc: 'Ancient cosmic monument world besieged by relentless alien fleets.'
+    astronomicalType: 'Galilean Ice Moon (Ocean World)',
+    realDistance: '5.20 AU (670,900 km from Jupiter)',
+    surfaceGravity: '1.315 m/s² (0.134g)',
+    realFact: 'Conceals a global salty liquid ocean twice the volume of all Earth’s oceans beneath an outer crust of fractured water ice.',
+    desc: 'Sub-surface cryo-ocean abyss with crisscrossing rust fractures besieged by relentless alien fleets.'
   },
   {
     id: 12,
-    name: 'Chronos',
-    title: 'Temporal Sphere',
+    name: 'Titan',
+    realName: 'Titan',
+    classicName: 'Chronos',
+    title: 'Liquid Methane Lakes & Nitrogen Haze',
     sector: 3,
-    color1: '#0d9488',
-    color2: '#fbbf24',
-    atmo: '#2dd4bf',
+    color1: '#d97706',
+    color2: '#f59e0b',
+    atmo: '#fde047',
     rings: false,
     waves: 3,
     baseEnemies: 40,
     bossName: null,
-    desc: 'Anomalous world wrapped in temporal stasis waves and heavy cruiser assaults.'
+    astronomicalType: 'Major Saturnian Moon (Atmospheric Ocean World)',
+    realDistance: '9.58 AU (1.22M km from Saturn)',
+    surfaceGravity: '1.352 m/s² (0.138g)',
+    realFact: 'The only planetary moon with a dense nitrogen atmosphere and standing lakes and rivers of liquid ethane and methane.',
+    desc: 'Liquid hydrocarbon seas wrapped in dense golden nitrogen haze and heavy cruiser assaults.'
   },
   {
     id: 13,
-    name: 'Mycelia',
-    title: 'Spore Nebula',
+    name: 'Io',
+    realName: 'Io',
+    classicName: 'Mycelia',
+    title: 'Tidal Sulfur Volcanoes',
     sector: 3,
-    color1: '#16a34a',
-    color2: '#a855f7',
-    atmo: '#4ade80',
+    color1: '#eab308',
+    color2: '#ef4444',
+    atmo: '#f97316',
     rings: false,
     waves: 4,
     baseEnemies: 44,
     bossName: null,
-    desc: 'Bio-luminescent spore planet under siege by fast assault dropships.'
+    astronomicalType: 'Galilean Volcanic Moon',
+    realDistance: '5.20 AU (421,700 km from Jupiter)',
+    surfaceGravity: '1.796 m/s² (0.183g)',
+    realFact: 'The most volcanically active body in the Solar System, driven by intense tidal flexing between Jupiter and neighboring moons.',
+    desc: 'Sulfur-yellow volcanic calderas and plasma plumes under siege by fast assault dropships.'
   },
   {
     id: 14,
-    name: 'Ferrum',
-    title: 'Forge Mech-World',
+    name: 'Enceladus',
+    realName: 'Enceladus',
+    classicName: 'Ferrum',
+    title: 'Cryovolcanic Geyser Spire',
     sector: 3,
-    color1: '#475569',
-    color2: '#f97316',
-    atmo: '#fb923c',
-    rings: true,
+    color1: '#f8fafc',
+    color2: '#0284c7',
+    atmo: '#bae6fd',
+    rings: false,
     waves: 4,
     baseEnemies: 48,
     bossName: null,
-    desc: 'Armored titanium fortress world with industrial defense batteries.'
+    astronomicalType: 'Saturnian Cryo-Moon',
+    realDistance: '9.58 AU (238,000 km from Saturn)',
+    surfaceGravity: '0.113 m/s² (0.011g)',
+    realFact: 'Blasts towering plumes of water vapor and organic molecules hundreds of kilometers into space through south polar tiger-stripe fissures.',
+    desc: 'Brilliant ice world with south polar cryovolcanic spires facing industrial invasion forces.'
   },
   {
     id: 15,
-    name: 'Eclipse',
-    title: 'Shadow Corona',
+    name: 'Ceres',
+    realName: 'Ceres',
+    classicName: 'Eclipse',
+    title: 'Occator Bright Spots & Salt Domes',
     sector: 3,
-    color1: '#1e1b4b',
-    color2: '#f43f5e',
-    atmo: '#fb7185',
-    rings: true,
+    color1: '#1e293b',
+    color2: '#cbd5e1',
+    atmo: '#94a3b8',
+    rings: false,
     waves: 4,
     baseEnemies: 52,
     bossName: 'Void Harbinger',
-    desc: 'Tomb world at the edge of the void where Flagship Void Harbinger reigns.'
+    astronomicalType: 'Asteroid Belt Dwarf Planet',
+    realDistance: '2.77 AU (414M km)',
+    surfaceGravity: '0.284 m/s² (0.029g)',
+    realFact: 'Largest body in the asteroid belt, containing water-ice mantle and radiant sodium carbonate mineral deposits in Occator Crater.',
+    desc: 'Ancient asteroid fortress world where Flagship Void Harbinger reigns.'
   },
 
-  // SECTOR IV: SOL GENESIS
+  // SECTOR IV: SOL GENESIS (EXOPLANETS)
   {
     id: 16,
-    name: 'Hyperion',
-    title: 'Helios Core',
+    name: 'Proxima Centauri b',
+    realName: 'Proxima Centauri b',
+    classicName: 'Hyperion',
+    title: 'Alpha Centauri Habitable Zone',
     sector: 4,
     color1: '#ea580c',
     color2: '#fde047',
     atmo: '#fef08a',
-    rings: true,
+    rings: false,
     waves: 4,
     baseEnemies: 50,
     bossName: null,
-    desc: 'Blazing solar paradise encircled by coronal energy rings.'
+    astronomicalType: 'Exoplanet (Terrestrial Super-Earth)',
+    realDistance: '4.246 Light-Years (40.17 Trillion km)',
+    surfaceGravity: '10.8 m/s² (1.10g)',
+    realFact: 'The closest known exoplanet to Earth, orbiting in the habitable zone of our neighboring red dwarf Proxima Centauri.',
+    desc: 'Red-dwarf irradiated frontier world in the habitable zone of Alpha Centauri.'
   },
   {
     id: 17,
-    name: 'Astralis',
-    title: 'Starlight Sanctum',
+    name: 'TRAPPIST-1e',
+    realName: 'TRAPPIST-1e',
+    classicName: 'Astralis',
+    title: 'Ultra-Cool Dwarf Water World',
     sector: 4,
     color1: '#2563eb',
     color2: '#38bdf8',
@@ -279,40 +377,58 @@ export const PLANETS = [
     waves: 4,
     baseEnemies: 55,
     bossName: null,
-    desc: 'Deep cosmic haven radiating concentrated starlight defense grids.'
+    astronomicalType: 'Exoplanet (Temperate Earth-Sized)',
+    realDistance: '39.46 Light-Years (373.3 Trillion km)',
+    surfaceGravity: '9.12 m/s² (0.93g)',
+    realFact: 'One of seven Earth-sized worlds in the TRAPPIST-1 system, considered one of the highest-potential habitable exoplanets discovered.',
+    desc: 'Temperate oceanic exoplanet radiating starlight defense grids against deep-space invasion fleets.'
   },
   {
     id: 18,
-    name: 'Voidreach',
-    title: 'Outer Bastion',
+    name: 'Kepler-452b',
+    realName: 'Kepler-452b',
+    classicName: 'Voidreach',
+    title: 'Super-Earth & Earth Elder Twin',
     sector: 4,
-    color1: '#4f46e5',
-    color2: '#e11d48',
-    atmo: '#f43f5e',
-    rings: true,
+    color1: '#059669',
+    color2: '#0284c7',
+    atmo: '#34d399',
+    rings: false,
     waves: 4,
     baseEnemies: 60,
     bossName: null,
-    desc: 'Final defense checkpoint before the celestial center of the universe.'
+    astronomicalType: 'Exoplanet (Super-Earth)',
+    realDistance: '1,799 Light-Years (17.02 Quadrillion km)',
+    surfaceGravity: '18.6 m/s² (1.90g)',
+    realFact: 'Often called Earth’s older cousin, orbiting a G2-type star remarkably similar to our Sun with a 385-day orbital year.',
+    desc: 'Elder super-Earth twin world guarding the approach to the celestial core.'
   },
   {
     id: 19,
-    name: 'Omega Prime',
-    title: 'Dyson Citadel',
+    name: '55 Cancri e',
+    realName: '55 Cancri e',
+    classicName: 'Omega Prime',
+    title: 'Molten Lava & Diamond Super-Earth',
     sector: 4,
-    color1: '#0284c7',
+    color1: '#b91c1c',
     color2: '#f59e0b',
-    atmo: '#38bdf8',
-    rings: true,
+    atmo: '#ef4444',
+    rings: false,
     waves: 4,
     baseEnemies: 65,
     bossName: null,
-    desc: 'Enormous megastructure world housing the galaxy’s central power archives.'
+    astronomicalType: 'Exoplanet (Ultra-Hot Lava Super-Earth)',
+    realDistance: '41.0 Light-Years (387.9 Trillion km)',
+    surfaceGravity: '21.5 m/s² (2.19g)',
+    realFact: 'Extreme carbon-rich composition and 2,000°C temperatures suggest its interior may be composed largely of diamond and liquid silicate oceans.',
+    desc: 'Ultra-hot carbon super-earth with molten lava seas and diamond crust.'
   },
   {
     id: 20,
-    name: 'Genesis Core',
-    title: 'Origin World',
+    name: 'Kepler-22b',
+    realName: 'Kepler-22b',
+    classicName: 'Genesis Core',
+    title: 'Cradle of Exoplanet Life',
     sector: 4,
     color1: '#00e5ff',
     color2: '#e040fb',
@@ -321,7 +437,11 @@ export const PLANETS = [
     waves: 5,
     baseEnemies: 72,
     bossName: 'The Apex Leviathan',
-    desc: 'Heart of the Universe. Defend Genesis Core against The Apex Leviathan to save all reality!'
+    astronomicalType: 'Exoplanet (Super-Earth Ocean World)',
+    realDistance: '638 Light-Years (6.03 Quadrillion km)',
+    surfaceGravity: '14.7 m/s² (1.50g)',
+    realFact: 'The first Kepler planet confirmed in the habitable zone of a Sun-like star, likely enveloped in a planetary-scale warm ocean.',
+    desc: 'Heart of the Universe. Defend Kepler-22b against The Apex Leviathan to save all reality!'
   }
 ];
 
@@ -1113,7 +1233,8 @@ export const DEFAULT_SETTINGS = {
   volumetricNebula: true, // boolean (v3.2)
   crtPostProcessing: true, // boolean (v3.2)
   hullDebrisShards: true, // boolean (v3.2)
-  autoAim: true // boolean (Auto-Targeting Lock)
+  autoAim: true, // boolean (Auto-Targeting Lock)
+  planetNaming: 'real' // 'real' | 'classic' | 'both'
 };
 
 export const TACTICAL_DRAFT_PERKS = [
@@ -1291,3 +1412,26 @@ export const SHIPYARD_PARTS = {
     }
   }
 };
+
+/**
+ * Format celestial body name according to the active Celestial System naming setting.
+ * @param {Object} planet Planet configuration object
+ * @param {'real' | 'classic' | 'both'} [style='real']
+ * @returns {string} Formatted planet display name
+ */
+export function getPlanetDisplayName(planet, style = 'real') {
+  if (!planet) return '';
+  const real = planet.realName || planet.name || '';
+  const classic = planet.classicName || planet.name || '';
+  if (style === 'classic') {
+    return classic;
+  }
+  if (style === 'both') {
+    if (classic && classic !== real) {
+      return `${real} [${classic}]`;
+    }
+    return real;
+  }
+  return real;
+}
+

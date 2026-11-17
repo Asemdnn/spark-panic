@@ -317,7 +317,7 @@
         </svg>
         <div>
           <div class="text-[9px] font-bold text-cosmic-cyan tracking-widest font-orbitron uppercase" id="hudSectorLabel">SECTOR I</div>
-          <div class="text-xs md:text-sm font-black font-orbitron text-white tracking-wider" id="hudPlanetLabel">AERILON PRIME</div>
+          <div class="text-xs md:text-sm font-black font-orbitron text-white tracking-wider" id="hudPlanetLabel">EARTH</div>
         </div>
       </div>
       <div id="hudWaveBadge" class="glass-panel cyber-chamfer px-3 py-1.5 rounded-xl text-center">
@@ -802,8 +802,20 @@
             <div class="flex items-center gap-3 my-2">
               <canvas id="briefingPlanetCanvas" width="70" height="70" class="rounded-full shadow-lg border border-white/20"></canvas>
               <div>
-                <h3 id="briefingPlanetName" class="font-orbitron font-black text-base text-white">AERILON</h3>
-                <p id="briefingPlanetTitle" class="text-[11px] text-slate-300">Terran Haven</p>
+                <h3 id="briefingPlanetName" class="font-orbitron font-black text-base text-white">EARTH</h3>
+                <p id="briefingPlanetTitle" class="text-[11px] text-slate-300">Cradle of Humanity • Terrestrial Habitable Planet</p>
+              </div>
+            </div>
+
+            <!-- Authentic Planetary Description -->
+            <p id="briefingDesc" class="text-[11px] text-slate-300/90 leading-relaxed my-2 italic">Lush terrestrial cradle under attack by Vanguard Recon Scout fleets.</p>
+
+            <!-- Astronomical Fact Badge -->
+            <div id="briefingFactBadge" class="p-2 rounded-xl bg-slate-900/80 border border-cosmic-cyan/30 text-[10px] text-slate-200 flex items-start gap-1.5 my-2">
+              <span class="text-xs shrink-0">🪐</span>
+              <div>
+                <span class="font-orbitron font-bold text-cosmic-cyan text-[9px] uppercase block tracking-wider">ASTRONOMICAL DATA</span>
+                <span id="briefingFactText" class="text-slate-300 leading-snug">The only celestial body known to harbor active water-based life, shielded by a geomagnetic dynamo and nitrogen-oxygen atmosphere.</span>
               </div>
             </div>
 
@@ -815,6 +827,14 @@
               <div class="flex justify-between py-1 border-b border-slate-800">
                 <span class="text-slate-400">Armada Fleet Size:</span>
                 <span id="briefingEnemies" class="font-orbitron font-bold text-cosmic-cyan">12 Invaders</span>
+              </div>
+              <div class="flex justify-between py-1 border-b border-slate-800">
+                <span class="text-slate-400">Solar Distance:</span>
+                <span id="briefingDistance" class="font-orbitron font-bold text-cyan-300 text-[11px]">1.00 AU (149.6M km)</span>
+              </div>
+              <div class="flex justify-between py-1 border-b border-slate-800">
+                <span class="text-slate-400">Surface Gravity:</span>
+                <span id="briefingGravity" class="font-orbitron font-bold text-emerald-300 text-[11px]">9.81 m/s² (1.00g)</span>
               </div>
               <div class="flex justify-between py-1 border-b border-slate-800">
                 <span class="text-slate-400">Planetary Rings:</span>
@@ -1042,7 +1062,7 @@
         PLANET <span class="text-cosmic-cyan text-glow-cyan">LIBERATED!</span>
       </h2>
       <p id="victoryPlanetTitle" class="text-xs font-orbitron text-cosmic-gold tracking-widest mb-4">
-        AERILON PRIME SAVED
+        EARTH PRIME SAVED
       </p>
 
       <!-- 3-Star Rating Animation -->
@@ -1311,6 +1331,19 @@
       </div>
 
       <div class="space-y-4 my-4">
+        <!-- Celestial System Planet Naming Selector -->
+        <div class="glass-card p-3 rounded-2xl border border-slate-700/60 flex items-center justify-between">
+          <div>
+            <div class="font-orbitron font-bold text-xs text-white">🪐 CELESTIAL SYSTEM</div>
+            <div class="text-[10px] text-slate-400">Nomenclature: Real Planets, Classic Sci-Fi, or Both</div>
+          </div>
+          <div class="flex items-center gap-1.5" id="settingPlanetNamingBtns">
+            <button data-val="real" class="btn-setting-planet-naming px-2.5 py-1 rounded-lg text-[10px] font-orbitron font-bold border transition cursor-pointer" title="Earth, Mars, Jupiter...">🪐 REAL</button>
+            <button data-val="classic" class="btn-setting-planet-naming px-2.5 py-1 rounded-lg text-[10px] font-orbitron font-bold border transition cursor-pointer" title="Aerilon, Aquatis, Solaria...">✨ CLASSIC</button>
+            <button data-val="both" class="btn-setting-planet-naming px-2.5 py-1 rounded-lg text-[10px] font-orbitron font-bold border transition cursor-pointer" title="Earth [Aerilon], Mars [Aquatis]...">🌐 BOTH</button>
+          </div>
+        </div>
+
         <!-- Visual Art Style Selector (v3.1) -->
         <div class="glass-card p-3 rounded-2xl border border-slate-700/60 flex items-center justify-between">
           <div>

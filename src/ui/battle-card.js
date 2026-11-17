@@ -1,6 +1,6 @@
 // Spark Panic 2.5 - Shareable Holographic Commander Battle Card Generator
 
-import { PLANETS, CHASSIS_CONFIG, TURRET_SKINS, WINGMAN_CONFIG, COSMIC_RELICS } from '../config.js';
+import { PLANETS, CHASSIS_CONFIG, TURRET_SKINS, WINGMAN_CONFIG, COSMIC_RELICS, getPlanetDisplayName } from '../config.js';
 
 export class BattleCardGenerator {
   static renderCard(engine, saveSystem) {
@@ -172,17 +172,21 @@ export class BattleCardGenerator {
     ctx.shadowBlur = 0;
 
     // Planet Metadata
+    const namingStyle = (saveSystem?.getSettings ? saveSystem.getSettings().planetNaming : saveSystem?.data?.settings?.planetNaming) || 'real';
+    const planetDisplayName = getPlanetDisplayName(planetCfg, namingStyle);
+    const astroType = planetCfg.astronomicalType || planetCfg.title || 'Terrestrial Habitable Planet';
+
     ctx.font = '900 16px Orbitron, sans-serif';
     ctx.fillStyle = '#ffffff';
-    ctx.fillText(planetCfg.name.toUpperCase(), 175, 335);
+    ctx.fillText(planetDisplayName.toUpperCase(), 175, 335);
 
     ctx.font = '700 11px Orbitron, sans-serif';
     ctx.fillStyle = isWin ? '#00e676' : '#ff3366';
     ctx.fillText(missionStatus, 175, 355);
 
-    ctx.font = '600 11px Inter, sans-serif';
+    ctx.font = '600 10px Inter, sans-serif';
     ctx.fillStyle = '#94a3b8';
-    ctx.fillText(planetCfg.title || 'Terran Haven', 175, 375);
+    ctx.fillText(astroType, 175, 375);
 
     ctx.font = '700 12px Orbitron, sans-serif';
     ctx.fillStyle = '#ffd700';
